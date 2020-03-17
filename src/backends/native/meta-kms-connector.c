@@ -408,6 +408,10 @@ state_set_properties (MetaKmsConnectorState *state,
       state->colorspace.supported =
         supported_drm_color_spaces_to_output_color_spaces (prop->supported_variants);
     }
+
+  prop = &props[META_KMS_CONNECTOR_PROP_VRR_CAPABLE];
+  if (prop->prop_id)
+    state->vrr_capable = prop->value;
 }
 
 static CoglSubpixelOrder
@@ -840,6 +844,7 @@ meta_kms_connector_state_new (void)
   state = g_new0 (MetaKmsConnectorState, 1);
   state->suggested_x = -1;
   state->suggested_y = -1;
+  state->vrr_capable = FALSE;
 
   return state;
 }
@@ -1011,6 +1016,9 @@ meta_kms_connector_state_changes (MetaKmsConnectorState *state,
   if (state->hdr.supported != new_state->hdr.supported ||
       state->hdr.unknown != new_state->hdr.unknown ||
       !hdr_metadata_equal (&state->hdr.value, &new_state->hdr.value))
+    return META_KMS_RESOURCE_CHANGE_FULL;
+
+  if (state->vrr_capable != new_state->vrr_capable)
     return META_KMS_RESOURCE_CHANGE_FULL;
 
   if (state->privacy_screen_state != new_state->privacy_screen_state)
@@ -1356,6 +1364,11 @@ init_properties (MetaKmsConnector  *connector,
         {
           .name = "HDR_OUTPUT_METADATA",
           .type = DRM_MODE_PROP_BLOB,
+        },
+      [META_KMS_CONNECTOR_PROP_VRR_CAPABLE] =
+        {
+          .name = "vrr_capable",
+          .type = DRM_MODE_PROP_RANGE,
         },
     },
     .dpms_enum = {

@@ -69,6 +69,8 @@ typedef struct _MetaKmsConnectorState
     gboolean supported;
     gboolean unknown;
   } hdr;
+
+  gboolean vrr_capable;
 } MetaKmsConnectorState;
 
 META_EXPORT_TEST
