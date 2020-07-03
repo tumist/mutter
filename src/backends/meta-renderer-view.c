@@ -33,6 +33,7 @@
 #include "backends/meta-renderer-view.h"
 
 #include "backends/meta-crtc.h"
+#include "backends/meta-output.h"
 #include "backends/meta-renderer.h"
 #include "clutter/clutter-mutter.h"
 #include "compositor/region-utils.h"
@@ -43,6 +44,7 @@ enum
 
   PROP_TRANSFORM,
   PROP_CRTC,
+  PROP_OUTPUT,
 
   PROP_LAST
 };
@@ -54,6 +56,7 @@ typedef struct _MetaRendererViewPrivate
   MetaMonitorTransform transform;
 
   MetaCrtc *crtc;
+  MetaOutput *output;
 } MetaRendererViewPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MetaRendererView, meta_renderer_view,
@@ -75,6 +78,15 @@ meta_renderer_view_get_crtc (MetaRendererView *view)
     meta_renderer_view_get_instance_private (view);
 
   return priv->crtc;
+}
+
+MetaOutput *
+meta_renderer_view_get_output (MetaRendererView *view)
+{
+  MetaRendererViewPrivate *priv =
+    meta_renderer_view_get_instance_private (view);
+
+  return priv->output;
 }
 
 static void
@@ -151,6 +163,9 @@ meta_renderer_view_get_property (GObject    *object,
     case PROP_CRTC:
       g_value_set_object (value, priv->crtc);
       break;
+    case PROP_OUTPUT:
+      g_value_set_object (value, priv->output);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -174,6 +189,9 @@ meta_renderer_view_set_property (GObject      *object,
       break;
     case PROP_CRTC:
       priv->crtc = g_value_get_object (value);
+      break;
+    case PROP_OUTPUT:
+      priv->output = g_value_get_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -214,6 +232,15 @@ meta_renderer_view_class_init (MetaRendererViewClass *klass)
   obj_props[PROP_CRTC] =
     g_param_spec_object ("crtc", NULL, NULL,
                          META_TYPE_CRTC,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS);
+
+  obj_props[PROP_OUTPUT] =
+    g_param_spec_object ("output",
+                         "MetaOutput",
+                         "MetaOutput",
+                         META_TYPE_OUTPUT,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY |
                          G_PARAM_STATIC_STRINGS);

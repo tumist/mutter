@@ -36,3 +36,5 @@ MetaMonitorTransform meta_renderer_view_get_transform (MetaRendererView *view);
 
 META_EXPORT_TEST
 MetaCrtc *meta_renderer_view_get_crtc (MetaRendererView *view);
+
+MetaOutput *meta_renderer_view_get_output (MetaRendererView *view);
