@@ -1,10 +1,13 @@
-mutter (41.3-4) UNRELEASED; urgency=medium
+mutter (41.4-1) UNRELEASED; urgency=medium
 
   [ Marco Trevisan (Treviño) ]
   * debian: Prepare for unstable branching
   * debian/watch: Only monitor 41 releases
 
- -- Simon McVittie <smcv@debian.org>  Sat, 19 Feb 2022 19:09:08 +0000
+  [ Simon McVittie ]
+  * New upstream release
+
+ -- Simon McVittie <smcv@debian.org>  Sat, 19 Feb 2022 19:11:50 +0000
 
 mutter (41.3-3) unstable; urgency=medium
 
