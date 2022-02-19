@@ -1,4 +1,6 @@
-mutter (41.4-1) UNRELEASED; urgency=medium
+mutter (41.4-1) unstable; urgency=medium
+
+  * Team upload
 
   [ Marco Trevisan (Treviño) ]
   * debian: Prepare for unstable branching
@@ -7,7 +9,7 @@ mutter (41.4-1) UNRELEASED; urgency=medium
   [ Simon McVittie ]
   * New upstream release
 
- -- Simon McVittie <smcv@debian.org>  Sat, 19 Feb 2022 19:11:50 +0000
+ -- Simon McVittie <smcv@debian.org>  Sat, 19 Feb 2022 19:14:01 +0000
 
 mutter (41.3-3) unstable; urgency=medium
 
