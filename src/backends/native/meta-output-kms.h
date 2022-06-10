@@ -37,6 +37,10 @@ void meta_output_kms_set_power_save_mode (MetaOutputKms *output_kms,
 void meta_output_kms_set_underscan (MetaOutputKms *output_kms,
                                     MetaKmsUpdate *kms_update);
 
+void meta_output_kms_set_vrr_mode (MetaOutputKms *output_kms,
+                                   MetaKmsUpdate *kms_update,
+                                   gboolean       enabled);
+
 void meta_output_kms_set_max_bpc (MetaOutputKms *output_kms,
                                   MetaKmsUpdate *kms_update);
 

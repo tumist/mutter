@@ -96,6 +96,26 @@ meta_output_kms_set_underscan (MetaOutputKms *output_kms,
 }
 
 void
+meta_output_kms_set_vrr_mode (MetaOutputKms *output_kms,
+                              MetaKmsUpdate *kms_update,
+                              gboolean       enabled)
+{
+  MetaOutput *output = META_OUTPUT (output_kms);
+  const MetaOutputInfo *output_info = meta_output_get_info (output);
+  MetaCrtc *crtc;
+  MetaKmsCrtc *kms_crtc;
+
+  g_assert (output_info->vrr_capable);
+
+  crtc = meta_output_get_assigned_crtc (output);
+  kms_crtc = meta_crtc_kms_get_kms_crtc (META_CRTC_KMS (crtc));
+
+  meta_kms_update_set_vrr_mode (kms_update,
+                                kms_crtc,
+                                enabled);
+}
+
+void
 meta_output_kms_set_max_bpc (MetaOutputKms *output_kms,
                              MetaKmsUpdate *kms_update)
 {
@@ -487,6 +507,9 @@ meta_output_kms_new (MetaGpuKms        *gpu_kms,
   output_info->hotplug_mode_update = connector_state->hotplug_mode_update;
   output_info->supports_underscanning =
     meta_kms_connector_is_underscanning_supported (kms_connector);
+
+  output_info->vrr_capable = (connector_state->vrr_capable &&
+                              !meta_gpu_kms_disable_vrr (gpu_kms));
 
   max_bpc_range = meta_kms_connector_get_max_bpc (kms_connector);
   if (max_bpc_range)

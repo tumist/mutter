@@ -101,6 +101,7 @@ struct _MetaOutputAssignment
   gboolean is_primary;
   gboolean is_presentation;
   gboolean is_underscanning;
+  gboolean is_vrr_disallowed;
   gboolean has_max_bpc;
   unsigned int max_bpc;
 };

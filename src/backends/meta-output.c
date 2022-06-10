@@ -64,6 +64,8 @@ typedef struct _MetaOutputPrivate
 
   gboolean is_underscanning;
 
+  gboolean is_vrr_disallowed;
+
   gboolean has_max_bpc;
   unsigned int max_bpc;
 
@@ -198,6 +200,22 @@ meta_output_is_underscanning (MetaOutput *output)
 }
 
 gboolean
+meta_output_is_vrr_capable (MetaOutput *output)
+{
+  const MetaOutputInfo *output_info = meta_output_get_info (output);
+
+  return output_info->vrr_capable;
+}
+
+gboolean
+meta_output_is_vrr_disallowed (MetaOutput *output)
+{
+  MetaOutputPrivate *priv = meta_output_get_instance_private (output);
+
+  return priv->is_vrr_disallowed;
+}
+
+gboolean
 meta_output_get_max_bpc (MetaOutput   *output,
                          unsigned int *max_bpc)
 {
@@ -267,6 +285,8 @@ meta_output_assign_crtc (MetaOutput                 *output,
   priv->is_primary = output_assignment->is_primary;
   priv->is_presentation = output_assignment->is_presentation;
   priv->is_underscanning = output_assignment->is_underscanning;
+
+  priv->is_vrr_disallowed = output_assignment->is_vrr_disallowed;
 
   priv->has_max_bpc = output_assignment->has_max_bpc;
   if (priv->has_max_bpc)
