@@ -702,6 +702,9 @@ void        meta_window_get_session_geometry (MetaWindow  *window,
                                               int         *width,
                                               int         *height);
 
+gboolean    meta_window_frame_contains_rect (MetaWindow    *window,
+                                             MetaRectangle *rect);
+
 void        meta_window_update_unfocused_button_grabs (MetaWindow *window);
 
 void        meta_window_update_appears_focused (MetaWindow *window);
