@@ -152,6 +152,10 @@ void meta_kms_update_set_crtc_gamma (MetaKmsUpdate      *update,
                                      MetaKmsCrtc        *crtc,
                                      const MetaGammaLut *gamma);
 
+void meta_kms_update_set_vrr_mode (MetaKmsUpdate *update,
+                                   MetaKmsCrtc   *crtc,
+                                   gboolean       enabled);
+
 void meta_kms_plane_assignment_set_fb_damage (MetaKmsPlaneAssignment *plane_assignment,
                                               const int              *rectangles,
                                               int                     n_rectangles);
