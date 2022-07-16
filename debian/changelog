@@ -1,3 +1,9 @@
+mutter (42.3-2) unstable; urgency=medium
+
+  * debian/libmutter-10-0.symbols: Add new symbols
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Sat, 16 Jul 2022 14:14:30 +0200
+
 mutter (42.3-1) unstable; urgency=medium
 
   * New upstream release
