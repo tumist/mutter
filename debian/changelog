@@ -1,3 +1,9 @@
+mutter (42.4-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Fri, 12 Aug 2022 00:18:08 +0200
+
 mutter (42.3-2) unstable; urgency=medium
 
   * debian/libmutter-10-0.symbols: Add new symbols
