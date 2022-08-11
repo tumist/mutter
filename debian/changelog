@@ -1,3 +1,22 @@
+mutter (42.4-1ubuntu1) UNRELEASED; urgency=medium
+
+  * Merge from Debian unstable (LP: #1985856). Remaining changes:
+    - Add triple-buffering patch
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch:
+      + X11: Add support for fractional scaling using Randr
+    - Add ubuntu/wayland-data-device-Allow-any-drag-timestamp....patch
+      + Allow any drag timestamp as drag start serial
+    - Add backends-native-kms-crtc-Don-t-compare-gamma-values-on-un.patch
+      + Avoid memory errors when comparing gamma values
+    - Add monitor-manager-Ensure-monitors-settings-after-backend-ha.patch
+      + Ensure privacy screen settings are applied on startup
+    - Add patches from GNOME !2364
+      + Fix X11 selection related crash when Xwayland died
+    - debian/libmutter-10-0.symbols: Add symbols for triple buffering patch
+  * debian/patches: Refresh
+
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Thu, 11 Aug 2022 19:44:49 -0400
+
 mutter (42.4-1) unstable; urgency=medium
 
   * New upstream release
