@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "backends/meta-virtual-monitor.h"
 #include "core/window-private.h"
 #include "meta-test/meta-context-test.h"
 #include "meta/util.h"
@@ -42,7 +41,6 @@ typedef struct {
   GString *warning_messages;
   GMainLoop *loop;
   gulong x11_display_opened_handler_id;
-  MetaVirtualMonitor *virtual_monitor;
 } TestCase;
 
 static gboolean
@@ -84,22 +82,25 @@ test_case_new (MetaContext *context)
   TestCase *test = g_new0 (TestCase, 1);
   MetaDisplay *display = meta_context_get_display (context);
 
-  if (display->x11_display)
+  if (!meta_is_wayland_compositor ())
     {
+      meta_context_test_wait_for_x11_display (META_CONTEXT_TEST (context));
       on_x11_display_opened (display, test);
     }
   else
     {
-      test->x11_display_opened_handler_id =
-        g_signal_connect (meta_get_display (), "x11-display-opened",
-                          G_CALLBACK (on_x11_display_opened),
-                          test);
+      if (display->x11_display)
+        on_x11_display_opened (display, test);
+      else
+        test->x11_display_opened_handler_id =
+          g_signal_connect (meta_get_display (), "x11-display-opened",
+                            G_CALLBACK (on_x11_display_opened),
+                            test);
     }
 
   test->context = context;
   test->clients = g_hash_table_new (g_str_hash, g_str_equal);
   test->loop = g_main_loop_new (NULL, FALSE);
-  test->virtual_monitor = meta_create_test_monitor (context, 800, 600, 60.0);
 
   return test;
 }
@@ -118,9 +119,6 @@ static gboolean
 test_case_dispatch (TestCase *test,
                     GError  **error)
 {
-  MetaBackend *backend = meta_context_get_backend (test->context);
-  ClutterActor *stage = meta_backend_get_stage (backend);
-
   /* Wait until we've done any outstanding queued up work.
    * Though we add this as BEFORE_REDRAW, the iteration that runs the
    * BEFORE_REDRAW idles will proceed on and do the redraw, so we're
@@ -130,8 +128,6 @@ test_case_dispatch (TestCase *test,
                   test_case_loop_quit,
                   test,
                   NULL);
-
-  clutter_stage_schedule_update (CLUTTER_STAGE (stage));
   g_main_loop_run (test->loop);
 
   return TRUE;
@@ -443,7 +439,7 @@ parse_window_size (MetaWindow *window,
   MetaRectangle logical_monitor_layout;
   int value;
 
-  logical_monitor = meta_window_find_monitor_from_frame_rect (window);
+  logical_monitor = meta_window_calculate_main_logical_monitor (window);
   g_assert_nonnull (logical_monitor);
 
   logical_monitor_layout = meta_logical_monitor_get_layout (logical_monitor);
@@ -637,24 +633,6 @@ test_case_do (TestCase *test,
 
       if (!show_async)
         meta_test_client_wait_for_window_shown (client, window);
-    }
-  else if (strcmp (argv[0], "sync_shown") == 0)
-    {
-      MetaWindow *window;
-      MetaTestClient *client;
-      const char *window_id;
-
-      if (argc != 2)
-        BAD_COMMAND("usage: %s <client-id>/<window-id>", argv[0]);
-
-      if (!test_case_parse_window_id (test, argv[1], &client, &window_id, error))
-        return FALSE;
-
-      window = meta_test_client_find_window (client, window_id, error);
-      if (!window)
-        return FALSE;
-
-      meta_test_client_wait_for_window_shown (client, window);
     }
   else if (strcmp (argv[0], "resize") == 0)
     {
@@ -1007,29 +985,6 @@ test_case_do (TestCase *test,
       if (!meta_test_client_do (client, error, argv[0], argv[2], argv[3], NULL))
         return FALSE;
     }
-  else if (strcmp (argv[0], "resize_monitor") == 0)
-    {
-      MetaBackend *backend = meta_context_get_backend (test->context);
-      MetaMonitorManager *monitor_manager =
-        meta_backend_get_monitor_manager (backend);
-      MetaCrtcMode *crtc_mode;
-      const MetaCrtcModeInfo *crtc_mode_info;
-
-      if (argc != 4)
-        BAD_COMMAND ("usage: %s <monitor-id> <width> <height>", argv[0]);
-
-      if (strcmp (argv[1], "0") != 0 &&
-          strcmp (argv[1], "primary") != 0)
-        BAD_COMMAND ("Unknown monitor %s", argv[1]);
-
-      crtc_mode = meta_virtual_monitor_get_crtc_mode (test->virtual_monitor);
-      crtc_mode_info = meta_crtc_mode_get_info (crtc_mode);
-      meta_virtual_monitor_set_mode (test->virtual_monitor,
-                                     atoi (argv[2]),
-                                     atoi (argv[3]),
-                                     crtc_mode_info->refresh_rate);
-      meta_monitor_manager_reload (monitor_manager);
-    }
   else
     {
       BAD_COMMAND("Unknown command %s", argv[0]);
@@ -1076,7 +1031,6 @@ test_case_destroy (TestCase *test,
     meta_x11_display_set_alarm_filter (display->x11_display, NULL, NULL);
 
   g_hash_table_destroy (test->clients);
-  g_object_unref (test->virtual_monitor);
   g_free (test);
 
   return TRUE;
@@ -1211,7 +1165,6 @@ run_tests (MetaContext  *context,
         success = FALSE;
     }
 
-
   return success ? 0 : 1;
 }
 
@@ -1290,7 +1243,7 @@ main (int argc, char **argv)
   GPtrArray *tests;
   RunTestsInfo info;
 
-  context = meta_create_test_context (META_CONTEXT_TEST_TYPE_HEADLESS,
+  context = meta_create_test_context (META_CONTEXT_TEST_TYPE_NESTED,
                                       META_CONTEXT_TEST_FLAG_TEST_CLIENT);
 
   meta_context_add_option_entries (context, options, NULL);

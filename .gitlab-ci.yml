@@ -9,6 +9,7 @@ stages:
  - build
  - test
  - analyze
+ - docs
  - deploy
 
 variables:
@@ -17,7 +18,7 @@ variables:
 .mutter.fedora:35@common:
   variables:
     FDO_DISTRIBUTION_VERSION: 35
-    BASE_TAG: '2022-03-05.0'
+    BASE_TAG: '2022-08-02.0'
     FDO_DISTRIBUTION_PACKAGES:
       asciidoc
       clang
@@ -33,6 +34,8 @@ variables:
       xorg-x11-proto-devel
       qemu-system-x86-core
       busybox
+      gi-docgen
+      pkgconfig(libgcrypt)
 
     FDO_DISTRIBUTION_EXEC: |
       dnf install -y 'dnf-command(builddep)' &&
@@ -51,14 +54,12 @@ variables:
       dnf install -y 'pkgconfig(libxcvt)' &&
 
       ./.gitlab-ci/install-meson-project.sh \
-        -Dxwayland=true \
         -Dxwayland_eglstream=true \
-        -D{xorg,xnest,xvfb}=false \
+        -Dxvfb=false \
         -Dvendor_name="Mutter CI" \
-        -D{xdmcp,udev,udev_kms}=false \
+        -Dxdmcp=false \
         -Dxcsecurity=true \
         -Dglamor=true \
-        -D{dri1,dri2}=false \
         -Ddri3=true \
         https://gitlab.freedesktop.org/xorg/xserver.git \
         xwayland-22.1.0 \
@@ -66,7 +67,17 @@ variables:
 
       ./.gitlab-ci/install-meson-project.sh \
         https://gitlab.gnome.org/GNOME/gjs.git \
-        1.71.1 . &&
+        1.73.1 . &&
+
+      ./.gitlab-ci/install-meson-project.sh \
+        -Dvapi=false \
+        -Dgtk3=false \
+        -Dgtk4=false \
+        -Dgtk_doc=false \
+        -Dssh_agent=false \
+        -Dsystemd=disabled \
+        https://gitlab.gnome.org/GNOME/gcr.git \
+        3.90.0 . &&
 
       ./.gitlab-ci/install-meson-project.sh \
         https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas.git \
@@ -74,11 +85,11 @@ variables:
 
       ./.gitlab-ci/install-meson-project.sh \
         https://gitlab.freedesktop.org/wayland/wayland.git \
-        1.20.0 . &&
+        1.21.0 . &&
 
       ./.gitlab-ci/install-meson-project.sh \
         https://gitlab.freedesktop.org/wayland/wayland-protocols.git \
-        1.25 . &&
+        1.26 . &&
 
       ./.gitlab-ci/install-meson-project.sh \
         -Dgtk_doc=false \
@@ -104,6 +115,10 @@ variables:
         cd .. &&
         rm -rf virtme
       fi
+  retry:
+    max: 2
+    when:
+      - 'always'
 
 default:
   # Cancel jobs if newer commits are pushed to the branch
@@ -485,3 +500,32 @@ dist-mutter-tarball:
       - build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz
   rules:
     - if: '$CI_COMMIT_TAG'
+
+reference:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .mutter.fedora:35@x86_64
+  stage: docs
+  needs:
+    - job: build-fedora-container@x86_64
+      artifacts: false
+  script:
+    - meson . build --werror -Ddocs=true -Dtests=false
+    - ninja -C build
+    - mkdir references
+    - mv build/doc/reference/{cally/cally,clutter/clutter,cogl/cogl,cogl-pango/cogl-pango,meta/meta} references/
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - references
+
+pages:
+  stage: deploy
+  needs: ['reference']
+  script:
+    - mv references public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: ($CI_DEFAULT_BRANCH == $CI_COMMIT_BRANCH && $CI_PROJECT_NAMESPACE == "GNOME")

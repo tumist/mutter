@@ -266,7 +266,7 @@ handle_start_element (GMarkupParseContext  *context,
             g_set_error (error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
                          "Missing config file format version");
           }
-        
+
         if (g_str_equal (version, "1"))
           {
             g_set_error_literal (error,
@@ -936,6 +936,7 @@ handle_end_element (GMarkupParseContext  *context,
       }
 
     case STATE_STORE:
+      {
         g_assert (g_str_equal (element_name, "store"));
 
         if (parser->pending_store == -1)
@@ -960,8 +961,10 @@ handle_end_element (GMarkupParseContext  *context,
 
         parser->state = STATE_STORES;
         return;
+      }
 
     case STATE_STORES:
+      {
         g_assert (g_str_equal (element_name, "stores"));
 
         if (parser->config_store->has_stores_policy)
@@ -980,8 +983,10 @@ handle_end_element (GMarkupParseContext  *context,
 
         parser->state = STATE_POLICY;
         return;
+      }
 
     case STATE_DBUS:
+      {
         if (!parser->config_store->has_dbus_policy)
           {
             parser->config_store->has_dbus_policy = TRUE;
@@ -997,12 +1002,15 @@ handle_end_element (GMarkupParseContext  *context,
         parser->state = STATE_POLICY;
 
         return;
+      }
 
     case STATE_POLICY:
+      {
         g_assert (g_str_equal (element_name, "policy"));
 
         parser->state = STATE_MONITORS;
         return;
+      }
 
     case STATE_UNKNOWN:
       {

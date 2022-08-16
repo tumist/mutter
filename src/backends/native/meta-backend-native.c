@@ -251,6 +251,12 @@ meta_backend_native_post_init (MetaBackend *backend)
   update_viewports (backend);
 }
 
+static MetaBackendCapabilities
+meta_backend_native_get_capabilities (MetaBackend *backend)
+{
+  return META_BACKEND_CAPABILITY_BARRIERS;
+}
+
 static MetaMonitorManager *
 meta_backend_native_create_monitor_manager (MetaBackend *backend,
                                             GError     **error)
@@ -407,9 +413,14 @@ meta_backend_native_set_pointer_constraint (MetaBackend           *backend,
 
   if (constraint)
     {
+      double min_edge_distance;
+
       region = meta_pointer_constraint_get_region (constraint);
+      min_edge_distance =
+        meta_pointer_constraint_get_min_edge_distance (constraint);
       constraint_impl = meta_pointer_constraint_impl_native_new (constraint,
-                                                                 region);
+                                                                 region,
+                                                                 min_edge_distance);
     }
 
   meta_seat_native_set_pointer_constraint (META_SEAT_NATIVE (seat),
@@ -675,6 +686,7 @@ meta_backend_native_class_init (MetaBackendNativeClass *klass)
   backend_class->create_default_seat = meta_backend_native_create_default_seat;
 
   backend_class->post_init = meta_backend_native_post_init;
+  backend_class->get_capabilities = meta_backend_native_get_capabilities;
 
   backend_class->create_monitor_manager = meta_backend_native_create_monitor_manager;
   backend_class->get_cursor_renderer = meta_backend_native_get_cursor_renderer;
