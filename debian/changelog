@@ -1,8 +1,13 @@
-mutter (43~beta-1) UNRELEASED; urgency=medium
+mutter (43~beta-1) experimental; urgency=medium
 
   * New upstream release
+  * Rename packages for API bump (mutter-10 -> mutter-11)
+  * debian/libmutter-11-0.symbols: Update
+  * debian/control.in: Bump minimum libwayland and wayland-protocols
+  * Refresh patches
+  * Add temporary patch to skip broken build test
 
- -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 16 Aug 2022 09:15:21 -0400
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 16 Aug 2022 12:07:41 -0400
 
 mutter (42.4-1) unstable; urgency=medium
 
