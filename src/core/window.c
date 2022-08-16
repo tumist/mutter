@@ -934,7 +934,7 @@ meta_window_main_monitor_changed (MetaWindow               *window,
 }
 
 MetaLogicalMonitor *
-meta_window_find_monitor_from_frame_rect (MetaWindow *window)
+meta_window_calculate_main_logical_monitor (MetaWindow *window)
 {
   MetaBackend *backend = meta_get_backend ();
   MetaMonitorManager *monitor_manager =
@@ -1160,7 +1160,7 @@ _meta_window_shared_new (MetaDisplay         *display,
   window->compositor_private = NULL;
 
   if (window->rect.width > 0 && window->rect.height > 0)
-    window->monitor = meta_window_find_monitor_from_frame_rect (window);
+    window->monitor = meta_window_calculate_main_logical_monitor (window);
   else
     window->monitor = meta_backend_get_current_logical_monitor (backend);
 
@@ -1666,7 +1666,6 @@ ancestor_is_minimized (MetaWindow *window)
 gboolean
 meta_window_showing_on_its_workspace (MetaWindow *window)
 {
-  MetaWorkspaceManager *workspace_manager = window->display->workspace_manager;
   gboolean showing;
   gboolean is_desktop_or_dock;
   MetaWorkspace* workspace_of_window;
@@ -1685,12 +1684,7 @@ meta_window_showing_on_its_workspace (MetaWindow *window)
   meta_window_foreach_ancestor (window, is_desktop_or_dock_foreach,
                                 &is_desktop_or_dock);
 
-  if (window->on_all_workspaces)
-    workspace_of_window = workspace_manager->active_workspace;
-  else if (window->workspace)
-    workspace_of_window = window->workspace;
-  else /* This only seems to be needed for startup */
-    workspace_of_window = NULL;
+  workspace_of_window = meta_window_get_workspace (window);
 
   if (showing &&
       workspace_of_window && workspace_of_window->showing_desktop &&
@@ -2468,6 +2462,13 @@ void
 meta_window_minimize (MetaWindow  *window)
 {
   g_return_if_fail (!window->override_redirect);
+
+  if (!window->has_minimize_func)
+    {
+      g_warning ("Window %s cannot be minimized, but something tried "
+                 "anyways. Not having it!", window->desc);
+      return;
+    }
 
   if (!window->minimized)
     {
@@ -3646,38 +3647,12 @@ find_monitor_by_winsys_id (MetaWindow *window,
   return NULL;
 }
 
-MetaLogicalMonitor *
-meta_window_find_monitor_from_id (MetaWindow *window)
-{
-  MetaContext *context = meta_display_get_context (window->display);
-  MetaBackend *backend = meta_context_get_backend (context);
-  MetaMonitorManager *monitor_manager =
-    meta_backend_get_monitor_manager (backend);
-  MetaLogicalMonitor *old_monitor = window->monitor;
-  MetaLogicalMonitor *new_monitor;
-
-  new_monitor = find_monitor_by_winsys_id (window,
-                                           window->preferred_output_winsys_id);
-
-  if (old_monitor && !new_monitor)
-    new_monitor = find_monitor_by_winsys_id (window, old_monitor->winsys_id);
-
-  if (!new_monitor)
-    {
-      new_monitor =
-        meta_monitor_manager_get_primary_logical_monitor (monitor_manager);
-    }
-
-  return new_monitor;
-}
-
 /* This is called when the monitor setup has changed. The window->monitor
  * reference is still "valid", but refer to the previous monitor setup */
 void
 meta_window_update_for_monitors_changed (MetaWindow *window)
 {
-  MetaContext *context = meta_display_get_context (window->display);
-  MetaBackend *backend = meta_context_get_backend (context);
+  MetaBackend *backend = meta_get_backend ();
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   const MetaLogicalMonitor *old, *new;
@@ -3693,7 +3668,17 @@ meta_window_update_for_monitors_changed (MetaWindow *window)
     }
 
   old = window->monitor;
-  new = meta_window_find_monitor_from_id (window);
+
+  /* Try the preferred output first */
+  new = find_monitor_by_winsys_id (window, window->preferred_output_winsys_id);
+
+  /* Otherwise, try to find the old output on a new monitor */
+  if (old && !new)
+    new = find_monitor_by_winsys_id (window, old->winsys_id);
+
+  /* Fall back to primary if everything else failed */
+  if (!new)
+    new = meta_monitor_manager_get_primary_logical_monitor (monitor_manager);
 
   if (window->tile_mode != META_TILE_NONE)
     {
@@ -7958,9 +7943,10 @@ meta_window_set_transient_for (MetaWindow *window,
 
       timestamp =
         meta_display_get_current_time_roundtrip (window->display);
-      meta_window_unmanage (window, timestamp);
+      meta_window_delete (window, timestamp);
       return;
     }
+
   /* We know this won't create a reference cycle because we check for loops */
   g_clear_object (&window->transient_for);
   window->transient_for = parent ? g_object_ref (parent) : NULL;

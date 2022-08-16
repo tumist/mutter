@@ -1009,17 +1009,21 @@ experimental_features_changed (MetaSettings           *settings,
 }
 
 static gboolean
-meta_monitor_manager_real_set_privacy_screen_enabled (MetaMonitorManager *manager,
-                                                      gboolean            enabled)
+ensure_privacy_screen_settings (MetaMonitorManager *manager)
 {
+  MetaSettings *settings = meta_backend_get_settings (manager->backend);
+  gboolean privacy_screen_enabled;
   GList *l;
 
+  privacy_screen_enabled = meta_settings_is_privacy_screen_enabled (settings);
   for (l = manager->monitors; l; l = l->next)
     {
-      g_autoptr (GError) error = NULL;
       MetaMonitor *monitor = l->data;
+      g_autoptr (GError) error = NULL;
 
-      if (!meta_monitor_set_privacy_screen_enabled (monitor, enabled, &error))
+      if (!meta_monitor_set_privacy_screen_enabled (monitor,
+                                                    privacy_screen_enabled,
+                                                    &error))
         {
           if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED))
             continue;
@@ -1031,25 +1035,6 @@ meta_monitor_manager_real_set_privacy_screen_enabled (MetaMonitorManager *manage
     }
 
   return TRUE;
-}
-
-static gboolean
-set_privacy_screen_enabled (MetaMonitorManager *manager,
-                            gboolean            enabled)
-{
-  MetaMonitorManagerClass *manager_class =
-    META_MONITOR_MANAGER_GET_CLASS (manager);
-
-  return manager_class->set_privacy_screen_enabled (manager, enabled);
-}
-
-static gboolean
-ensure_monitors_settings (MetaMonitorManager *manager)
-{
-  MetaSettings *settings = meta_backend_get_settings (manager->backend);
-
-  return set_privacy_screen_enabled (
-    manager, meta_settings_is_privacy_screen_enabled (settings));
 }
 
 static MetaPrivacyScreenState
@@ -1098,7 +1083,7 @@ static void
 apply_privacy_screen_settings (MetaMonitorManager *manager)
 {
   if (privacy_screen_needs_update (manager) &&
-      ensure_monitors_settings (manager))
+      ensure_privacy_screen_settings (manager))
     {
       manager->privacy_screen_change_state =
         META_PRIVACY_SCREEN_CHANGE_STATE_PENDING_SETTING;
@@ -1165,11 +1150,65 @@ update_has_builtin_panel (MetaMonitorManager *manager)
                             obj_props[PROP_HAS_BUILTIN_PANEL]);
 }
 
+static void
+meta_monitor_manager_get_crtc_gamma (MetaMonitorManager  *manager,
+                                     MetaCrtc            *crtc,
+                                     size_t              *size,
+                                     unsigned short     **red,
+                                     unsigned short     **green,
+                                     unsigned short     **blue)
+{
+  MetaMonitorManagerClass *klass = META_MONITOR_MANAGER_GET_CLASS (manager);
+
+  if (klass->get_crtc_gamma)
+    {
+      klass->get_crtc_gamma (manager, crtc, size, red, green, blue);
+    }
+  else
+    {
+      if (size)
+        *size = 0;
+      if (red)
+        *red = NULL;
+      if (green)
+        *green = NULL;
+      if (blue)
+        *blue = NULL;
+    }
+}
+
+static gboolean
+is_night_light_supported (MetaMonitorManager *manager)
+{
+  GList *l;
+
+  for (l = meta_backend_get_gpus (manager->backend); l; l = l->next)
+    {
+      MetaGpu *gpu = l->data;
+      GList *l_crtc;
+
+      for (l_crtc = meta_gpu_get_crtcs (gpu); l_crtc; l_crtc = l_crtc->next)
+        {
+          MetaCrtc *crtc = l_crtc->data;
+          size_t gamma_lut_size;
+
+          meta_monitor_manager_get_crtc_gamma (manager, crtc,
+                                               &gamma_lut_size,
+                                               NULL, NULL, NULL);
+          if (gamma_lut_size > 0)
+            return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
 void
 meta_monitor_manager_setup (MetaMonitorManager *manager)
 {
   MetaMonitorConfigStore *config_store;
   const MetaMonitorConfigPolicy *policy;
+  gboolean night_light_supported;
 
   manager->in_init = TRUE;
 
@@ -1180,6 +1219,9 @@ meta_monitor_manager_setup (MetaMonitorManager *manager)
   meta_dbus_display_config_set_apply_monitors_config_allowed (manager->display_config,
                                                               policy->enable_dbus);
 
+  night_light_supported = is_night_light_supported (manager);
+  meta_dbus_display_config_set_night_light_supported (manager->display_config,
+                                                      night_light_supported);
 
   meta_monitor_manager_read_current_state (manager);
 
@@ -1339,8 +1381,6 @@ meta_monitor_manager_class_init (MetaMonitorManagerClass *klass)
 
   klass->read_edid = meta_monitor_manager_real_read_edid;
   klass->read_current_state = meta_monitor_manager_real_read_current_state;
-  klass->set_privacy_screen_enabled =
-    meta_monitor_manager_real_set_privacy_screen_enabled;
 
   signals[MONITORS_CHANGED] =
     g_signal_new ("monitors-changed",
@@ -2811,7 +2851,6 @@ meta_monitor_manager_handle_get_crtc_gamma  (MetaDBusDisplayConfig *skeleton,
                                              guint                  crtc_id,
                                              MetaMonitorManager    *manager)
 {
-  MetaMonitorManagerClass *klass;
   GList *combined_crtcs;
   MetaCrtc *crtc;
   gsize size;
@@ -2842,14 +2881,8 @@ meta_monitor_manager_handle_get_crtc_gamma  (MetaDBusDisplayConfig *skeleton,
   crtc = g_list_nth_data (combined_crtcs, crtc_id);
   g_list_free (combined_crtcs);
 
-  klass = META_MONITOR_MANAGER_GET_CLASS (manager);
-  if (klass->get_crtc_gamma)
-    klass->get_crtc_gamma (manager, crtc, &size, &red, &green, &blue);
-  else
-    {
-      size = 0;
-      red = green = blue = NULL;
-    }
+  meta_monitor_manager_get_crtc_gamma (manager, crtc,
+                                       &size, &red, &green, &blue);
 
   red_bytes = g_bytes_new_take (red, size * sizeof (unsigned short));
   green_bytes = g_bytes_new_take (green, size * sizeof (unsigned short));
@@ -3459,7 +3492,7 @@ meta_monitor_manager_real_read_current_state (MetaMonitorManager *manager)
 
       if (!meta_gpu_read_current (gpu, &error))
         {
-          g_warning ("Failed to read current KMS state: %s", error->message);
+          g_warning ("Failed to read current monitor state: %s", error->message);
           g_clear_error (&error);
         }
     }
@@ -3569,7 +3602,7 @@ meta_monitor_manager_rebuild (MetaMonitorManager *manager,
 
   meta_monitor_manager_notify_monitors_changed (manager);
 
-  ensure_monitors_settings (manager);
+  ensure_privacy_screen_settings (manager);
 
   g_list_free_full (old_logical_monitors, g_object_unref);
 }
