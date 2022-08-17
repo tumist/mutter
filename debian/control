@@ -7,7 +7,7 @@ Section: x11
 Priority: optional
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 XSBC-Original-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Uploaders: Iain Lane <laney@debian.org>, Jeremy Bicha <jbicha@debian.org>, Laurent Bigonville <bigon@debian.org>
+Uploaders: Jeremy Bicha <jbicha@ubuntu.com>, Laurent Bigonville <bigon@debian.org>
 Build-Depends: debhelper-compat (= 13),
                dh-exec,
                dh-sequence-gir,
@@ -86,7 +86,7 @@ Build-Depends: debhelper-compat (= 13),
                zenity
 Rules-Requires-Root: no
 Standards-Version: 4.6.0
-XS-Debian-Vcs-Git: https://salsa.debian.org/gnome-team/mutter.git
+XS-Debian-Vcs-Git: https://salsa.debian.org/gnome-team/mutter.git -b debian/unstable
 XS-Debian-Vcs-Browser: https://salsa.debian.org/gnome-team/mutter
 Vcs-Git: https://salsa.debian.org/gnome-team/mutter.git -b ubuntu/master
 Vcs-Browser: https://salsa.debian.org/gnome-team/mutter/tree/ubuntu/master

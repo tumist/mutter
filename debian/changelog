@@ -1,3 +1,36 @@
+mutter (42.4-2ubuntu1) UNRELEASED; urgency=medium
+
+  * Merge from Debian unstable (LP: #1985856). Remaining changes:
+    - Add triple-buffering patch
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch:
+      + X11: Add support for fractional scaling using Randr
+    - Add ubuntu/wayland-data-device-Allow-any-drag-timestamp....patch
+      + Allow any drag timestamp as drag start serial
+    - Add backends-native-kms-crtc-Don-t-compare-gamma-values-on-un.patch
+      + Avoid memory errors when comparing gamma values
+    - Add monitor-manager-Ensure-monitors-settings-after-backend-ha.patch
+      + Ensure privacy screen settings are applied on startup
+    - Add patches from GNOME !2364
+      + Fix X11 selection related crash when Xwayland died
+    - debian/libmutter-10-0.symbols: Add symbols for triple buffering patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Wed, 17 Aug 2022 14:38:25 -0400
+
+mutter (42.4-2) unstable; urgency=medium
+
+  * Team upload
+  * d/control.in, d/gbp.conf: Set up branches for an unstable upload
+  * d/p/tests-Give-mutter-test-runner-the-RUNPATH-to-find-Clutter.patch:
+    Add patch to fix missing RUNPATH in tests, fixing an autopkgtest
+    regression in 42.4.
+    - Note that this does not resolve a different autopkgtest regression
+      in 42.4, in environments where /dev/dri/card0 exists but is
+      inaccessible. However, the /dev/dri/card0 issue is not fatal for
+      Debian's production infrastructure, which uses autopkgtest-virt-lxc
+      and therefore does not provide /dev/dri/card0 at all.
+
+ -- Simon McVittie <smcv@debian.org>  Wed, 17 Aug 2022 17:54:28 +0100
+
 mutter (42.4-1ubuntu1) kinetic; urgency=medium
 
   * Merge from Debian unstable (LP: #1985856). Remaining changes:
