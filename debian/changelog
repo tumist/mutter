@@ -1,3 +1,18 @@
+mutter (42.4-2) unstable; urgency=medium
+
+  * Team upload
+  * d/control.in, d/gbp.conf: Set up branches for an unstable upload
+  * d/p/tests-Give-mutter-test-runner-the-RUNPATH-to-find-Clutter.patch:
+    Add patch to fix missing RUNPATH in tests, fixing an autopkgtest
+    regression in 42.4.
+    - Note that this does not resolve a different autopkgtest regression
+      in 42.4, in environments where /dev/dri/card0 exists but is
+      inaccessible. However, the /dev/dri/card0 issue is not fatal for
+      Debian's production infrastructure, which uses autopkgtest-virt-lxc
+      and therefore does not provide /dev/dri/card0 at all.
+
+ -- Simon McVittie <smcv@debian.org>  Wed, 17 Aug 2022 17:54:28 +0100
+
 mutter (42.4-1) unstable; urgency=medium
 
   * New upstream release
