@@ -1,3 +1,15 @@
+mutter (43~beta-3) experimental; urgency=medium
+
+  * Add patches from Ubuntu:
+    - Support-Dynamic-triple-double-buffering.patch
+    - backends-native-kms-crtc-Don-t-compare-gamma-values-on-un.patch
+      + Avoid memory errors when comparing gamma values
+    - wayland-data-device-Allow-any-drag-timestamp....patch
+      + Allow any drag timestamp as drag start serial
+  * debian/libmutter-11-0.symbols: Add new symbols from triple buffering patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Sun, 21 Aug 2022 12:27:28 -0400
+
 mutter (43~beta-2) experimental; urgency=medium
 
   * Update mutter-10 to mutter-11 in more places
