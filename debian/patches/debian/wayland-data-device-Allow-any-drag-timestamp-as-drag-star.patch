@@ -57,10 +57,10 @@ index c8cf8f5..03ce90b 100644
        seat->pointer->focus_surface != surface)
      return;
 diff --git a/src/wayland/meta-wayland-pointer.c b/src/wayland/meta-wayland-pointer.c
-index 3b8b104..f1115ec 100644
+index 94e7667..a442e5f 100644
 --- a/src/wayland/meta-wayland-pointer.c
 +++ b/src/wayland/meta-wayland-pointer.c
-@@ -692,6 +692,9 @@ notify_motion (MetaWaylandPointer *pointer,
+@@ -690,6 +690,9 @@ notify_motion (MetaWaylandPointer *pointer,
                 const ClutterEvent *event)
  {
    pointer->grab->interface->motion (pointer->grab, event);
@@ -70,7 +70,7 @@ index 3b8b104..f1115ec 100644
  }
  
  static void
-@@ -712,8 +715,14 @@ handle_button_event (MetaWaylandPointer *pointer,
+@@ -710,8 +713,14 @@ handle_button_event (MetaWaylandPointer *pointer,
      {
        pointer->grab_button = clutter_event_get_button (event);
        pointer->grab_time = clutter_event_get_time (event);
