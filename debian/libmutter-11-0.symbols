@@ -664,7 +664,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  (arch=linux-any)meta_wayland_client_spawn@Base 3.37.91
  (arch=linux-any)meta_wayland_client_spawnv@Base 3.37.91
  (arch=linux-any)meta_wayland_compositor_get_default@Base 3.28.2
- meta_wayland_compositor_get_xwayland_manager@Base 42.3
+ (arch=linux-any)meta_wayland_compositor_get_xwayland_manager@Base 43~beta
  (arch=linux-any)meta_wayland_get_public_xwayland_display_name@Base 40.0
  (arch=linux-any)meta_wayland_get_wayland_display_name@Base 3.28.2
  (arch=linux-any)meta_wayland_override_display_name@Base 3.28.2
