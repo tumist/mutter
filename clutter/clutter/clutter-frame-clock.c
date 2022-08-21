@@ -270,7 +270,8 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
     }
 #endif
 
-  frame_clock->last_presentation_time_us = frame_info->presentation_time;
+  if (frame_info->presentation_time > 0)
+    frame_clock->last_presentation_time_us = frame_info->presentation_time;
 
   frame_clock->got_measurements_last_frame = FALSE;
 
@@ -304,7 +305,7 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
       frame_clock->got_measurements_last_frame = TRUE;
     }
 
-  if (frame_info->refresh_rate > 1)
+  if (frame_info->refresh_rate > 1.0)
     {
       clutter_frame_clock_set_refresh_rate (frame_clock,
                                             frame_info->refresh_rate);
@@ -527,6 +528,7 @@ calculate_next_update_time_us (ClutterFrameClock *frame_clock,
   time_since_last_next_presentation_time_us =
     next_presentation_time_us - last_next_presentation_time_us;
   if (frame_clock->is_next_presentation_time_valid &&
+      time_since_last_next_presentation_time_us > 0 &&
       time_since_last_next_presentation_time_us < (refresh_interval_us / 2))
     {
       next_presentation_time_us =

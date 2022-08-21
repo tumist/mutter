@@ -30,7 +30,7 @@ index 29ca429..85fd0c6 100644
 +
  #define COGL_CONFIG_H_INCLUDED 1
 diff --git a/cogl/meson.build b/cogl/meson.build
-index a3c61cf..c45614c 100644
+index a87cd18..6a60648 100644
 --- a/cogl/meson.build
 +++ b/cogl/meson.build
 @@ -10,6 +10,10 @@ cdata.set('HAVE_COGL_GLES2', have_gles2)
@@ -45,10 +45,10 @@ index a3c61cf..c45614c 100644
    input: 'cogl-config.h.meson',
    output: 'cogl-config.h',
 diff --git a/meson.build b/meson.build
-index 05aeb46..2e95ede 100644
+index 739b249..b95c3b9 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -247,6 +247,8 @@ if have_wayland_eglstream
+@@ -260,6 +260,8 @@ if have_wayland_eglstream
    endif
  endif
  
@@ -57,8 +57,8 @@ index 05aeb46..2e95ede 100644
  have_sm = get_option('sm')
  if have_sm
    sm_dep = dependency('sm')
-@@ -608,6 +610,7 @@ summary('Wayland', have_wayland, section: 'Options')
- summary('Wayland EGLStream', have_wayland_eglstream, section: 'Options')
+@@ -643,6 +645,7 @@ summary('X11', have_x11, section: 'Options')
+ summary('XWayland', have_xwayland, section: 'Options')
  summary('Native Backend', have_native_backend, section: 'Options')
  summary('EGL Device', have_egl_device, section: 'Options')
 +summary('Default driver', default_driver, section: 'Options')

@@ -410,7 +410,6 @@ set_crtc_cursor (MetaCursorRendererNative *cursor_renderer_native,
   float cursor_crtc_scale;
   MetaRectangle cursor_rect;
   MetaMonitorTransform transform;
-  MetaMonitorTransform inverted_transform;
   MetaMonitorMode *monitor_mode;
   MetaMonitorCrtcMode *monitor_crtc_mode;
   const MetaCrtcModeInfo *crtc_mode_info;
@@ -452,15 +451,13 @@ set_crtc_cursor (MetaCursorRendererNative *cursor_renderer_native,
   transform = meta_logical_monitor_get_transform (logical_monitor);
   transform = meta_monitor_logical_to_crtc_transform (monitor, transform);
 
-  inverted_transform = meta_monitor_transform_invert (transform);
-
   monitor_mode = meta_monitor_get_current_mode (monitor);
   monitor_crtc_mode = meta_monitor_get_crtc_mode_for_output (monitor,
                                                              monitor_mode,
                                                              output);
   crtc_mode_info = meta_crtc_mode_get_info (monitor_crtc_mode->crtc_mode);
   meta_rectangle_transform (&cursor_rect,
-                            inverted_transform,
+                            transform,
                             crtc_mode_info->width,
                             crtc_mode_info->height,
                             &cursor_rect);
@@ -505,12 +502,9 @@ unset_crtc_cursor (MetaCursorRendererNative *native,
 }
 
 static void
-disable_hw_cursor_for_crtc (MetaKmsCrtc  *kms_crtc,
-                            const GError *error)
+disable_hw_cursor_for_gpu (MetaGpuKms   *gpu_kms,
+                           const GError *error)
 {
-  MetaCrtcKms *crtc_kms = meta_crtc_kms_from_kms_crtc (kms_crtc);
-  MetaCrtc *crtc = META_CRTC (crtc_kms);
-  MetaGpuKms *gpu_kms = META_GPU_KMS (meta_crtc_get_gpu (crtc));
   MetaCursorRendererNativeGpuData *cursor_renderer_gpu_data =
     meta_cursor_renderer_native_gpu_data_from_gpu (gpu_kms);
 
@@ -518,6 +512,17 @@ disable_hw_cursor_for_crtc (MetaKmsCrtc  *kms_crtc,
              "using OpenGL from now on",
              error->message);
   cursor_renderer_gpu_data->hw_cursor_broken = TRUE;
+}
+
+static void
+disable_hw_cursor_for_crtc (MetaKmsCrtc  *kms_crtc,
+                            const GError *error)
+{
+  MetaCrtcKms *crtc_kms = meta_crtc_kms_from_kms_crtc (kms_crtc);
+  MetaCrtc *crtc = META_CRTC (crtc_kms);
+  MetaGpuKms *gpu_kms = META_GPU_KMS (meta_crtc_get_gpu (crtc));
+
+  disable_hw_cursor_for_gpu (gpu_kms, error);
 }
 
 void
@@ -816,8 +821,9 @@ get_common_crtc_sprite_transform_for_logical_monitors (MetaCursorRenderer   *ren
         {
           MetaMonitor *monitor = l_mon->data;
 
-          tmp_transform = meta_monitor_transform_relative_transform (
-            meta_cursor_sprite_get_texture_transform (cursor_sprite),
+          tmp_transform = meta_monitor_transform_transform (
+            meta_monitor_transform_invert (
+              meta_cursor_sprite_get_texture_transform (cursor_sprite)),
             meta_monitor_logical_to_crtc_transform (monitor, logical_transform));
 
           if (has_visible_crtc_sprite && transform != tmp_transform)
@@ -897,8 +903,6 @@ should_have_hw_cursor (MetaCursorRenderer *renderer,
     return TRUE;
   else
     return get_can_preprocess (cursor_sprite);
-
-  return TRUE;
 }
 
 static gboolean
@@ -1104,11 +1108,11 @@ unset_crtc_cursor_renderer_privates (MetaGpu       *gpu,
   for (l = meta_gpu_get_crtcs (gpu); l; l = l->next)
     {
       MetaCrtcKms *crtc_kms = META_CRTC_KMS (l->data);
-      MetaDrmBuffer *crtc_buffer;
+      CrtcCursorData *crtc_cursor_data;
 
-      crtc_buffer = meta_crtc_kms_get_cursor_renderer_private (crtc_kms);
-      if (buffer == crtc_buffer)
-        meta_crtc_kms_set_cursor_renderer_private (crtc_kms, NULL, NULL);
+      crtc_cursor_data = meta_crtc_kms_get_cursor_renderer_private (crtc_kms);
+      if (crtc_cursor_data && buffer == crtc_cursor_data->buffer)
+        crtc_cursor_data->buffer = NULL;
     }
 }
 
@@ -1388,6 +1392,7 @@ load_cursor_sprite_gbm_buffer_for_gpu (MetaCursorRendererNative *native,
       g_warning ("Failed to open '%s' for updating the cursor: %s",
                  meta_gpu_kms_get_file_path (gpu_kms),
                  error->message);
+      disable_hw_cursor_for_gpu (gpu_kms, error);
       return;
     }
 
@@ -1401,6 +1406,7 @@ load_cursor_sprite_gbm_buffer_for_gpu (MetaCursorRendererNative *native,
   if (!buffer)
     {
       g_warning ("Realizing HW cursor failed: %s", error->message);
+      disable_hw_cursor_for_gpu (gpu_kms, error);
       return;
     }
 
@@ -1493,19 +1499,19 @@ scale_and_transform_cursor_sprite_cpu (uint8_t              *pixels,
           cairo_rotate (cr, M_PI * 0.5);
           break;
         case META_MONITOR_TRANSFORM_FLIPPED:
-          cairo_scale (cr, 1, -1);
+          cairo_scale (cr, -1, 1);
           break;
         case META_MONITOR_TRANSFORM_FLIPPED_90:
-          cairo_rotate (cr, M_PI * 1.5);
           cairo_scale (cr, -1, 1);
+          cairo_rotate (cr, M_PI * 0.5);
           break;
         case META_MONITOR_TRANSFORM_FLIPPED_180:
+          cairo_scale (cr, -1, 1);
           cairo_rotate (cr, M_PI);
-          cairo_scale (cr, 1, -1);
           break;
         case META_MONITOR_TRANSFORM_FLIPPED_270:
-          cairo_rotate (cr, M_PI * 0.5);
           cairo_scale (cr, -1, 1);
+          cairo_rotate (cr, M_PI * 1.5);
           break;
         case META_MONITOR_TRANSFORM_NORMAL:
           g_assert_not_reached ();

@@ -38,7 +38,6 @@
 #include "backends/meta-viewport-info.h"
 #include "core/util-private.h"
 #include "meta/display.h"
-#include "meta/meta-enum-types.h"
 #include "meta/meta-monitor-manager.h"
 
 #define META_MONITOR_MANAGER_MIN_SCREEN_WIDTH 640
@@ -83,11 +82,11 @@ typedef enum
  */
 struct _MetaCrtcAssignment
 {
-  MetaCrtc                 *crtc;
-  MetaCrtcMode             *mode;
-  graphene_rect_t           layout;
-  MetaMonitorTransform      transform;
-  GPtrArray                *outputs;
+  MetaCrtc *crtc;
+  MetaCrtcMode *mode;
+  graphene_rect_t layout;
+  MetaMonitorTransform transform;
+  GPtrArray *outputs;
 };
 
 /*
@@ -98,10 +97,10 @@ struct _MetaCrtcAssignment
  */
 struct _MetaOutputAssignment
 {
-  MetaOutput  *output;
-  gboolean     is_primary;
-  gboolean     is_presentation;
-  gboolean     is_underscanning;
+  MetaOutput *output;
+  gboolean is_primary;
+  gboolean is_presentation;
+  gboolean is_underscanning;
 };
 
 /*
@@ -245,9 +244,6 @@ struct _MetaMonitorManagerClass
                            unsigned short     *red,
                            unsigned short     *green,
                            unsigned short     *blue);
-
-  gboolean (* set_privacy_screen_enabled) (MetaMonitorManager *manager,
-                                           gboolean            enabled);
 
   void (* tiled_monitor_added) (MetaMonitorManager *manager,
                                 MetaMonitor        *monitor);
