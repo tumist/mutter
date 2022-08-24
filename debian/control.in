@@ -75,7 +75,7 @@ Build-Depends: debhelper-compat (= 13),
                xauth <!nocheck>,
                xcvt [linux-any],
                xkb-data,
-               xvfb <!nocheck>,
+               xvfb,
                xwayland [linux-any],
                zenity
 Rules-Requires-Root: no
