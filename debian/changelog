@@ -1,3 +1,13 @@
+mutter (43~beta-4) experimental; urgency=medium
+
+  [ Marco Trevisan (Treviño) ]
+  * debian/control: Remove <!nocheck> from xvfb-run
+
+  [ Jeremy Bicha ]
+  * debian/tests/libmutter-11-dev: fix a reference to mutter-10
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Thu, 25 Aug 2022 05:28:09 -0400
+
 mutter (43~beta-3) experimental; urgency=medium
 
   * Add patches from Ubuntu:
