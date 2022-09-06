@@ -1,3 +1,9 @@
+mutter (43~rc-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 06 Sep 2022 13:20:33 -0400
+
 mutter (43~beta-4) experimental; urgency=medium
 
   [ Marco Trevisan (Treviño) ]
