@@ -4,6 +4,9 @@
 /* Version number of package */
 #mesondefine VERSION
 
+/* Name of package */
+#mesondefine PACKAGE_NAME
+
 /* Version number of package */
 #mesondefine PACKAGE_VERSION
 
@@ -57,6 +60,9 @@
 
 /* Defined if gnome-desktop is enabled */
 #mesondefine HAVE_GNOME_DESKTOP
+
+/* Defined if sound player is enabled */
+#mesondefine HAVE_SOUND_PLAYER
 
 /* Building with SM support */
 #mesondefine HAVE_SM

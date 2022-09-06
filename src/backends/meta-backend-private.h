@@ -67,6 +67,7 @@ struct _MetaBackendClass
 
   MetaMonitorManager * (* create_monitor_manager) (MetaBackend *backend,
                                                    GError     **error);
+  MetaColorManager * (* create_color_manager) (MetaBackend *backend);
   MetaCursorRenderer * (* get_cursor_renderer) (MetaBackend        *backend,
                                                 ClutterInputDevice *device);
   MetaCursorTracker * (* create_cursor_tracker) (MetaBackend *backend);
@@ -106,9 +107,6 @@ struct _MetaBackendClass
   void (* update_screen_size) (MetaBackend *backend, int width, int height);
   void (* select_stage_events) (MetaBackend *backend);
 
-  MetaBarrierImpl * (* create_barrier_impl) (MetaBackend *backend,
-                                             MetaBarrier *barrier);
-
   void (* set_pointer_constraint) (MetaBackend           *backend,
                                    MetaPointerConstraint *constraint);
 
@@ -129,6 +127,9 @@ MetaIdleMonitor * meta_backend_get_idle_monitor (MetaBackend        *backend,
                                                  ClutterInputDevice *device);
 
 MetaIdleManager * meta_backend_get_idle_manager (MetaBackend *backend);
+
+META_EXPORT_TEST
+MetaColorManager * meta_backend_get_color_manager (MetaBackend *backend);
 
 META_EXPORT_TEST
 MetaOrientationManager * meta_backend_get_orientation_manager (MetaBackend *backend);
@@ -166,9 +167,6 @@ struct xkb_keymap * meta_backend_get_keymap (MetaBackend *backend);
 xkb_layout_index_t meta_backend_get_keymap_layout_group (MetaBackend *backend);
 
 gboolean meta_backend_is_lid_closed (MetaBackend *backend);
-
-MetaBarrierImpl * meta_backend_create_barrier_impl (MetaBackend *backend,
-                                                    MetaBarrier *barrier);
 
 MetaPointerConstraint * meta_backend_get_client_pointer_constraint (MetaBackend *backend);
 void meta_backend_set_client_pointer_constraint (MetaBackend *backend,
@@ -212,5 +210,8 @@ gboolean meta_backend_is_hw_cursors_inhibited (MetaBackend *backend);
 
 void meta_backend_update_from_event (MetaBackend  *backend,
                                      ClutterEvent *event);
+
+char * meta_backend_get_vendor_name (MetaBackend *backend,
+                                     const char  *pnp_id);
 
 #endif /* META_BACKEND_PRIVATE_H */

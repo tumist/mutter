@@ -218,6 +218,22 @@ process_connector_update (MetaKmsImplDevice  *impl_device,
         return FALSE;
     }
 
+  if (connector_update->max_bpc.has_update)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[atomic] Setting max BPC to %u on connector %u (%s)",
+                  (unsigned int) connector_update->max_bpc.value,
+                  meta_kms_connector_get_id (connector),
+                  meta_kms_impl_device_get_path (impl_device));
+
+      if (!add_connector_property (impl_device,
+                                   connector, req,
+                                   META_KMS_CONNECTOR_PROP_MAX_BPC,
+                                   connector_update->max_bpc.value,
+                                   error))
+        return FALSE;
+    }
+
   return TRUE;
 }
 
@@ -1198,8 +1214,8 @@ is_atomic_allowed (const char *driver_name)
     "qxl",
     "vmwgfx",
     "vboxvideo",
-    "nvidia-drm",
     "virtio_gpu",
+    "xlnx",
     NULL,
   };
 
