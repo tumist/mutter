@@ -1,8 +1,12 @@
-mutter (43~rc-1) UNRELEASED; urgency=medium
+mutter (43~rc-1) experimental; urgency=medium
 
   * New upstream release
+  * Build-Depend on libcolord-dev & liblcms2-dev
+  * debian/*.symbols: Update
+  * Drop Consistently-pass-timestamp….patch: Applied in new release
+  * Refresh 2 patches
 
- -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 06 Sep 2022 13:20:33 -0400
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 06 Sep 2022 14:07:28 -0400
 
 mutter (43~beta-4) experimental; urgency=medium
 
