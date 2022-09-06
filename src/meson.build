@@ -22,16 +22,23 @@ mutter_pkg_deps = [
 ]
 
 mutter_pkg_private_deps = [
+  colord_dep,
+  lcms2_dep,
   gmodule_no_export_dep,
   gnome_settings_daemon_dep,
   json_glib_dep,
-  libcanberra_dep,
   xkbcommon_dep,
 ]
 
 if have_gnome_desktop
   mutter_pkg_private_deps += [
     gnome_desktop_dep,
+  ]
+endif
+
+if have_sound_player
+  mutter_pkg_private_deps += [
+    libcanberra_dep,
   ]
 endif
 
@@ -181,6 +188,15 @@ mutter_sources = [
   'backends/meta-backend-private.h',
   'backends/meta-barrier.c',
   'backends/meta-barrier-private.h',
+  'backends/meta-color-device.c',
+  'backends/meta-color-device.h',
+  'backends/meta-color-manager.c',
+  'backends/meta-color-manager.h',
+  'backends/meta-color-manager-private.h',
+  'backends/meta-color-profile.c',
+  'backends/meta-color-profile.h',
+  'backends/meta-color-store.c',
+  'backends/meta-color-store.h',
   'backends/meta-crtc-mode.c',
   'backends/meta-crtc-mode.h',
   'backends/meta-crtc.c',
@@ -376,6 +392,8 @@ if have_x11
     'backends/x11/meta-barrier-x11.h',
     'backends/x11/meta-clutter-backend-x11.c',
     'backends/x11/meta-clutter-backend-x11.h',
+    'backends/x11/meta-color-manager-x11.c',
+    'backends/x11/meta-color-manager-x11.h',
     'backends/x11/meta-crtc-xrandr.c',
     'backends/x11/meta-crtc-xrandr.h',
     'backends/x11/meta-cursor-renderer-x11.c',
@@ -850,6 +868,13 @@ dbus_idle_monitor_built_sources = gnome.gdbus_codegen('meta-dbus-idle-monitor',
   )
 mutter_built_sources += dbus_idle_monitor_built_sources
 
+dbus_input_mapping_built_sources = gnome.gdbus_codegen('meta-dbus-input-mapping',
+    join_paths(dbus_interfaces_dir, 'org.gnome.Mutter.InputMapping.xml'),
+    interface_prefix: 'org.gnome.Mutter.',
+    namespace: 'MetaDBus',
+  )
+mutter_built_sources += dbus_input_mapping_built_sources
+
 if have_profiler
   mutter_sources += [
     'backends/meta-profiler.c',
@@ -911,6 +936,20 @@ dbus_rtkit_built_sources = gnome.gdbus_codegen('meta-dbus-rtkit1',
     namespace: 'MetaDbus',
 )
 mutter_built_sources += dbus_rtkit_built_sources
+
+dbus_gsd_color_built_sources = gnome.gdbus_codegen('meta-dbus-gsd-color',
+    join_paths(dbus_interfaces_dir, 'org.gnome.SettingsDaemon.Color.xml'),
+    interface_prefix: 'org.gnome.',
+    namespace: 'MetaDbus',
+)
+mutter_built_sources += dbus_gsd_color_built_sources
+
+dbus_gsd_power_screen_built_sources = gnome.gdbus_codegen('meta-dbus-gsd-power-screen',
+    join_paths(dbus_interfaces_dir, 'org.gnome.SettingsDaemon.Power.Screen.xml'),
+    interface_prefix: 'org.gnome.',
+    namespace: 'MetaDbus',
+)
+mutter_built_sources += dbus_gsd_power_screen_built_sources
 
 wayland_protocol_server_headers = []
 wayland_protocol_client_headers = []

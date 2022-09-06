@@ -1,5 +1,5 @@
 project('mutter', 'c',
-  version: '43.beta',
+  version: '43.rc',
   meson_version: '>= 0.55.0',
   license: 'GPLv2+'
 )
@@ -13,6 +13,8 @@ mutter_srcdir = meson.current_source_dir()
 mutter_builddir = meson.current_build_dir()
 
 # generic version requirements
+lcms2_req = '>= 2.6'
+colord_req = '>= 1.4.5'
 fribidi_req = '>= 1.0.0'
 glib_req = '>= 2.69.0'
 gi_req = '>= 0.9.5'
@@ -122,8 +124,9 @@ json_glib_dep = dependency('json-glib-1.0', version: json_glib_req)
 xkbcommon_dep = dependency('xkbcommon', version: xkbcommon_req)
 ice_dep = dependency('ice')
 atk_dep = dependency('atk', version: atk_req)
-libcanberra_dep = dependency('libcanberra', version: libcanberra_req)
 dbus_dep = dependency('dbus-1')
+colord_dep = dependency('colord', version: colord_req)
+lcms2_dep = dependency('lcms2', version: lcms2_req)
 
 have_wayland = get_option('wayland')
 # For now always require X11 support
@@ -164,6 +167,11 @@ endif
 have_gnome_desktop = get_option('libgnome_desktop')
 if have_gnome_desktop
   gnome_desktop_dep = dependency('gnome-desktop-3.0')
+endif
+
+have_sound_player = get_option('sound_player')
+if have_sound_player
+  libcanberra_dep = dependency('libcanberra', version: libcanberra_req)
 endif
 
 have_gl = get_option('opengl')
@@ -353,7 +361,15 @@ if have_tests
   meta_dbus_runner = find_program('src/tests/meta-dbus-runner.py')
   default_test_wrappers = [
     meta_dbus_runner,
+    '--',
   ]
+
+  if get_option('catch')
+    catch = find_program('catch')
+    default_test_wrappers += [
+      catch,
+    ]
+  endif
 
   add_test_setup('default',
     is_default: true,
@@ -476,6 +492,7 @@ cc.compiles('void main (void) { __builtin_ffsl (0); __builtin_popcountl (0); }')
 cdata = configuration_data()
 cdata.set_quoted('GETTEXT_PACKAGE', gettext_package)
 cdata.set_quoted('VERSION', meson.project_version())
+cdata.set_quoted('PACKAGE_NAME', meson.project_name())
 cdata.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 cdata.set('HAVE_EGL', have_egl)
@@ -487,6 +504,7 @@ cdata.set('HAVE_LIBSYSTEMD', have_libsystemd)
 cdata.set('HAVE_NATIVE_BACKEND', have_native_backend)
 cdata.set('HAVE_REMOTE_DESKTOP', have_remote_desktop)
 cdata.set('HAVE_GNOME_DESKTOP', have_gnome_desktop)
+cdata.set('HAVE_SOUND_PLAYER', have_sound_player)
 cdata.set('HAVE_EGL_DEVICE', have_egl_device)
 cdata.set('HAVE_WAYLAND_EGLSTREAM', have_wayland_eglstream)
 cdata.set('HAVE_LIBGUDEV', have_libgudev)
@@ -645,6 +663,7 @@ summary('Native Backend', have_native_backend, section: 'Options')
 summary('EGL Device', have_egl_device, section: 'Options')
 summary('Remote desktop', have_remote_desktop, section: 'Options')
 summary('libgnome-desktop', have_gnome_desktop, section: 'Options')
+summary('Sound player', have_sound_player, section: 'Options')
 summary('gudev', have_libgudev, section: 'Options')
 summary('Wacom', have_libwacom, section: 'Options')
 summary('SM', have_sm, section: 'Options')

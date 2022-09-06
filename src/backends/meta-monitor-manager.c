@@ -72,6 +72,7 @@ enum
   PROP_BACKEND,
   PROP_PANEL_ORIENTATION_MANAGED,
   PROP_HAS_BUILTIN_PANEL,
+  PROP_NIGHT_LIGHT_SUPPORTED,
 
   PROP_LAST
 };
@@ -112,6 +113,7 @@ typedef struct _MetaMonitorManagerPrivate
   gboolean shutting_down;
 
   gboolean has_builtin_panel;
+  gboolean night_light_supported;
 } MetaMonitorManagerPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MetaMonitorManager, meta_monitor_manager,
@@ -1151,36 +1153,13 @@ update_has_builtin_panel (MetaMonitorManager *manager)
 }
 
 static void
-meta_monitor_manager_get_crtc_gamma (MetaMonitorManager  *manager,
-                                     MetaCrtc            *crtc,
-                                     size_t              *size,
-                                     unsigned short     **red,
-                                     unsigned short     **green,
-                                     unsigned short     **blue)
+update_night_light_supported (MetaMonitorManager *manager)
 {
-  MetaMonitorManagerClass *klass = META_MONITOR_MANAGER_GET_CLASS (manager);
-
-  if (klass->get_crtc_gamma)
-    {
-      klass->get_crtc_gamma (manager, crtc, size, red, green, blue);
-    }
-  else
-    {
-      if (size)
-        *size = 0;
-      if (red)
-        *red = NULL;
-      if (green)
-        *green = NULL;
-      if (blue)
-        *blue = NULL;
-    }
-}
-
-static gboolean
-is_night_light_supported (MetaMonitorManager *manager)
-{
+  MetaMonitorManagerPrivate *priv =
+    meta_monitor_manager_get_instance_private (manager);
   GList *l;
+
+  gboolean night_light_supported = FALSE;
 
   for (l = meta_backend_get_gpus (manager->backend); l; l = l->next)
     {
@@ -1190,17 +1169,21 @@ is_night_light_supported (MetaMonitorManager *manager)
       for (l_crtc = meta_gpu_get_crtcs (gpu); l_crtc; l_crtc = l_crtc->next)
         {
           MetaCrtc *crtc = l_crtc->data;
-          size_t gamma_lut_size;
 
-          meta_monitor_manager_get_crtc_gamma (manager, crtc,
-                                               &gamma_lut_size,
-                                               NULL, NULL, NULL);
-          if (gamma_lut_size > 0)
-            return TRUE;
+          if (meta_crtc_get_gamma_lut_size (crtc) > 0)
+            {
+              night_light_supported = TRUE;
+              break;
+            }
         }
     }
 
-  return FALSE;
+  if (priv->night_light_supported == night_light_supported)
+    return;
+
+  priv->night_light_supported = night_light_supported;
+  g_object_notify_by_pspec (G_OBJECT (manager),
+                            obj_props[PROP_NIGHT_LIGHT_SUPPORTED]);
 }
 
 void
@@ -1208,7 +1191,8 @@ meta_monitor_manager_setup (MetaMonitorManager *manager)
 {
   MetaMonitorConfigStore *config_store;
   const MetaMonitorConfigPolicy *policy;
-  gboolean night_light_supported;
+  MetaMonitorManagerPrivate *priv =
+    meta_monitor_manager_get_instance_private (manager);
 
   manager->in_init = TRUE;
 
@@ -1219,9 +1203,8 @@ meta_monitor_manager_setup (MetaMonitorManager *manager)
   meta_dbus_display_config_set_apply_monitors_config_allowed (manager->display_config,
                                                               policy->enable_dbus);
 
-  night_light_supported = is_night_light_supported (manager);
   meta_dbus_display_config_set_night_light_supported (manager->display_config,
-                                                      night_light_supported);
+                                                      priv->night_light_supported);
 
   meta_monitor_manager_read_current_state (manager);
 
@@ -1337,6 +1320,7 @@ meta_monitor_manager_set_property (GObject      *object,
       break;
     case PROP_PANEL_ORIENTATION_MANAGED:
     case PROP_HAS_BUILTIN_PANEL:
+    case PROP_NIGHT_LIGHT_SUPPORTED:
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -1362,6 +1346,9 @@ meta_monitor_manager_get_property (GObject    *object,
       break;
     case PROP_HAS_BUILTIN_PANEL:
       g_value_set_boolean (value, priv->has_builtin_panel);
+      break;
+    case PROP_NIGHT_LIGHT_SUPPORTED:
+      g_value_set_boolean (value, priv->night_light_supported);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1456,6 +1443,15 @@ meta_monitor_manager_class_init (MetaMonitorManagerClass *klass)
                           G_PARAM_EXPLICIT_NOTIFY |
                           G_PARAM_STATIC_STRINGS);
 
+  obj_props[PROP_NIGHT_LIGHT_SUPPORTED] =
+    g_param_spec_boolean ("night-light-supported",
+                          "Night light supported",
+                          "Night light is supported",
+                          FALSE,
+                          G_PARAM_READABLE |
+                          G_PARAM_EXPLICIT_NOTIFY |
+                          G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (object_class, PROP_LAST, obj_props);
 }
 
@@ -1497,6 +1493,10 @@ get_connector_type_name (MetaConnectorType connector_type)
     case META_CONNECTOR_TYPE_eDP: return "eDP";
     case META_CONNECTOR_TYPE_VIRTUAL: return "VIRTUAL";
     case META_CONNECTOR_TYPE_DSI: return "DSI";
+    case META_CONNECTOR_TYPE_DPI: return "DPI";
+    case META_CONNECTOR_TYPE_WRITEBACK: return "WRITEBACK";
+    case META_CONNECTOR_TYPE_SPI: return "SPI";
+    case META_CONNECTOR_TYPE_USB: return "USB";
     default: g_assert_not_reached ();
     }
   return NULL;
@@ -1657,6 +1657,9 @@ meta_monitor_manager_handle_get_resources (MetaDBusDisplayConfig *skeleton,
       gboolean is_underscanning;
       gboolean supports_underscanning;
       gboolean supports_color_transform;
+      const char *vendor;
+      const char *product;
+      const char *serial;
 
       g_variant_builder_init (&crtcs, G_VARIANT_TYPE ("au"));
       for (j = 0; j < output_info->n_possible_crtcs; j++)
@@ -1698,14 +1701,17 @@ meta_monitor_manager_handle_get_resources (MetaDBusDisplayConfig *skeleton,
       connector_type_name = get_connector_type_name (output_info->connector_type);
       supports_underscanning = output_info->supports_underscanning;
       supports_color_transform = output_info->supports_color_transform;
+      vendor = output_info->vendor;
+      product = output_info->product;;
+      serial = output_info->serial;
 
       g_variant_builder_init (&properties, G_VARIANT_TYPE ("a{sv}"));
       g_variant_builder_add (&properties, "{sv}", "vendor",
-                             g_variant_new_string (output_info->vendor));
+                             g_variant_new_string (vendor ? vendor : "unknown"));
       g_variant_builder_add (&properties, "{sv}", "product",
-                             g_variant_new_string (output_info->product));
+                             g_variant_new_string (product ? product : "unknown"));
       g_variant_builder_add (&properties, "{sv}", "serial",
-                             g_variant_new_string (output_info->serial));
+                             g_variant_new_string (serial ? serial : "unknown"));
       g_variant_builder_add (&properties, "{sv}", "width-mm",
                              g_variant_new_int32 (output_info->width_mm));
       g_variant_builder_add (&properties, "{sv}", "height-mm",
@@ -2853,10 +2859,7 @@ meta_monitor_manager_handle_get_crtc_gamma  (MetaDBusDisplayConfig *skeleton,
 {
   GList *combined_crtcs;
   MetaCrtc *crtc;
-  gsize size;
-  unsigned short *red;
-  unsigned short *green;
-  unsigned short *blue;
+  g_autoptr (MetaGammaLut) gamma_lut = NULL;
   GBytes *red_bytes, *green_bytes, *blue_bytes;
   GVariant *red_v, *green_v, *blue_v;
 
@@ -2881,12 +2884,14 @@ meta_monitor_manager_handle_get_crtc_gamma  (MetaDBusDisplayConfig *skeleton,
   crtc = g_list_nth_data (combined_crtcs, crtc_id);
   g_list_free (combined_crtcs);
 
-  meta_monitor_manager_get_crtc_gamma (manager, crtc,
-                                       &size, &red, &green, &blue);
+  gamma_lut = meta_crtc_get_gamma_lut (crtc);
 
-  red_bytes = g_bytes_new_take (red, size * sizeof (unsigned short));
-  green_bytes = g_bytes_new_take (green, size * sizeof (unsigned short));
-  blue_bytes = g_bytes_new_take (blue, size * sizeof (unsigned short));
+  red_bytes = g_bytes_new_take (g_steal_pointer (&gamma_lut->red),
+                                gamma_lut->size * sizeof (unsigned short));
+  green_bytes = g_bytes_new_take (g_steal_pointer (&gamma_lut->green),
+                                  gamma_lut->size * sizeof (unsigned short));
+  blue_bytes = g_bytes_new_take (g_steal_pointer (&gamma_lut->blue),
+                                 gamma_lut->size * sizeof (unsigned short));
 
   red_v = g_variant_new_from_bytes (G_VARIANT_TYPE ("aq"), red_bytes, TRUE);
   green_v = g_variant_new_from_bytes (G_VARIANT_TYPE ("aq"), green_bytes, TRUE);
@@ -2912,14 +2917,11 @@ meta_monitor_manager_handle_set_crtc_gamma  (MetaDBusDisplayConfig *skeleton,
                                              GVariant              *blue_v,
                                              MetaMonitorManager    *manager)
 {
-  MetaMonitorManagerClass *klass;
   GList *combined_crtcs;
   MetaCrtc *crtc;
-  gsize size, dummy;
-  unsigned short *red;
-  unsigned short *green;
-  unsigned short *blue;
+  size_t dummy;
   GBytes *red_bytes, *green_bytes, *blue_bytes;
+  MetaGammaLut lut;
 
   if (serial != manager->serial)
     {
@@ -2947,14 +2949,12 @@ meta_monitor_manager_handle_set_crtc_gamma  (MetaDBusDisplayConfig *skeleton,
   green_bytes = g_variant_get_data_as_bytes (green_v);
   blue_bytes = g_variant_get_data_as_bytes (blue_v);
 
-  size = g_bytes_get_size (red_bytes) / sizeof (unsigned short);
-  red = (unsigned short*) g_bytes_get_data (red_bytes, &dummy);
-  green = (unsigned short*) g_bytes_get_data (green_bytes, &dummy);
-  blue = (unsigned short*) g_bytes_get_data (blue_bytes, &dummy);
+  lut.size = g_bytes_get_size (red_bytes) / sizeof (uint16_t);
+  lut.red = (uint16_t *) g_bytes_get_data (red_bytes, &dummy);
+  lut.green = (uint16_t *) g_bytes_get_data (green_bytes, &dummy);
+  lut.blue = (uint16_t *) g_bytes_get_data (blue_bytes, &dummy);
 
-  klass = META_MONITOR_MANAGER_GET_CLASS (manager);
-  if (klass->set_crtc_gamma)
-    klass->set_crtc_gamma (manager, crtc, size, red, green, blue);
+  meta_crtc_set_gamma_lut (crtc, &lut);
   meta_dbus_display_config_complete_set_crtc_gamma (skeleton, invocation);
 
   g_bytes_unref (red_bytes);
@@ -3443,6 +3443,7 @@ rebuild_monitors (MetaMonitorManager *manager)
 
   update_panel_orientation_managed (manager);
   update_has_builtin_panel (manager);
+  update_night_light_supported (manager);
 }
 
 void
@@ -3839,30 +3840,6 @@ MetaMonitorConfigManager *
 meta_monitor_manager_get_config_manager (MetaMonitorManager *manager)
 {
   return manager->config_manager;
-}
-
-/**
- * meta_monitor_manager_get_vendor_name:
- * @manager: A #MetaMonitorManager object
- * @vendor:  the PNP ID of the monitor
- *
- * Find the full vendor name from the given monitor PNP ID.
- *
- * Returns: (transfer full): A string containing the vendor name,
- *                           or NULL when not found.
- */
-char *
-meta_monitor_manager_get_vendor_name (MetaMonitorManager *manager,
-                                      const char         *vendor)
-{
-#ifdef HAVE_GNOME_DESKTOP
-  if (!manager->pnp_ids)
-    manager->pnp_ids = gnome_pnp_ids_new ();
-
-  return gnome_pnp_ids_get_pnp_id (manager->pnp_ids, vendor);
-#else
-  return g_strdup (vendor);
-#endif
 }
 
 gboolean
