@@ -24,10 +24,10 @@ Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/mutter/+bug/1964541
  3 files changed, 24 insertions(+), 1 deletion(-)
 
 diff --git a/src/wayland/meta-wayland-data-device.c b/src/wayland/meta-wayland-data-device.c
-index c8cf8f5..03ce90b 100644
+index d6c28ff..d230bbf 100644
 --- a/src/wayland/meta-wayland-data-device.c
 +++ b/src/wayland/meta-wayland-data-device.c
-@@ -660,6 +660,15 @@ meta_wayland_data_device_end_drag (MetaWaylandDataDevice *data_device)
+@@ -664,6 +664,15 @@ meta_wayland_data_device_end_drag (MetaWaylandDataDevice *data_device)
      data_device_end_drag_grab (data_device->current_grab);
  }
  
@@ -43,7 +43,7 @@ index c8cf8f5..03ce90b 100644
  static void
  data_device_start_drag (struct wl_client *client,
                          struct wl_resource *resource,
-@@ -680,7 +689,11 @@ data_device_start_drag (struct wl_client *client,
+@@ -684,7 +693,11 @@ data_device_start_drag (struct wl_client *client,
      return;
  
    if (seat->pointer->button_count == 0 ||
