@@ -12,6 +12,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_backend_capabilities_get_type@Base 43~beta
  meta_backend_get_capabilities@Base 43~beta
  meta_backend_get_clutter_backend@Base 41.0
+ meta_backend_get_color_manager@Base 43~rc
  meta_backend_get_context@Base 41.0
  meta_backend_get_core_idle_monitor@Base 41.0
  meta_backend_get_current_logical_monitor@Base 42~beta
@@ -78,6 +79,18 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_close_dialog_response@Base 3.28.2
  meta_close_dialog_response_get_type@Base 3.28.2
  meta_close_dialog_show@Base 3.28.2
+ meta_color_device_get_assigned_profile@Base 43~rc
+ meta_color_device_get_device_profile@Base 43~rc
+ meta_color_device_get_id@Base 43~rc
+ meta_color_device_get_monitor@Base 43~rc
+ meta_color_device_is_ready@Base 43~rc
+ meta_color_manager_get_color_device@Base 43~rc
+ meta_color_manager_get_num_color_devices@Base 43~rc
+ meta_color_manager_get_type@Base 43~rc
+ meta_color_manager_is_ready@Base 43~rc
+ meta_color_profile_get_calibration@Base 43~rc
+ meta_color_profile_get_cd_icc@Base 43~rc
+ meta_color_profile_get_id@Base 43~rc
  meta_comp_effect_get_type@Base 3.28.2
  meta_compositor_add_window@Base 3.28.2
  meta_compositor_destroy@Base 3.28.2
@@ -386,6 +399,9 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_monitor_get_connector@Base 3.28.2
  meta_monitor_get_connector_type@Base 3.28.2
  meta_monitor_get_current_mode@Base 3.28.2
+ meta_monitor_get_edid_checksum_md5@Base 43~rc
+ meta_monitor_get_edid_info@Base 43~rc
+ meta_monitor_get_gamma_lut_size@Base 43~rc
  meta_monitor_get_logical_monitor@Base 3.28.2
  meta_monitor_get_main_output@Base 3.28.2
  meta_monitor_get_mode_from_id@Base 3.28.2
@@ -421,6 +437,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_monitor_manager_lid_is_closed_changed@Base 3.28.2
  meta_monitor_manager_rebuild@Base 3.28.2
  meta_monitor_manager_rebuild_derived@Base 3.28.2
+ meta_monitor_manager_reconfigure@Base 43~rc
  meta_monitor_manager_reload@Base 40.0
  meta_monitor_manager_switch_config@Base 3.28.2
  meta_monitor_manager_update_logical_state@Base 3.28.2
@@ -433,6 +450,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_monitor_mode_get_resolution@Base 3.28.2
  meta_monitor_mode_get_spec@Base 3.28.2
  meta_monitor_mode_should_be_advertised@Base 3.29.4-3~
+ meta_monitor_mode_spec_has_similar_size@Base 43~rc
  meta_monitor_set_current_mode@Base 3.28.2
  meta_monitor_spec_clone@Base 3.28.2
  meta_monitor_spec_compare@Base 3.28.2
@@ -462,6 +480,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_output_get_gpu@Base 3.28.2
  meta_output_get_id@Base 3.37.91
  meta_output_get_info@Base 40.0
+ meta_output_get_max_bpc@Base 43~rc
  meta_output_get_monitor@Base 40.0
  meta_output_get_type@Base 3.28.2
  meta_output_info_get_type@Base 3.37.91
@@ -589,6 +608,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_selection_transfer_finish@Base 3.33.4
  meta_selection_type_get_type@Base 3.33.4
  meta_selection_unset_owner@Base 3.33.4
+ meta_set_color_efivar_test_path@Base 43~rc
  meta_settings_enable_experimental_feature@Base 3.28.2
  meta_settings_get_font_dpi@Base 3.28.2
  meta_settings_get_ui_scaling_factor@Base 3.28.2
@@ -650,6 +670,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_verify_monitor_spec@Base 3.28.2
  meta_verify_monitors_config@Base 3.28.2
  meta_virtual_modifier_get_type@Base 3.28.2
+ meta_virtual_monitor_get_crtc_mode@Base 43~rc
  meta_virtual_monitor_get_output@Base 40.0
  meta_virtual_monitor_info_free@Base 40.0
  meta_virtual_monitor_info_new@Base 40.0
@@ -689,7 +710,6 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_window_allows_resize@Base 3.28.2
  meta_window_appears_focused@Base 3.28.2
  meta_window_begin_grab_op@Base 3.28.2
- meta_window_calculate_main_logical_monitor@Base 43~beta
  meta_window_can_close@Base 3.28.2
  meta_window_can_maximize@Base 3.28.2
  meta_window_can_minimize@Base 3.28.2
@@ -701,6 +721,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_window_client_type_get_type@Base 3.28.2
  meta_window_compute_group@Base 3.28.2
  meta_window_delete@Base 3.28.2
+ meta_window_find_monitor_from_frame_rect@Base 43~rc
  meta_window_find_root_ancestor@Base 3.28.2
  meta_window_focus@Base 3.28.2
  meta_window_foreach_ancestor@Base 3.28.2
@@ -1901,6 +1922,7 @@ libmutter-clutter-11.so.0 libmutter-11-0 #MINVER#
  clutter_stage_view_get_refresh_rate@Base 3.37.91
  clutter_stage_view_get_scale@Base 3.29.4
  clutter_stage_view_get_type@Base 3.29.4
+ clutter_stage_view_has_shadowfb@Base 43~rc
  clutter_stage_view_invalidate_offscreen_blit_pipeline@Base 3.29.4
  clutter_stage_view_notify_presented@Base 41.0
  clutter_stage_view_notify_ready@Base 41.0

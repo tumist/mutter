@@ -17,6 +17,7 @@ libmutter-test-11.so libmutter-test-11 #MINVER#
  meta_create_monitor_test_setup@Base 42~beta
  meta_create_test_context@Base 41.0
  meta_create_test_monitor@Base 42~beta
+ meta_crtc_test_disable_gamma_lut@Base 43~rc
  meta_crtc_test_get_type@Base 41.0
  meta_find_window_from_title@Base 42~beta
  meta_init_monitor_test_setup@Base 42~beta

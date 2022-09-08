@@ -13,6 +13,12 @@ If the previous frame is not running late then we stick to double buffering so
 there's no latency penalty when the system is able to maintain full frame rate.
 
 Origin: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/1441
+
+Formatted for Debian with:
+git fetch https://gitlab.gnome.org/vanvugt/mutter
+git merge --squash -e vanvugt/triple-buffering-v4
+And then git commit but using all this as the header instead of what
+git suggests. Also add Gbp-Pq: Topic debian
 ---
  clutter/clutter/clutter-frame-clock.c             | 165 ++++++--
  clutter/clutter/clutter-frame-clock.h             |  11 +-
@@ -41,7 +47,7 @@ Origin: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/1441
  24 files changed, 843 insertions(+), 360 deletions(-)
 
 diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
-index cf740ad..ea3c09f 100644
+index b223b85..ae8b11f 100644
 --- a/clutter/clutter/clutter-frame-clock.c
 +++ b/clutter/clutter/clutter-frame-clock.c
 @@ -45,6 +45,8 @@ typedef struct _EstimateQueue
@@ -193,7 +199,7 @@ index cf740ad..ea3c09f 100644
    return max_render_time_us;
  }
  
-@@ -560,8 +608,12 @@ clutter_frame_clock_inhibit (ClutterFrameClock *frame_clock)
+@@ -563,8 +611,12 @@ clutter_frame_clock_inhibit (ClutterFrameClock *frame_clock)
            frame_clock->pending_reschedule = TRUE;
            frame_clock->state = CLUTTER_FRAME_CLOCK_STATE_IDLE;
            break;
@@ -208,7 +214,7 @@ index cf740ad..ea3c09f 100644
            break;
          }
  
-@@ -597,11 +649,17 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
+@@ -600,11 +652,17 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
      case CLUTTER_FRAME_CLOCK_STATE_INIT:
      case CLUTTER_FRAME_CLOCK_STATE_IDLE:
        next_update_time_us = g_get_monotonic_time ();
@@ -228,7 +234,7 @@ index cf740ad..ea3c09f 100644
        frame_clock->pending_reschedule = TRUE;
        frame_clock->pending_reschedule_now = TRUE;
        return;
-@@ -610,7 +668,6 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
+@@ -613,7 +671,6 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
    g_warn_if_fail (next_update_time_us != -1);
  
    g_source_set_ready_time (frame_clock->source, next_update_time_us);
@@ -236,7 +242,7 @@ index cf740ad..ea3c09f 100644
    frame_clock->is_next_presentation_time_valid = FALSE;
  }
  
-@@ -629,6 +686,7 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -632,6 +689,7 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
      {
      case CLUTTER_FRAME_CLOCK_STATE_INIT:
        next_update_time_us = g_get_monotonic_time ();
@@ -244,7 +250,7 @@ index cf740ad..ea3c09f 100644
        break;
      case CLUTTER_FRAME_CLOCK_STATE_IDLE:
        calculate_next_update_time_us (frame_clock,
-@@ -636,11 +694,28 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -639,11 +697,28 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
                                       &frame_clock->next_presentation_time_us);
        frame_clock->is_next_presentation_time_valid =
          (frame_clock->next_presentation_time_us != 0);
@@ -275,7 +281,7 @@ index cf740ad..ea3c09f 100644
        frame_clock->pending_reschedule = TRUE;
        return;
      }
-@@ -648,7 +723,6 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -651,7 +726,6 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
    g_warn_if_fail (next_update_time_us != -1);
  
    g_source_set_ready_time (frame_clock->source, next_update_time_us);
@@ -283,7 +289,7 @@ index cf740ad..ea3c09f 100644
  }
  
  static void
-@@ -672,7 +746,7 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -675,7 +749,7 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
                             frame_clock->refresh_interval_us;
  
    lateness_us = time_us - ideal_dispatch_time_us;
@@ -292,7 +298,7 @@ index cf740ad..ea3c09f 100644
      frame_clock->last_dispatch_lateness_us = 0;
    else
      frame_clock->last_dispatch_lateness_us = lateness_us;
-@@ -680,7 +754,21 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -683,7 +757,21 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
    frame_clock->last_dispatch_time_us = time_us;
    g_source_set_ready_time (frame_clock->source, -1);
  
@@ -315,7 +321,7 @@ index cf740ad..ea3c09f 100644
  
    frame_count = frame_clock->frame_count++;
  
-@@ -705,25 +793,31 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -708,25 +796,31 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
                                                 frame_clock->listener.user_data);
    COGL_TRACE_END (ClutterFrameClockFrame);
  
@@ -359,7 +365,7 @@ index cf740ad..ea3c09f 100644
          }
        break;
      }
-@@ -756,10 +850,12 @@ frame_clock_source_dispatch (GSource     *source,
+@@ -759,10 +853,12 @@ frame_clock_source_dispatch (GSource     *source,
  }
  
  void
@@ -374,7 +380,7 @@ index cf740ad..ea3c09f 100644
  }
  
  GString *
-@@ -890,6 +986,9 @@ clutter_frame_clock_class_init (ClutterFrameClockClass *klass)
+@@ -893,6 +989,9 @@ clutter_frame_clock_class_init (ClutterFrameClockClass *klass)
  {
    GObjectClass *object_class = G_OBJECT_CLASS (klass);
  
@@ -463,10 +469,10 @@ index d3608e8..06c5f7f 100644
 +
  #endif /* CLUTTER_FRAME_H */
 diff --git a/clutter/clutter/clutter-stage-view.c b/clutter/clutter/clutter-stage-view.c
-index 22c7647..a6ab612 100644
+index aa98e6a..fada3a6 100644
 --- a/clutter/clutter/clutter-stage-view.c
 +++ b/clutter/clutter/clutter-stage-view.c
-@@ -1243,8 +1243,9 @@ handle_frame_clock_frame (ClutterFrameClock *frame_clock,
+@@ -1252,8 +1252,9 @@ handle_frame_clock_frame (ClutterFrameClock *frame_clock,
  
        _clutter_stage_window_redraw_view (stage_window, view, &frame);
  
@@ -510,10 +516,10 @@ index ff9e174..b25b4af 100644
  cogl_onscreen_add_frame_callback (CoglOnscreen *onscreen,
                                    CoglFrameCallback callback,
 diff --git a/src/backends/meta-stage-impl.c b/src/backends/meta-stage-impl.c
-index d562603..ea9b128 100644
+index b3f6064..6eef4c2 100644
 --- a/src/backends/meta-stage-impl.c
 +++ b/src/backends/meta-stage-impl.c
-@@ -720,6 +720,8 @@ meta_stage_impl_redraw_view (ClutterStageWindow *stage_window,
+@@ -721,6 +721,8 @@ meta_stage_impl_redraw_view (ClutterStageWindow *stage_window,
      {
        g_autoptr (GError) error = NULL;
  
@@ -523,10 +529,10 @@ index d562603..ea9b128 100644
                                          stage_view,
                                          scanout,
 diff --git a/src/backends/native/meta-crtc-kms.c b/src/backends/native/meta-crtc-kms.c
-index ad72dba..24e9b0a 100644
+index 0bfd3f5..3590608 100644
 --- a/src/backends/native/meta-crtc-kms.c
 +++ b/src/backends/native/meta-crtc-kms.c
-@@ -226,7 +226,7 @@ meta_crtc_kms_maybe_set_gamma (MetaCrtcKms   *crtc_kms,
+@@ -394,7 +394,7 @@ meta_crtc_kms_maybe_set_gamma (MetaCrtcKms   *crtc_kms,
    if (!gamma)
      return;
  
@@ -948,10 +954,10 @@ index 54801dd..deafeb6 100644
 +
  #endif /* META_KMS_CRTC_H */
 diff --git a/src/backends/native/meta-kms-impl-device-atomic.c b/src/backends/native/meta-kms-impl-device-atomic.c
-index b1925f9..decc0ce 100644
+index e938e45..5271cbe 100644
 --- a/src/backends/native/meta-kms-impl-device-atomic.c
 +++ b/src/backends/native/meta-kms-impl-device-atomic.c
-@@ -441,6 +441,7 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
+@@ -457,6 +457,7 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
  {
    MetaKmsPlaneAssignment *plane_assignment = update_entry;
    MetaKmsPlane *plane = plane_assignment->plane;
@@ -959,7 +965,7 @@ index b1925f9..decc0ce 100644
    MetaDrmBuffer *buffer;
    MetaKmsFbDamage *fb_damage;
    uint32_t prop_id;
-@@ -593,6 +594,12 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
+@@ -609,6 +610,12 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
                                 error))
          return FALSE;
      }
@@ -972,7 +978,7 @@ index b1925f9..decc0ce 100644
    return TRUE;
  }
  
-@@ -970,7 +977,7 @@ meta_kms_impl_device_atomic_process_update (MetaKmsImplDevice *impl_device,
+@@ -986,7 +993,7 @@ meta_kms_impl_device_atomic_process_update (MetaKmsImplDevice *impl_device,
                          req,
                          blob_ids,
                          meta_kms_update_get_plane_assignments (update),
@@ -982,10 +988,10 @@ index b1925f9..decc0ce 100644
                          &error))
      goto err;
 diff --git a/src/backends/native/meta-kms-impl-device-simple.c b/src/backends/native/meta-kms-impl-device-simple.c
-index e4a8d5f..5490c4c 100644
+index 648de51..53d7629 100644
 --- a/src/backends/native/meta-kms-impl-device-simple.c
 +++ b/src/backends/native/meta-kms-impl-device-simple.c
-@@ -470,6 +470,8 @@ process_mode_set (MetaKmsImplDevice  *impl_device,
+@@ -486,6 +486,8 @@ process_mode_set (MetaKmsImplDevice  *impl_device,
        return FALSE;
      }
  
@@ -994,7 +1000,7 @@ index e4a8d5f..5490c4c 100644
    if (drm_mode)
      {
        g_hash_table_replace (impl_device_simple->cached_mode_sets,
-@@ -534,7 +536,7 @@ is_timestamp_earlier_than (uint64_t ts1,
+@@ -550,7 +552,7 @@ is_timestamp_earlier_than (uint64_t ts1,
  typedef struct _RetryPageFlipData
  {
    MetaKmsCrtc *crtc;
@@ -1003,7 +1009,7 @@ index e4a8d5f..5490c4c 100644
    MetaKmsPageFlipData *page_flip_data;
    float refresh_rate;
    uint64_t retry_time_us;
-@@ -547,6 +549,7 @@ retry_page_flip_data_free (RetryPageFlipData *retry_page_flip_data)
+@@ -563,6 +565,7 @@ retry_page_flip_data_free (RetryPageFlipData *retry_page_flip_data)
    g_assert (!retry_page_flip_data->page_flip_data);
    g_clear_pointer (&retry_page_flip_data->custom_page_flip,
                     meta_kms_custom_page_flip_free);
@@ -1011,7 +1017,7 @@ index e4a8d5f..5490c4c 100644
    g_free (retry_page_flip_data);
  }
  
-@@ -614,16 +617,21 @@ retry_page_flips (gpointer user_data)
+@@ -630,16 +633,21 @@ retry_page_flips (gpointer user_data)
          }
        else
          {
@@ -1035,7 +1041,7 @@ index e4a8d5f..5490c4c 100644
                                   DRM_MODE_PAGE_FLIP_EVENT,
                                   retry_page_flip_data->page_flip_data);
          }
-@@ -710,7 +718,7 @@ retry_page_flips (gpointer user_data)
+@@ -726,7 +734,7 @@ retry_page_flips (gpointer user_data)
  static void
  schedule_retry_page_flip (MetaKmsImplDeviceSimple *impl_device_simple,
                            MetaKmsCrtc             *crtc,
@@ -1044,7 +1050,7 @@ index e4a8d5f..5490c4c 100644
                            float                    refresh_rate,
                            MetaKmsPageFlipData     *page_flip_data,
                            MetaKmsCustomPageFlip   *custom_page_flip)
-@@ -725,7 +733,7 @@ schedule_retry_page_flip (MetaKmsImplDeviceSimple *impl_device_simple,
+@@ -741,7 +749,7 @@ schedule_retry_page_flip (MetaKmsImplDeviceSimple *impl_device_simple,
    retry_page_flip_data = g_new0 (RetryPageFlipData, 1);
    *retry_page_flip_data = (RetryPageFlipData) {
      .crtc = crtc,
@@ -1053,7 +1059,7 @@ index e4a8d5f..5490c4c 100644
      .page_flip_data = page_flip_data,
      .refresh_rate = refresh_rate,
      .retry_time_us = retry_time_us,
-@@ -859,6 +867,8 @@ mode_set_fallback (MetaKmsImplDeviceSimple  *impl_device_simple,
+@@ -875,6 +883,8 @@ mode_set_fallback (MetaKmsImplDeviceSimple  *impl_device_simple,
        return FALSE;
      }
  
@@ -1062,7 +1068,7 @@ index e4a8d5f..5490c4c 100644
    if (!impl_device_simple->mode_set_fallback_feedback_source)
      {
        GSource *source;
-@@ -983,20 +993,20 @@ dispatch_page_flip (MetaKmsImplDevice    *impl_device,
+@@ -999,20 +1009,20 @@ dispatch_page_flip (MetaKmsImplDevice    *impl_device,
        cached_mode_set = get_cached_mode_set (impl_device_simple, crtc);
        if (cached_mode_set)
          {
@@ -1087,7 +1093,7 @@ index e4a8d5f..5490c4c 100644
                                      refresh_rate,
                                      page_flip_data,
                                      g_steal_pointer (&custom_page_flip));
-@@ -1286,7 +1296,7 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
+@@ -1302,7 +1312,7 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
      {
      case META_KMS_PLANE_TYPE_PRIMARY:
        /* Handled as part of the mode-set and page flip. */
@@ -1096,7 +1102,7 @@ index e4a8d5f..5490c4c 100644
      case META_KMS_PLANE_TYPE_CURSOR:
        if (!process_cursor_plane_assignment (impl_device, update,
                                              plane_assignment,
-@@ -1300,7 +1310,7 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
+@@ -1316,7 +1326,7 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
          }
        else
          {
@@ -1105,7 +1111,7 @@ index e4a8d5f..5490c4c 100644
          }
      case META_KMS_PLANE_TYPE_OVERLAY:
        error = g_error_new_literal (G_IO_ERROR, G_IO_ERROR_FAILED,
-@@ -1313,6 +1323,12 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
+@@ -1329,6 +1339,12 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
      }
  
    g_assert_not_reached ();
@@ -1119,10 +1125,10 @@ index e4a8d5f..5490c4c 100644
  
  static gboolean
 diff --git a/src/backends/native/meta-kms-impl-device.c b/src/backends/native/meta-kms-impl-device.c
-index dc2ac31..6f201a7 100644
+index b1dd321..c42320a 100644
 --- a/src/backends/native/meta-kms-impl-device.c
 +++ b/src/backends/native/meta-kms-impl-device.c
-@@ -1192,8 +1192,12 @@ meta_kms_impl_device_init_mode_setting (MetaKmsImplDevice  *impl_device,
+@@ -1206,8 +1206,12 @@ meta_kms_impl_device_init_mode_setting (MetaKmsImplDevice  *impl_device,
  void
  meta_kms_impl_device_prepare_shutdown (MetaKmsImplDevice *impl_device)
  {
@@ -1157,10 +1163,10 @@ index c1c2990..a6fbaf2 100644
      {
        MetaKmsPageFlipClosure *closure = l->data;
 diff --git a/src/backends/native/meta-kms-update-private.h b/src/backends/native/meta-kms-update-private.h
-index 9dab7c1..a1288cc 100644
+index 3a648ba..cfcf4b0 100644
 --- a/src/backends/native/meta-kms-update-private.h
 +++ b/src/backends/native/meta-kms-update-private.h
-@@ -132,6 +132,12 @@ uint64_t meta_kms_update_get_sequence_number (MetaKmsUpdate *update);
+@@ -137,6 +137,12 @@ uint64_t meta_kms_update_get_sequence_number (MetaKmsUpdate *update);
  META_EXPORT_TEST
  MetaKmsDevice * meta_kms_update_get_device (MetaKmsUpdate *update);
  
@@ -1174,7 +1180,7 @@ index 9dab7c1..a1288cc 100644
                                               MetaKmsPlaneRotation    rotation);
  
 diff --git a/src/backends/native/meta-kms-update.c b/src/backends/native/meta-kms-update.c
-index 042714d..55c9da8 100644
+index 4c34000..a12a3be 100644
 --- a/src/backends/native/meta-kms-update.c
 +++ b/src/backends/native/meta-kms-update.c
 @@ -25,12 +25,14 @@
@@ -1269,7 +1275,7 @@ index 042714d..55c9da8 100644
  
    return connector_update;
  }
-@@ -402,6 +430,8 @@ meta_kms_update_set_crtc_gamma (MetaKmsUpdate  *update,
+@@ -416,6 +444,8 @@ meta_kms_update_set_crtc_gamma (MetaKmsUpdate  *update,
    gamma = meta_kms_crtc_gamma_new (crtc, size, red, green, blue);
  
    update->crtc_gammas = g_list_prepend (update->crtc_gammas, gamma);
@@ -1278,7 +1284,7 @@ index 042714d..55c9da8 100644
  }
  
  void
-@@ -665,6 +695,20 @@ meta_kms_update_get_device (MetaKmsUpdate *update)
+@@ -679,6 +709,20 @@ meta_kms_update_get_device (MetaKmsUpdate *update)
    return update->device;
  }
  
@@ -1299,7 +1305,7 @@ index 042714d..55c9da8 100644
  MetaKmsCustomPageFlip *
  meta_kms_update_take_custom_page_flip_func (MetaKmsUpdate *update)
  {
-@@ -693,12 +737,15 @@ meta_kms_update_new (MetaKmsDevice *device)
+@@ -707,12 +751,15 @@ meta_kms_update_new (MetaKmsDevice *device)
    update->device = device;
    update->sequence_number = sequence_number++;
  
@@ -1506,7 +1512,7 @@ index bd9fe5c..84f1bed 100644
  
  void meta_kms_notify_modes_set (MetaKms *kms);
 diff --git a/src/backends/native/meta-onscreen-native.c b/src/backends/native/meta-onscreen-native.c
-index 36d6e29..fbe3e26 100644
+index a107a99..d062951 100644
 --- a/src/backends/native/meta-onscreen-native.c
 +++ b/src/backends/native/meta-onscreen-native.c
 @@ -67,13 +67,12 @@ typedef struct _MetaOnscreenNativeSecondaryGpuState
@@ -1737,8 +1743,8 @@ index 36d6e29..fbe3e26 100644
  
    switch (renderer_gpu_data->mode)
      {
-@@ -535,13 +504,41 @@ meta_onscreen_native_set_crtc_mode (CoglOnscreen              *onscreen,
-                                  kms_update);
+@@ -537,13 +506,41 @@ meta_onscreen_native_set_crtc_mode (CoglOnscreen              *onscreen,
+                                kms_update);
  }
  
 +static void
@@ -1780,7 +1786,7 @@ index 36d6e29..fbe3e26 100644
  }
  
  static void
-@@ -566,8 +563,6 @@ secondary_gpu_state_free (MetaOnscreenNativeSecondaryGpuState *secondary_gpu_sta
+@@ -568,8 +565,6 @@ secondary_gpu_state_free (MetaOnscreenNativeSecondaryGpuState *secondary_gpu_sta
                                  NULL);
      }
  
@@ -1789,7 +1795,7 @@ index 36d6e29..fbe3e26 100644
    g_clear_pointer (&secondary_gpu_state->gbm.surface, gbm_surface_destroy);
  
    secondary_gpu_release_dumb (secondary_gpu_state);
-@@ -575,11 +570,11 @@ secondary_gpu_state_free (MetaOnscreenNativeSecondaryGpuState *secondary_gpu_sta
+@@ -577,11 +572,11 @@ secondary_gpu_state_free (MetaOnscreenNativeSecondaryGpuState *secondary_gpu_sta
    g_free (secondary_gpu_state);
  }
  
@@ -1804,7 +1810,7 @@ index 36d6e29..fbe3e26 100644
    MetaRenderDevice *render_device;
    g_autoptr (GError) error = NULL;
    MetaDrmBuffer *imported_buffer;
-@@ -587,7 +582,7 @@ import_shared_framebuffer (CoglOnscreen                        *onscreen,
+@@ -589,7 +584,7 @@ import_shared_framebuffer (CoglOnscreen                        *onscreen,
    render_device = secondary_gpu_state->renderer_gpu_data->render_device;
    imported_buffer =
      meta_render_device_import_dma_buf (render_device,
@@ -1813,7 +1819,7 @@ index 36d6e29..fbe3e26 100644
                                         &error);
    if (!imported_buffer)
      {
-@@ -601,16 +596,9 @@ import_shared_framebuffer (CoglOnscreen                        *onscreen,
+@@ -603,16 +598,9 @@ import_shared_framebuffer (CoglOnscreen                        *onscreen,
                        META_SHARED_FRAMEBUFFER_IMPORT_STATUS_NONE);
        secondary_gpu_state->import_status =
          META_SHARED_FRAMEBUFFER_IMPORT_STATUS_FAILED;
@@ -1831,7 +1837,7 @@ index 36d6e29..fbe3e26 100644
    if (secondary_gpu_state->import_status ==
        META_SHARED_FRAMEBUFFER_IMPORT_STATUS_NONE)
      {
-@@ -627,16 +615,16 @@ import_shared_framebuffer (CoglOnscreen                        *onscreen,
+@@ -629,16 +617,16 @@ import_shared_framebuffer (CoglOnscreen                        *onscreen,
  
    secondary_gpu_state->import_status =
      META_SHARED_FRAMEBUFFER_IMPORT_STATUS_OK;
@@ -1852,7 +1858,7 @@ index 36d6e29..fbe3e26 100644
    MetaRendererNative *renderer_native = renderer_gpu_data->renderer_native;
    MetaEgl *egl = meta_renderer_native_get_egl (renderer_native);
    MetaGles3 *gles3 = meta_renderer_native_get_gles3 (renderer_native);
-@@ -652,9 +640,6 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
+@@ -654,9 +642,6 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
    COGL_TRACE_BEGIN_SCOPED (CopySharedFramebufferSecondaryGpu,
                             "FB Copy (secondary GPU)");
  
@@ -1862,7 +1868,7 @@ index 36d6e29..fbe3e26 100644
    render_device = renderer_gpu_data->render_device;
    egl_display = meta_render_device_get_egl_display (render_device);
  
-@@ -667,13 +652,13 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
+@@ -669,13 +654,13 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
      {
        g_warning ("Failed to make current: %s", error->message);
        g_error_free (error);
@@ -1878,7 +1884,7 @@ index 36d6e29..fbe3e26 100644
    bo = meta_drm_buffer_gbm_get_bo (buffer_gbm);
    if (!meta_renderer_native_gles3_blit_shared_bo (egl,
                                                    gles3,
-@@ -685,7 +670,7 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
+@@ -687,7 +672,7 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
      {
        g_warning ("Failed to blit shared framebuffer: %s", error->message);
        g_error_free (error);
@@ -1887,7 +1893,7 @@ index 36d6e29..fbe3e26 100644
      }
  
    if (!meta_egl_swap_buffers (egl,
-@@ -695,7 +680,7 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
+@@ -697,7 +682,7 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
      {
        g_warning ("Failed to swap buffers: %s", error->message);
        g_error_free (error);
@@ -1896,7 +1902,7 @@ index 36d6e29..fbe3e26 100644
      }
  
    use_modifiers = meta_renderer_native_use_modifiers (renderer_native);
-@@ -715,10 +700,10 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
+@@ -717,10 +702,10 @@ copy_shared_framebuffer_gpu (CoglOnscreen                        *onscreen,
        g_warning ("meta_drm_buffer_gbm_new_lock_front failed: %s",
                   error->message);
        g_error_free (error);
@@ -1909,7 +1915,7 @@ index 36d6e29..fbe3e26 100644
  }
  
  static MetaDrmBufferDumb *
-@@ -733,7 +718,7 @@ secondary_gpu_get_next_dumb_buffer (MetaOnscreenNativeSecondaryGpuState *seconda
+@@ -735,7 +720,7 @@ secondary_gpu_get_next_dumb_buffer (MetaOnscreenNativeSecondaryGpuState *seconda
      return secondary_gpu_state->cpu.dumb_fbs[0];
  }
  
@@ -1918,7 +1924,7 @@ index 36d6e29..fbe3e26 100644
  copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscreen,
                                       MetaOnscreenNativeSecondaryGpuState *secondary_gpu_state,
                                       const int                           *rectangles,
-@@ -759,13 +744,13 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
+@@ -761,13 +746,13 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
  
    if (!secondary_gpu_state ||
        secondary_gpu_state->egl_surface == EGL_NO_SURFACE)
@@ -1934,7 +1940,7 @@ index 36d6e29..fbe3e26 100644
  
    buffer_dumb = secondary_gpu_get_next_dumb_buffer (secondary_gpu_state);
    buffer = META_DRM_BUFFER (buffer_dumb);
-@@ -788,7 +773,7 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
+@@ -790,7 +775,7 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
      {
        meta_topic (META_DEBUG_KMS,
                    "Failed to create DMA buffer: %s", error->message);
@@ -1943,7 +1949,7 @@ index 36d6e29..fbe3e26 100644
      }
  
    dmabuf_fb =
-@@ -806,7 +791,7 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
+@@ -808,7 +793,7 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
        meta_topic (META_DEBUG_KMS,
                    "Failed to create DMA buffer for blitting: %s",
                    error->message);
@@ -1952,7 +1958,7 @@ index 36d6e29..fbe3e26 100644
      }
    /* Limit the number of individual copies to 16 */
  #define MAX_RECTS 16
-@@ -819,7 +804,7 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
+@@ -821,7 +806,7 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
                                    &error))
          {
            g_object_unref (dmabuf_fb);
@@ -1961,7 +1967,7 @@ index 36d6e29..fbe3e26 100644
          }
      }
    else
-@@ -836,20 +821,19 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
+@@ -838,20 +823,19 @@ copy_shared_framebuffer_primary_gpu (CoglOnscreen                        *onscre
                                        &error))
              {
                g_object_unref (dmabuf_fb);
@@ -1985,7 +1991,7 @@ index 36d6e29..fbe3e26 100644
  copy_shared_framebuffer_cpu (CoglOnscreen                        *onscreen,
                               MetaOnscreenNativeSecondaryGpuState *secondary_gpu_state,
                               MetaRendererNativeGpuData           *renderer_gpu_data)
-@@ -901,17 +885,19 @@ copy_shared_framebuffer_cpu (CoglOnscreen                        *onscreen,
+@@ -903,17 +887,19 @@ copy_shared_framebuffer_cpu (CoglOnscreen                        *onscreen,
  
    cogl_object_unref (dumb_bitmap);
  
@@ -2007,7 +2013,7 @@ index 36d6e29..fbe3e26 100644
  
    COGL_TRACE_BEGIN_SCOPED (MetaRendererNativeGpuStatePreSwapBuffers,
                             "Onscreen (secondary gpu pre-swap-buffers)");
-@@ -937,10 +923,11 @@ update_secondary_gpu_state_pre_swap_buffers (CoglOnscreen *onscreen,
+@@ -939,10 +925,11 @@ update_secondary_gpu_state_pre_swap_buffers (CoglOnscreen *onscreen,
            /* prepare fallback */
            G_GNUC_FALLTHROUGH;
          case META_SHARED_FRAMEBUFFER_COPY_MODE_PRIMARY:
@@ -2023,7 +2029,7 @@ index 36d6e29..fbe3e26 100644
              {
                if (!secondary_gpu_state->noted_primary_gpu_copy_failed)
                  {
-@@ -950,9 +937,9 @@ update_secondary_gpu_state_pre_swap_buffers (CoglOnscreen *onscreen,
+@@ -952,9 +939,9 @@ update_secondary_gpu_state_pre_swap_buffers (CoglOnscreen *onscreen,
                    secondary_gpu_state->noted_primary_gpu_copy_failed = TRUE;
                  }
  
@@ -2036,7 +2042,7 @@ index 36d6e29..fbe3e26 100644
              }
            else if (!secondary_gpu_state->noted_primary_gpu_copy_ok)
              {
-@@ -964,11 +951,15 @@ update_secondary_gpu_state_pre_swap_buffers (CoglOnscreen *onscreen,
+@@ -966,11 +953,15 @@ update_secondary_gpu_state_pre_swap_buffers (CoglOnscreen *onscreen,
            break;
          }
      }
@@ -2054,7 +2060,7 @@ index 36d6e29..fbe3e26 100644
  {
    MetaOnscreenNative *onscreen_native = META_ONSCREEN_NATIVE (onscreen);
    MetaRendererNative *renderer_native = onscreen_native->renderer_native;
-@@ -981,6 +972,7 @@ update_secondary_gpu_state_post_swap_buffers (CoglOnscreen *onscreen,
+@@ -983,6 +974,7 @@ update_secondary_gpu_state_post_swap_buffers (CoglOnscreen *onscreen,
    if (secondary_gpu_state)
      {
        MetaRendererNativeGpuData *renderer_gpu_data;
@@ -2062,7 +2068,7 @@ index 36d6e29..fbe3e26 100644
  
        renderer_gpu_data =
          meta_renderer_native_get_gpu_data (renderer_native,
-@@ -988,23 +980,30 @@ update_secondary_gpu_state_post_swap_buffers (CoglOnscreen *onscreen,
+@@ -990,23 +982,30 @@ update_secondary_gpu_state_post_swap_buffers (CoglOnscreen *onscreen,
        switch (renderer_gpu_data->secondary.copy_mode)
          {
          case META_SHARED_FRAMEBUFFER_COPY_MODE_ZERO:
@@ -2101,7 +2107,7 @@ index 36d6e29..fbe3e26 100644
      }
  }
  
-@@ -1038,34 +1037,39 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1040,34 +1039,39 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
    CoglRendererEGL *cogl_renderer_egl = cogl_renderer->winsys;
    MetaRendererNativeGpuData *renderer_gpu_data = cogl_renderer_egl->platform;
    MetaRendererNative *renderer_native = renderer_gpu_data->renderer_native;
@@ -2156,7 +2162,7 @@ index 36d6e29..fbe3e26 100644
  
    parent_class = COGL_ONSCREEN_CLASS (meta_onscreen_native_parent_class);
    parent_class->swap_buffers_with_damage (onscreen,
-@@ -1081,9 +1085,6 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1083,9 +1087,6 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
    switch (renderer_gpu_data->mode)
      {
      case META_RENDERER_NATIVE_MODE_GBM:
@@ -2166,7 +2172,7 @@ index 36d6e29..fbe3e26 100644
        buffer_flags = META_DRM_BUFFER_FLAG_NONE;
        if (!meta_renderer_native_use_modifiers (renderer_native))
          buffer_flags |= META_DRM_BUFFER_FLAG_DISABLE_MODIFIERS;
-@@ -1101,7 +1102,12 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1103,7 +1104,12 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
            return;
          }
  
@@ -2180,7 +2186,7 @@ index 36d6e29..fbe3e26 100644
  
        break;
      case META_RENDERER_NATIVE_MODE_SURFACELESS:
-@@ -1113,7 +1119,46 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1115,7 +1121,46 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
  #endif
      }
  
@@ -2228,7 +2234,7 @@ index 36d6e29..fbe3e26 100644
  
    /*
     * If we changed EGL context, cogl will have the wrong idea about what is
-@@ -1124,23 +1169,71 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1126,23 +1171,71 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
    if (egl_context_changed)
      _cogl_winsys_egl_ensure_current (cogl_display);
  
@@ -2304,7 +2310,7 @@ index 36d6e29..fbe3e26 100644
        return;
      }
  
-@@ -1158,9 +1251,6 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1160,9 +1253,6 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
                        "Postponing primary plane composite update for CRTC %u (%s)",
                        meta_kms_crtc_get_id (kms_crtc),
                        meta_kms_device_get_path (kms_device));
@@ -2314,7 +2320,7 @@ index 36d6e29..fbe3e26 100644
            return;
          }
        else if (meta_renderer_native_has_pending_mode_set (renderer_native))
-@@ -1170,8 +1260,6 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1172,8 +1262,6 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
  
            meta_renderer_native_notify_mode_sets_reset (renderer_native);
            meta_renderer_native_post_mode_set_updates (renderer_native);
@@ -2323,7 +2329,7 @@ index 36d6e29..fbe3e26 100644
            return;
          }
        break;
-@@ -1184,8 +1272,6 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1186,8 +1274,6 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
          {
            meta_renderer_native_notify_mode_sets_reset (renderer_native);
            meta_renderer_native_post_mode_set_updates (renderer_native);
@@ -2332,7 +2338,7 @@ index 36d6e29..fbe3e26 100644
            return;
          }
        break;
-@@ -1198,18 +1284,16 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1200,18 +1286,16 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
                meta_kms_device_get_path (kms_device));
  
    flags = META_KMS_UPDATE_FLAG_NONE;
@@ -2355,7 +2361,7 @@ index 36d6e29..fbe3e26 100644
        feedback_error = meta_kms_feedback_get_error (kms_feedback);
        if (!g_error_matches (feedback_error,
                              G_IO_ERROR,
-@@ -1296,6 +1380,18 @@ meta_onscreen_native_direct_scanout (CoglOnscreen   *onscreen,
+@@ -1298,6 +1382,18 @@ meta_onscreen_native_direct_scanout (CoglOnscreen   *onscreen,
        return FALSE;
      }
  
@@ -2374,7 +2380,7 @@ index 36d6e29..fbe3e26 100644
    renderer_gpu_data = meta_renderer_native_get_gpu_data (renderer_native,
                                                           render_gpu);
  
-@@ -1348,7 +1444,9 @@ meta_onscreen_native_direct_scanout (CoglOnscreen   *onscreen,
+@@ -1350,7 +1446,9 @@ meta_onscreen_native_direct_scanout (CoglOnscreen   *onscreen,
                meta_kms_device_get_path (kms_device));
  
    flags = META_KMS_UPDATE_FLAG_PRESERVE_ON_ERROR;
@@ -2385,7 +2391,7 @@ index 36d6e29..fbe3e26 100644
    switch (meta_kms_feedback_get_result (kms_feedback))
      {
      case META_KMS_FEEDBACK_PASSED:
-@@ -1362,7 +1460,6 @@ meta_onscreen_native_direct_scanout (CoglOnscreen   *onscreen,
+@@ -1364,7 +1462,6 @@ meta_onscreen_native_direct_scanout (CoglOnscreen   *onscreen,
                             G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED))
          break;
  
@@ -2393,7 +2399,7 @@ index 36d6e29..fbe3e26 100644
        g_propagate_error (error, g_error_copy (feedback_error));
        return FALSE;
      }
-@@ -1398,7 +1495,10 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1400,7 +1497,10 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
    g_autoptr (MetaKmsFeedback) kms_feedback = NULL;
    const GError *error;
  
@@ -2405,7 +2411,7 @@ index 36d6e29..fbe3e26 100644
    if (!kms_update)
      {
        clutter_frame_set_result (frame, CLUTTER_FRAME_RESULT_IDLE);
-@@ -1413,9 +1513,9 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1415,9 +1515,9 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
                                            g_object_unref);
  
    flags = META_KMS_UPDATE_FLAG_NONE;
@@ -2418,7 +2424,7 @@ index 36d6e29..fbe3e26 100644
    switch (meta_kms_feedback_get_result (kms_feedback))
      {
      case META_KMS_FEEDBACK_PASSED:
-@@ -1437,6 +1537,17 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1439,6 +1539,17 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
      }
  }
  
@@ -2436,7 +2442,7 @@ index 36d6e29..fbe3e26 100644
  static gboolean
  should_surface_be_sharable (CoglOnscreen *onscreen)
  {
-@@ -1985,6 +2096,21 @@ pick_secondary_gpu_framebuffer_format_for_cpu (CoglOnscreen *onscreen)
+@@ -1987,6 +2098,21 @@ pick_secondary_gpu_framebuffer_format_for_cpu (CoglOnscreen *onscreen)
    return DRM_FORMAT_INVALID;
  }
  
@@ -2458,7 +2464,7 @@ index 36d6e29..fbe3e26 100644
  static gboolean
  init_secondary_gpu_state_cpu_copy_mode (MetaRendererNative         *renderer_native,
                                          CoglOnscreen               *onscreen,
-@@ -2041,6 +2167,12 @@ init_secondary_gpu_state_cpu_copy_mode (MetaRendererNative         *renderer_nat
+@@ -2043,6 +2169,12 @@ init_secondary_gpu_state_cpu_copy_mode (MetaRendererNative         *renderer_nat
          }
  
        secondary_gpu_state->cpu.dumb_fbs[i] = META_DRM_BUFFER_DUMB (dumb_buffer);
@@ -2471,7 +2477,7 @@ index 36d6e29..fbe3e26 100644
      }
  
    /*
-@@ -2130,7 +2262,7 @@ meta_onscreen_native_new (MetaRendererNative *renderer_native,
+@@ -2132,7 +2264,7 @@ meta_onscreen_native_new (MetaRendererNative *renderer_native,
    onscreen_native->renderer_native = renderer_native;
    onscreen_native->render_gpu = render_gpu;
    onscreen_native->output = output;
@@ -2480,7 +2486,7 @@ index 36d6e29..fbe3e26 100644
  
    return onscreen_native;
  }
-@@ -2151,7 +2283,6 @@ meta_onscreen_native_dispose (GObject *object)
+@@ -2153,7 +2285,6 @@ meta_onscreen_native_dispose (GObject *object)
      {
      case META_RENDERER_NATIVE_MODE_GBM:
        g_clear_object (&onscreen_native->gbm.next_fb);
@@ -2488,7 +2494,7 @@ index 36d6e29..fbe3e26 100644
        break;
      case META_RENDERER_NATIVE_MODE_SURFACELESS:
        g_assert_not_reached ();
-@@ -2179,9 +2310,12 @@ meta_onscreen_native_dispose (GObject *object)
+@@ -2181,9 +2312,12 @@ meta_onscreen_native_dispose (GObject *object)
  
    G_OBJECT_CLASS (meta_onscreen_native_parent_class)->dispose (object);
  
@@ -2515,7 +2521,7 @@ index 8ea7ec2..81b0eea 100644
                                                              MetaDrmBuffer *fb);
  
 diff --git a/src/backends/native/meta-renderer-native.c b/src/backends/native/meta-renderer-native.c
-index 76169d5..e6283b2 100644
+index 99fbb2b..d86a5f4 100644
 --- a/src/backends/native/meta-renderer-native.c
 +++ b/src/backends/native/meta-renderer-native.c
 @@ -677,12 +677,18 @@ static gboolean

@@ -63,6 +63,7 @@ typedef enum _MetaKmsDeviceFlag
   META_KMS_DEVICE_FLAG_PREFERRED_PRIMARY = 1 << 3,
   META_KMS_DEVICE_FLAG_NO_MODE_SETTING = 1 << 4,
   META_KMS_DEVICE_FLAG_HAS_ADDFB2 = 1 << 5,
+  META_KMS_DEVICE_FLAG_FORCE_LEGACY = 1 << 6,
 } MetaKmsDeviceFlag;
 
 typedef enum _MetaKmsResourceChanges
@@ -88,5 +89,12 @@ typedef enum _MetaKmsPropType
   META_KMS_PROP_TYPE_RAW = 0,
   META_KMS_PROP_TYPE_FIXED_16,
 } MetaKmsPropType;
+
+typedef struct _MetaKmsRange
+{
+  uint64_t value;
+  uint64_t min_value;
+  uint64_t max_value;
+} MetaKmsRange;
 
 #endif /* META_KMS_IMPL_TYPES_H */

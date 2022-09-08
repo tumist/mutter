@@ -1,3 +1,23 @@
+mutter (43~rc-1) experimental; urgency=medium
+
+  * New upstream release
+  * Build-Depend on libcolord-dev & liblcms2-dev
+  * debian/*.symbols: Update
+  * Drop Consistently-pass-timestamp….patch: Applied in new release
+  * Refresh 2 patches
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 06 Sep 2022 14:07:28 -0400
+
+mutter (43~beta-4) experimental; urgency=medium
+
+  [ Marco Trevisan (Treviño) ]
+  * debian/control: Remove <!nocheck> from xvfb-run
+
+  [ Jeremy Bicha ]
+  * debian/tests/libmutter-11-dev: fix a reference to mutter-10
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Thu, 25 Aug 2022 05:28:09 -0400
+
 mutter (43~beta-3ubuntu2) kinetic; urgency=medium
 
   * debian/tests/libmutter-11-dev: fix a reference to mutter-10
