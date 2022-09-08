@@ -1,3 +1,12 @@
+mutter (43~rc-2ubuntu1) UNRELEASED; urgency=medium
+
+  * Merge with debian, containing new upstream version.
+  * Refresh xrandr scaling patch to latest upstream code
+  * Remaining changes with debian:
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
+
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Thu, 08 Sep 2022 18:10:16 +0200
+
 mutter (43~rc-2) experimental; urgency=medium
 
   [ Simon McVittie ]
