@@ -1,3 +1,9 @@
+mutter (43~rc-2ubuntu2) kinetic; urgency=medium
+
+  * Ignore build test failures on s390x
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 13 Sep 2022 11:43:54 -0400
+
 mutter (43~rc-2ubuntu1) kinetic; urgency=medium
 
   * Merge with debian, containing new upstream version.
