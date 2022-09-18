@@ -1,10 +1,21 @@
-mutter (43.0-1) UNRELEASED; urgency=medium
+mutter (43.0-1) experimental; urgency=medium
 
+  * Team upload
+
+  [ Simon McVittie ]
   * Team upload
   * New upstream release
   * d/copyright: Update
+  * Standards-Version: 4.6.1 (no changes required)
+  * d/libmutter-11-0.symbols: Add new symbols
 
- -- Simon McVittie <smcv@debian.org>  Sun, 18 Sep 2022 19:47:03 +0100
+  [ Jeremy Bicha ]
+  * Mark as Linux-any
+    - Build tests indicate mutter doesn't work on Hurd or kFreeBSD
+    - Mutter is only used by GNOME Shell and Budgie, neither of which
+      are currently available on those architectures for other reasons
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 18 Sep 2022 20:18:26 +0100
 
 mutter (43~rc-2) experimental; urgency=medium
 
