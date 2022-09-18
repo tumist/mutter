@@ -87,8 +87,16 @@ meta_color_store_init (MetaColorStore *color_store)
 
 static void
 on_directory_profile_ready (MetaColorProfile *color_profile,
+                            gboolean          success,
                             MetaColorStore   *color_store)
 {
+  if (!success)
+    {
+      g_hash_table_remove (color_store->pending_local_profiles,
+                           meta_color_profile_get_file_path (color_profile));
+      return;
+    }
+
   g_object_ref (color_profile);
 
   if (!g_hash_table_steal (color_store->pending_local_profiles,
@@ -132,7 +140,6 @@ create_profile_from_contents (MetaColorStore *color_store,
 
   bytes = g_bytes_new (contents, size);
 
-  /* Set metadata needed by colord */
   cd_icc_add_metadata (cd_icc, CD_PROFILE_PROPERTY_FILENAME,
                        file_path);
 
@@ -742,4 +749,18 @@ meta_color_store_ensure_colord_profile_finish (MetaColorStore  *color_store,
             meta_color_store_ensure_colord_profile);
 
   return g_task_propagate_pointer (G_TASK (res), error);
+}
+
+MetaColorProfile *
+meta_color_store_get_profile (MetaColorStore *color_store,
+                              const char     *profile_id)
+{
+  return g_hash_table_lookup (color_store->profiles, profile_id);
+}
+
+gboolean
+meta_color_store_has_pending_profiles (MetaColorStore *color_store)
+{
+  return (g_hash_table_size (color_store->pending_local_profiles) > 0 ||
+          g_hash_table_size (color_store->pending_device_profiles) > 0);
 }
