@@ -85,12 +85,15 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_color_device_get_monitor@Base 43~rc
  meta_color_device_is_ready@Base 43~rc
  meta_color_manager_get_color_device@Base 43~rc
+ meta_color_manager_get_color_store@Base 43.0
  meta_color_manager_get_num_color_devices@Base 43~rc
  meta_color_manager_get_type@Base 43~rc
  meta_color_manager_is_ready@Base 43~rc
  meta_color_profile_get_calibration@Base 43~rc
  meta_color_profile_get_cd_icc@Base 43~rc
  meta_color_profile_get_id@Base 43~rc
+ meta_color_store_get_profile@Base 43.0
+ meta_color_store_has_pending_profiles@Base 43.0
  meta_comp_effect_get_type@Base 3.28.2
  meta_compositor_add_window@Base 3.28.2
  meta_compositor_destroy@Base 3.28.2
