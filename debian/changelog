@@ -1,3 +1,9 @@
+mutter (43.0-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 18 Sep 2022 19:41:29 +0100
+
 mutter (43~rc-2) experimental; urgency=medium
 
   [ Simon McVittie ]
