@@ -1,8 +1,10 @@
 mutter (43.0-1) UNRELEASED; urgency=medium
 
+  * Team upload
   * New upstream release
+  * d/copyright: Update
 
- -- Simon McVittie <smcv@debian.org>  Sun, 18 Sep 2022 19:41:29 +0100
+ -- Simon McVittie <smcv@debian.org>  Sun, 18 Sep 2022 19:47:03 +0100
 
 mutter (43~rc-2) experimental; urgency=medium
 
