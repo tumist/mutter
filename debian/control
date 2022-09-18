@@ -115,7 +115,7 @@ Description: Example window manager using GNOME's window manager library
  standalone window manager, but is primarily intended for debugging.
 
 Package: mutter-11-tests
-Architecture: any
+Architecture: linux-any
 Depends: at-spi2-core,
          dbus,
          dmz-cursor-theme,
@@ -236,7 +236,7 @@ Description: Development files for the Mutter window manager
 
 Package: libmutter-test-11
 Section: libs
-Architecture: any
+Architecture: linux-any
 Multi-Arch: same
 Depends: libmutter-11-0 (= ${binary:Version}),
          mutter (= ${binary:Version}),
