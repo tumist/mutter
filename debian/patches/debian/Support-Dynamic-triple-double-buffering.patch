@@ -13,6 +13,12 @@ If the previous frame is not running late then we stick to double buffering so
 there's no latency penalty when the system is able to maintain full frame rate.
 
 Origin: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/1441
+
+Formatted for Debian with:
+git fetch https://gitlab.gnome.org/vanvugt/mutter
+git merge --squash -e vanvugt/triple-buffering-v4
+And then git commit but using all this as the header instead of what
+git suggests. Also add Gbp-Pq: Topic debian
 ---
  clutter/clutter/clutter-frame-clock.c             | 165 ++++++--
  clutter/clutter/clutter-frame-clock.h             |  11 +-

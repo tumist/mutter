@@ -1,3 +1,29 @@
+mutter (43.0-1ubuntu1) UNRELEASED; urgency=medium
+
+  * Merge with Debian. Remaining change:
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 19 Sep 2022 13:06:46 -0400
+
+mutter (43.0-1) experimental; urgency=medium
+
+  * Team upload
+
+  [ Simon McVittie ]
+  * Team upload
+  * New upstream release
+  * d/copyright: Update
+  * Standards-Version: 4.6.1 (no changes required)
+  * d/libmutter-11-0.symbols: Add new symbols
+
+  [ Jeremy Bicha ]
+  * Mark as Linux-any
+    - Build tests indicate mutter doesn't work on Hurd or kFreeBSD
+    - Mutter is only used by GNOME Shell and Budgie, neither of which
+      are currently available on those architectures for other reasons
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 18 Sep 2022 20:18:26 +0100
+
 mutter (43~rc-2ubuntu2) kinetic; urgency=medium
 
   * Ignore build test failures on s390x

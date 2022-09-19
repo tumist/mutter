@@ -10,10 +10,10 @@ https://gitlab.gnome.org/GNOME/mutter/-/issues/2385
  1 file changed, 14 insertions(+), 14 deletions(-)
 
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index 74de095..fb00125 100644
+index cbd2231..c1c6bb0 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
-@@ -504,20 +504,20 @@ if have_kvm_tests or have_tty_tests
+@@ -476,20 +476,20 @@ if have_kvm_tests or have_tty_tests
    endif
  endif
  

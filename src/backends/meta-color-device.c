@@ -396,8 +396,17 @@ on_cd_device_connected (GObject      *source_object,
 
 static void
 on_profile_ready (MetaColorProfile *color_profile,
+                  gboolean          success,
                   MetaColorDevice  *color_device)
 {
+  if (!success)
+    {
+      g_clear_object (&color_device->device_profile);
+      g_cancellable_cancel (color_device->cancellable);
+      meta_color_device_notify_ready (color_device, FALSE);
+      return;
+    }
+
   color_device->pending_state &= ~PENDING_PROFILE_READY;
   maybe_finish_setup (color_device);
 }
@@ -790,6 +799,7 @@ save_icc_profile (const char *file_path,
 static CdIcc *
 create_icc_profile_from_edid (MetaColorDevice     *color_device,
                               const MetaEdidInfo  *edid_info,
+                              const char          *file_path,
                               GError             **error)
 {
   MetaColorManager *color_manager = color_device->color_manager;
@@ -839,6 +849,7 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
       return NULL;
     }
 
+  cd_icc_add_metadata (cd_icc, CD_PROFILE_PROPERTY_FILENAME, file_path);
   cd_icc_add_metadata (cd_icc,
                        CD_PROFILE_METADATA_DATA_SOURCE,
                        CD_PROFILE_METADATA_DATA_SOURCE_EDID);
@@ -923,7 +934,9 @@ create_device_profile_from_edid (MetaColorDevice *color_device,
                   "Generating ICC profile for '%s' from EDID",
                   meta_color_device_get_id (color_device));
 
-      cd_icc = create_icc_profile_from_edid (color_device, edid_info, &error);
+      cd_icc = create_icc_profile_from_edid (color_device,
+                                             edid_info, file_path,
+                                             &error);
       if (!cd_icc)
         {
           g_task_return_error (task, g_steal_pointer (&error));
@@ -938,9 +951,6 @@ create_device_profile_from_edid (MetaColorDevice *color_device,
           g_object_unref (task);
           return;
         }
-
-      /* Set metadata needed by colord */
-      cd_icc_add_metadata (cd_icc, CD_PROFILE_PROPERTY_FILENAME, file_path);
 
       file_md5_checksum = g_compute_checksum_for_bytes (G_CHECKSUM_MD5, bytes);
       cd_icc_add_metadata (cd_icc, CD_PROFILE_METADATA_FILE_CHECKSUM,

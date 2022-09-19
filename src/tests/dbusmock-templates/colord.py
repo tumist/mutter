@@ -53,6 +53,14 @@ def profile_id_from_path(mock, path):
          return profile_id
   return None
 
+
+class ColordAlreadyExistsException(dbus.DBusException):
+    _dbus_error_name = 'org.freedesktop.ColorManager.AlreadyExists'
+
+class ColordNotFoundException(dbus.DBusException):
+    _dbus_error_name = 'org.freedesktop.ColorManager.NotFound'
+
+
 @dbus.service.method(MAIN_IFACE, in_signature='ssa{sv}', out_signature='o')
 def CreateDevice(self, device_id, scope, props):
     uid = os.getuid()
@@ -93,6 +101,10 @@ def CreateProfileWithFd(self, profile_id, scope, handle, props):
     profile_path = PATH_PREFIX + '/profiles/' + \
         escape_unit_name(profile_id) + \
         '_' + username + '_' + str(uid)
+
+    if profile_id in self.profiles:
+        raise ColordAlreadyExistsException()
+
     self.profiles[profile_id] = profile_path
     self.AddObject(profile_path,
                    PROFILE_IFACE,
@@ -113,6 +125,14 @@ def DeleteProfile(self, profile_path):
     self.EmitSignal(MAIN_IFACE, 'ProfileRemoved', 'o', [profile_path])
 
 
+@dbus.service.method(MAIN_IFACE, in_signature='s', out_signature='o')
+def FindProfileById(self, profile_id):
+    if profile_id in self.devices:
+        return self.devices[profile_id]
+    else:
+        raise ColordNotFoundException()
+
+
 @dbus.service.method(MOCK_IFACE)
 def Reset(self):
     for device_path in self.devices.values():
@@ -127,8 +147,7 @@ def AddSystemProfile(self, profile_id, file_path):
     uid = os.getuid()
     username = get_username(uid)
     profile_path = PATH_PREFIX + '/profiles/' + \
-        escape_unit_name(profile_id) + \
-        '_' + username + '_' + str(uid)
+        escape_unit_name(profile_id)
     self.profiles[profile_id] = profile_path
     self.AddObject(profile_path,
                    PROFILE_IFACE,
