@@ -1,9 +1,9 @@
-mutter (43.0-1ubuntu1) UNRELEASED; urgency=medium
+mutter (43.0-1ubuntu1) kinetic; urgency=medium
 
   * Merge with Debian. Remaining change:
     - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
 
- -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 19 Sep 2022 13:06:46 -0400
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 19 Sep 2022 13:10:57 -0400
 
 mutter (43.0-1) experimental; urgency=medium
 
