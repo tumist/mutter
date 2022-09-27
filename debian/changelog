@@ -1,3 +1,9 @@
+mutter (43.0-2) unstable; urgency=medium
+
+  * Release to unstable (Closes: #1009990, #1019266, #1020515)
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 27 Sep 2022 19:00:48 -0400
+
 mutter (43.0-1) experimental; urgency=medium
 
   * Team upload
