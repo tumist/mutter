@@ -3,6 +3,7 @@ tests-Disable-broken-test.patch
 tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
 theme-load-icons-as-Gtk-does-with-fallback-and-RTL-suppor.patch
 theme-use-gtk_render_icon_suface-to-paint-button-icon.patch
+monitor-Keep-the-dbus-night-light-supported-property-in-s.patch
 debian/backends-native-kms-crtc-Don-t-compare-gamma-values-on-un.patch
 debian/meson-Do-not-mark-CI-test-tools-as-required.patch
 debian/Support-Dynamic-triple-double-buffering.patch
