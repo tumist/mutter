@@ -1,3 +1,10 @@
+mutter (43.0-1ubuntu2) kinetic; urgency=medium
+
+  * Cherry-pick patch to fix Night Light availability in GNOME Settings
+    (Closes: #1020941) (LP: #1990207)
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Fri, 14 Oct 2022 16:25:40 -0400
+
 mutter (43.0-1ubuntu1) kinetic; urgency=medium
 
   * Merge with Debian. Remaining change:
