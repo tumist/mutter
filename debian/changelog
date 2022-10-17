@@ -1,3 +1,12 @@
+mutter (43.0-3) unstable; urgency=medium
+
+  * Cherry-pick patch to fix Night Light availability in GNOME Settings
+    (Closes: #1020941) (LP: #1990207)
+  * Cherry-pick patches to avoid crash when ICC color profile is invalid
+    (Closes: #1021680) (LP: #1993114)
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 17 Oct 2022 06:57:50 -0400
+
 mutter (43.0-2) unstable; urgency=medium
 
   * Release to unstable (Closes: #1009990, #1019266, #1020515)
