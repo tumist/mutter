@@ -1,3 +1,10 @@
+mutter (43.0-1ubuntu3) kinetic; urgency=medium
+
+  * Cherry-pick patches to avoid crash when ICC color profile is invalid
+    (Closes: #1021680) (LP: #1993114)
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 17 Oct 2022 06:55:32 -0400
+
 mutter (43.0-1ubuntu2) kinetic; urgency=medium
 
   * Cherry-pick patch to fix Night Light availability in GNOME Settings
