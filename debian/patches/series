@@ -4,6 +4,11 @@ tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
 theme-load-icons-as-Gtk-does-with-fallback-and-RTL-suppor.patch
 theme-use-gtk_render_icon_suface-to-paint-button-icon.patch
 monitor-Keep-the-dbus-night-light-supported-property-in-s.patch
+color-device-Always-become-ready-no-matter-if-we-succeede.patch
+color-device-Return-early-if-the-deivce-becomes-ready-due.patch
+color-device-Don-t-create-profiles-from-obvious-garbage-d.patch
+color-device-Clear-pending-flags-always-when-finished.patch
+tests-color-Test-EDIDs-with-bogus-data.patch
 debian/backends-native-kms-crtc-Don-t-compare-gamma-values-on-un.patch
 debian/meson-Do-not-mark-CI-test-tools-as-required.patch
 debian/Support-Dynamic-triple-double-buffering.patch
