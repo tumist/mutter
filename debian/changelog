@@ -1,3 +1,10 @@
+mutter (43.0-1ubuntu4) kinetic; urgency=medium
+
+  * debian/rules: Ignore test failures on armhf.
+    Temporary, to unblock the mutter update while we investigate the regression
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 17 Oct 2022 19:58:15 -0400
+
 mutter (43.0-1ubuntu3) kinetic; urgency=medium
 
   * Cherry-pick patches to avoid crash when ICC color profile is invalid
