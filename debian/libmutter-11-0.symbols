@@ -285,7 +285,6 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_inhibit_shortcuts_dialog_response_get_type@Base 3.28.2
  meta_inhibit_shortcuts_dialog_show@Base 3.28.2
  meta_is_restart@Base 3.28.2
- meta_is_stage_views_enabled@Base 3.28.2
  meta_is_topic_enabled@Base 40.0
  meta_is_verbose@Base 3.28.2
  meta_is_wayland_compositor@Base 3.28.2
@@ -693,6 +692,8 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  (arch=linux-any)meta_wayland_get_wayland_display_name@Base 3.28.2
  (arch=linux-any)meta_wayland_override_display_name@Base 3.28.2
  (arch=linux-any)meta_wayland_surface_get_actor@Base 42~alpha
+ (arch=linux-any)meta_wayland_surface_get_height@Base 43.1
+ (arch=linux-any)meta_wayland_surface_get_width@Base 43.1
  meta_wayland_surface_get_window@Base 43~beta
  meta_window_activate@Base 3.28.2
  meta_window_activate_with_workspace@Base 3.28.2
@@ -831,6 +832,8 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_window_unshade@Base 3.28.2
  meta_window_unstick@Base 3.28.2
  meta_window_untile@Base 3.37.91
+ (arch=linux-any)meta_window_wayland_get_type@Base 43.1
+ (arch=linux-any)meta_window_wayland_is_acked_fullscreen@Base 43.1
  meta_workspace_activate@Base 3.28.2
  meta_workspace_activate_with_focus@Base 3.28.2
  meta_workspace_get_display@Base 3.29.4
@@ -850,6 +853,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_workspace_manager_override_workspace_layout@Base 3.29.4
  meta_workspace_manager_remove_workspace@Base 3.29.4
  meta_workspace_manager_reorder_workspace@Base 3.33.4
+ meta_workspace_manager_update_num_workspaces@Base 43.1
  meta_workspace_set_builtin_struts@Base 3.28.2
  meta_x11_display_clear_stage_input_region@Base 3.33.91
  meta_x11_display_get_damage_event_base@Base 3.29.4
