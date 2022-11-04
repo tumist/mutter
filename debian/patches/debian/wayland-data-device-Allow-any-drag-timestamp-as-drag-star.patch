@@ -24,10 +24,10 @@ Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/mutter/+bug/1964541
  3 files changed, 24 insertions(+), 1 deletion(-)
 
 diff --git a/src/wayland/meta-wayland-data-device.c b/src/wayland/meta-wayland-data-device.c
-index c8cf8f5..03ce90b 100644
+index 49b61fc..b28580e 100644
 --- a/src/wayland/meta-wayland-data-device.c
 +++ b/src/wayland/meta-wayland-data-device.c
-@@ -660,6 +660,15 @@ meta_wayland_data_device_end_drag (MetaWaylandDataDevice *data_device)
+@@ -673,6 +673,15 @@ meta_wayland_data_device_end_drag (MetaWaylandDataDevice *data_device)
      data_device_end_drag_grab (data_device->current_grab);
  }
  
@@ -41,9 +41,9 @@ index c8cf8f5..03ce90b 100644
 +}
 +
  static void
- data_device_start_drag (struct wl_client *client,
+ data_device_start_drag (struct wl_client  *client,
                          struct wl_resource *resource,
-@@ -680,7 +689,11 @@ data_device_start_drag (struct wl_client *client,
+@@ -694,7 +703,11 @@ data_device_start_drag (struct wl_client  *client,
      return;
  
    if (seat->pointer->button_count == 0 ||
@@ -57,10 +57,10 @@ index c8cf8f5..03ce90b 100644
        seat->pointer->focus_surface != surface)
      return;
 diff --git a/src/wayland/meta-wayland-pointer.c b/src/wayland/meta-wayland-pointer.c
-index 94e7667..a442e5f 100644
+index d000ccf..6181ae7 100644
 --- a/src/wayland/meta-wayland-pointer.c
 +++ b/src/wayland/meta-wayland-pointer.c
-@@ -690,6 +690,9 @@ notify_motion (MetaWaylandPointer *pointer,
+@@ -714,6 +714,9 @@ notify_motion (MetaWaylandPointer *pointer,
                 const ClutterEvent *event)
  {
    pointer->grab->interface->motion (pointer->grab, event);
@@ -70,7 +70,7 @@ index 94e7667..a442e5f 100644
  }
  
  static void
-@@ -710,8 +713,14 @@ handle_button_event (MetaWaylandPointer *pointer,
+@@ -734,8 +737,14 @@ handle_button_event (MetaWaylandPointer *pointer,
      {
        pointer->grab_button = clutter_event_get_button (event);
        pointer->grab_time = clutter_event_get_time (event);
@@ -86,10 +86,10 @@ index 94e7667..a442e5f 100644
    pointer->grab->interface->button (pointer->grab, event);
  
 diff --git a/src/wayland/meta-wayland-pointer.h b/src/wayland/meta-wayland-pointer.h
-index 088312f..7070be2 100644
+index 5cd725d..f2ab695 100644
 --- a/src/wayland/meta-wayland-pointer.h
 +++ b/src/wayland/meta-wayland-pointer.h
-@@ -84,6 +84,7 @@ struct _MetaWaylandPointer
+@@ -85,6 +85,7 @@ struct _MetaWaylandPointer
    guint32 grab_button;
    guint32 grab_serial;
    guint32 grab_time;
