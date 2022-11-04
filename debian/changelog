@@ -1,3 +1,9 @@
+mutter (43.1-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 04 Nov 2022 14:58:49 +0000
+
 mutter (43.0-3) unstable; urgency=medium
 
   * Cherry-pick patch to fix Night Light availability in GNOME Settings
