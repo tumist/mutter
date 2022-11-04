@@ -1,5 +1,6 @@
 mutter (43.1-1) unstable; urgency=medium
 
+  * Team upload
   * New upstream release
     - Among other fixes, this avoids a fullscreen window on one display
       being replicated on another display (Closes: #1023256, LP: #1990563)
@@ -17,7 +18,7 @@ mutter (43.1-1) unstable; urgency=medium
     point in finer-grained tracking of which specific prerelease each
     symbol came from.
 
- -- Simon McVittie <smcv@debian.org>  Fri, 04 Nov 2022 20:08:46 +0000
+ -- Simon McVittie <smcv@debian.org>  Fri, 04 Nov 2022 20:09:07 +0000
 
 mutter (43.0-3) unstable; urgency=medium
 
