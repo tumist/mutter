@@ -595,6 +595,9 @@ add_drm_device (MetaBackendNative  *backend_native,
   if (meta_is_udev_device_disable_modifiers (device))
     flags |= META_KMS_DEVICE_FLAG_DISABLE_MODIFIERS;
 
+  if (meta_is_udev_device_disable_client_modifiers (device))
+    flags |= META_KMS_DEVICE_FLAG_DISABLE_CLIENT_MODIFIERS;
+
   if (meta_is_udev_device_preferred_primary (device))
     flags |= META_KMS_DEVICE_FLAG_PREFERRED_PRIMARY;
 
@@ -763,13 +766,6 @@ meta_backend_native_initable_init (GInitable     *initable,
   MetaBackendNative *native = META_BACKEND_NATIVE (initable);
   MetaBackend *backend = META_BACKEND (native);
   MetaKmsFlags kms_flags;
-
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "The native backend requires stage views");
-      return FALSE;
-    }
 
   if (!meta_backend_is_headless (backend))
     {
@@ -995,9 +991,21 @@ void meta_backend_native_resume (MetaBackendNative *native)
   clutter_seat_ensure_a11y_state (CLUTTER_SEAT (seat));
 }
 
+static MetaRenderDevice *
+meta_backend_native_create_render_device (MetaBackendNative  *backend_native,
+                                          const char         *device_path,
+                                          GError            **error)
+{
+  g_autoptr (MetaRenderDevice) render_device = NULL;
+
+  render_device = create_render_device (backend_native, device_path, error);
+  return g_steal_pointer (&render_device);
+}
+
 MetaRenderDevice *
-meta_backend_native_take_render_device (MetaBackendNative *backend_native,
-                                        const char        *device_path)
+meta_backend_native_take_render_device (MetaBackendNative  *backend_native,
+                                        const char         *device_path,
+                                        GError            **error)
 {
   MetaRenderDevice *render_device;
 
@@ -1005,7 +1013,12 @@ meta_backend_native_take_render_device (MetaBackendNative *backend_native,
                                    device_path,
                                    NULL,
                                    (gpointer *) &render_device))
-    return render_device;
+    {
+      return render_device;
+    }
   else
-    return NULL;
+    {
+      return meta_backend_native_create_render_device (backend_native,
+                                                       device_path, error);
+    }
 }

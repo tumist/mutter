@@ -125,6 +125,10 @@ struct _MetaWaylandSurfaceState
 
   /* presentation-time */
   struct wl_list presentation_feedback_list;
+
+  struct {
+    gboolean surface_size_changed;
+  } derived;
 };
 
 struct _MetaWaylandDragDestFuncs
@@ -353,7 +357,10 @@ void                meta_wayland_surface_notify_subsurface_state_changed (MetaWa
 
 void                meta_wayland_surface_notify_unmapped (MetaWaylandSurface *surface);
 
+META_EXPORT_TEST
 int                 meta_wayland_surface_get_width (MetaWaylandSurface *surface);
+
+META_EXPORT_TEST
 int                 meta_wayland_surface_get_height (MetaWaylandSurface *surface);
 
 CoglScanout *       meta_wayland_surface_try_acquire_scanout (MetaWaylandSurface *surface,
@@ -394,7 +401,9 @@ meta_get_first_subsurface_node (MetaWaylandSurface *surface)
   GNode *n;
 
   n = g_node_first_child (surface->subsurface_branch_node);
-  if (!G_NODE_IS_LEAF (n))
+  if (!n)
+    return NULL;
+  else if (!G_NODE_IS_LEAF (n))
     return n;
   else
     return meta_get_next_subsurface_sibling (n);

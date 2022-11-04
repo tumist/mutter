@@ -39,6 +39,7 @@
 #include <string.h>
 
 #include "backends/meta-backend-private.h"
+#include "backends/meta-cursor-tracker-private.h"
 #include "backends/meta-logical-monitor.h"
 #include "cogl/cogl.h"
 #include "core/boxes-private.h"
@@ -50,9 +51,11 @@
 #include "x11/meta-x11-display-private.h"
 
 void meta_workspace_queue_calc_showing   (MetaWorkspace *workspace);
-static void focus_ancestor_or_top_window (MetaWorkspace *workspace,
+static void focus_ancestor_or_mru_window (MetaWorkspace *workspace,
                                           MetaWindow    *not_this_one,
                                           guint32        timestamp);
+static MetaWindow * get_pointer_window (MetaWorkspace *workspace,
+                                        MetaWindow    *not_this_one);
 
 G_DEFINE_TYPE (MetaWorkspace, meta_workspace, G_TYPE_OBJECT);
 
@@ -1313,20 +1316,6 @@ meta_workspace_get_name (MetaWorkspace *workspace)
   return meta_prefs_get_workspace_name (meta_workspace_index (workspace));
 }
 
-MetaWindow *
-meta_workspace_get_default_focus_window (MetaWorkspace *workspace)
-{
-  if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK)
-    {
-      return meta_stack_get_default_focus_window (workspace->display->stack,
-                                                  workspace, NULL);
-    }
-  else
-    {
-      return NULL;
-    }
-}
-
 void
 meta_workspace_focus_default_window (MetaWorkspace *workspace,
                                      MetaWindow    *not_this_one,
@@ -1338,11 +1327,14 @@ meta_workspace_focus_default_window (MetaWorkspace *workspace,
 
   if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK ||
       !workspace->display->mouse_mode)
-    focus_ancestor_or_top_window (workspace, not_this_one, timestamp);
+    {
+      focus_ancestor_or_mru_window (workspace, not_this_one, timestamp);
+    }
   else
     {
       MetaWindow * window;
-      window = meta_display_get_pointer_window (workspace->display, not_this_one);
+
+      window = get_pointer_window (workspace, not_this_one);
       if (window &&
           window->type != META_WINDOW_DOCK &&
           window->type != META_WINDOW_DESKTOP)
@@ -1375,7 +1367,9 @@ meta_workspace_focus_default_window (MetaWorkspace *workspace,
             }
         }
       else if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_SLOPPY)
-        focus_ancestor_or_top_window (workspace, not_this_one, timestamp);
+        {
+          focus_ancestor_or_mru_window (workspace, not_this_one, timestamp);
+        }
       else if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_MOUSE)
         {
           meta_topic (META_DEBUG_FOCUS,
@@ -1387,23 +1381,153 @@ meta_workspace_focus_default_window (MetaWorkspace *workspace,
 }
 
 static gboolean
+is_focusable (MetaWindow    *window,
+              MetaWorkspace *workspace)
+{
+  return !window->unmanaging &&
+         window->unmaps_pending == 0 &&
+         window->type != META_WINDOW_DOCK &&
+         meta_window_is_focusable (window) &&
+         meta_window_located_on_workspace (window, workspace) &&
+         meta_window_showing_on_its_workspace (window);
+}
+
+static gboolean
 find_focusable_ancestor (MetaWindow *window,
                          gpointer    user_data)
 {
   MetaWorkspaceFocusableAncestorData *data = user_data;
 
-  if (!window->unmanaging &&
-      window->mapped &&
-      !window->hidden &&
-      meta_window_is_focusable (window) &&
-      meta_window_located_on_workspace (window, data->workspace) &&
-      meta_window_showing_on_its_workspace (window))
+  if (is_focusable (window, data->workspace) && !window->hidden)
     {
       data->out_window = window;
       return FALSE;
     }
 
   return TRUE;
+}
+
+GList *
+meta_workspace_get_default_focus_candidates (MetaWorkspace *workspace)
+{
+  GList *l;
+  GList *candidates = NULL;
+
+  for (l = workspace->mru_list; l; l = l->next)
+    {
+      MetaWindow *window = l->data;
+
+      g_assert (window);
+
+      if (!is_focusable (window, workspace))
+        continue;
+
+      candidates = g_list_prepend (candidates, window);
+    }
+
+  return candidates;
+}
+
+static gboolean
+window_contains_point (MetaWindow *window,
+                       int         root_x,
+                       int         root_y)
+{
+  MetaRectangle rect;
+
+  meta_window_get_frame_rect (window, &rect);
+
+  return META_POINT_IN_RECT (root_x, root_y, rect);
+}
+
+MetaWindow *
+meta_workspace_get_default_focus_window_at_point (MetaWorkspace *workspace,
+                                                  MetaWindow    *not_this_one,
+                                                  int            root_x,
+                                                  int            root_y)
+{
+  g_autoptr (GList) sorted = NULL;
+  GList *l;
+  MetaStack *stack;
+
+  g_return_val_if_fail (META_IS_WORKSPACE (workspace), NULL);
+  g_return_val_if_fail (!not_this_one || META_IS_WINDOW (not_this_one), NULL);
+
+  stack = workspace->display->stack;
+
+  g_return_val_if_fail (META_IS_STACK (stack), NULL);
+
+  /* Find the topmost, focusable, mapped, window.
+   * not_this_one is being unfocused or going away, so exclude it.
+   */
+  sorted = g_list_reverse (meta_stack_list_windows (stack, workspace));
+
+  /* top of this layer is at the front of the list */
+  for (l = sorted; l != NULL; l = l->next)
+    {
+      MetaWindow *window = l->data;
+
+      g_assert (window);
+
+      if (window == not_this_one)
+        continue;
+
+      if (!is_focusable (window, workspace))
+        continue;
+
+      if (!window_contains_point (window, root_x, root_y))
+        continue;
+
+      return window;
+    }
+
+  return NULL;
+}
+
+MetaWindow *
+meta_workspace_get_default_focus_window (MetaWorkspace *workspace,
+                                         MetaWindow    *not_this_one)
+{
+  GList *l;
+
+  g_return_val_if_fail (META_IS_WORKSPACE (workspace), NULL);
+  g_return_val_if_fail (!not_this_one || META_IS_WINDOW (not_this_one), NULL);
+
+  for (l = workspace->mru_list; l; l = l->next)
+    {
+      MetaWindow *window = l->data;
+
+      g_assert (window);
+
+      if (window == not_this_one)
+        continue;
+
+      if (!is_focusable (window, workspace))
+        continue;
+
+      return window;
+    }
+
+  return NULL;
+}
+
+static MetaWindow *
+get_pointer_window (MetaWorkspace *workspace,
+                    MetaWindow    *not_this_one)
+{
+  MetaBackend *backend = meta_get_backend ();
+  MetaCursorTracker *cursor_tracker = meta_backend_get_cursor_tracker (backend);
+  graphene_point_t point;
+
+  if (not_this_one)
+    meta_topic (META_DEBUG_FOCUS,
+                "Focusing mouse window excluding %s", not_this_one->desc);
+
+  meta_cursor_tracker_get_pointer (cursor_tracker, &point, NULL);
+
+  return meta_workspace_get_default_focus_window_at_point (workspace,
+                                                           not_this_one,
+                                                           point.x, point.y);
 }
 
 static gboolean
@@ -1440,7 +1564,7 @@ try_to_set_focus_and_check (MetaWindow *window,
 
 /* Focus ancestor of not_this_one if there is one */
 static void
-focus_ancestor_or_top_window (MetaWorkspace *workspace,
+focus_ancestor_or_mru_window (MetaWorkspace *workspace,
                               MetaWindow    *not_this_one,
                               guint32        timestamp)
 {
@@ -1482,9 +1606,7 @@ focus_ancestor_or_top_window (MetaWorkspace *workspace,
         }
     }
 
-  window = meta_stack_get_default_focus_window (workspace->display->stack,
-                                                workspace,
-                                                not_this_one);
+  window = meta_workspace_get_default_focus_window (workspace, not_this_one);
 
   if (window)
     {

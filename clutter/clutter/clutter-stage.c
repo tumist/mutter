@@ -3790,6 +3790,9 @@ clutter_stage_grab (ClutterStage *stage,
 
   g_return_val_if_fail (CLUTTER_IS_STAGE (stage), NULL);
   g_return_val_if_fail (CLUTTER_IS_ACTOR (actor), NULL);
+  g_return_val_if_fail (stage ==
+                        (ClutterStage *) _clutter_actor_get_stage_internal (actor),
+                        NULL);
 
   priv = stage->priv;
 

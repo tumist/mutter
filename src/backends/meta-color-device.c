@@ -342,7 +342,7 @@ static void
 meta_color_device_notify_ready (MetaColorDevice *color_device,
                                 gboolean         success)
 {
-  color_device->is_ready = success;
+  color_device->is_ready = TRUE;
   g_signal_emit (color_device, signals[READY], 0, success);
 }
 
@@ -367,6 +367,8 @@ on_cd_device_connected (GObject      *source_object,
   MetaColorDevice *color_device = user_data;
   g_autoptr (GError) error = NULL;
 
+  color_device->pending_state &= ~PENDING_CONNECTED;
+
   if (!cd_device_connect_finish (cd_device, res, &error))
     {
       if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
@@ -378,14 +380,13 @@ on_cd_device_connected (GObject      *source_object,
 
       g_cancellable_cancel (color_device->cancellable);
       meta_color_device_notify_ready (color_device, FALSE);
+      return;
     }
   else
     {
       meta_topic (META_DEBUG_COLOR, "Color device '%s' connected",
                   color_device->cd_device_id);
     }
-
-  color_device->pending_state &= ~PENDING_CONNECTED;
 
   g_signal_connect (cd_device, "changed",
                     G_CALLBACK (on_cd_device_changed), color_device);
@@ -399,6 +400,8 @@ on_profile_ready (MetaColorProfile *color_profile,
                   gboolean          success,
                   MetaColorDevice  *color_device)
 {
+  color_device->pending_state &= ~PENDING_PROFILE_READY;
+
   if (!success)
     {
       g_clear_object (&color_device->device_profile);
@@ -407,7 +410,6 @@ on_profile_ready (MetaColorProfile *color_profile,
       return;
     }
 
-  color_device->pending_state &= ~PENDING_PROFILE_READY;
   maybe_finish_setup (color_device);
 }
 
@@ -420,6 +422,8 @@ ensure_device_profile_cb (GObject      *source_object,
   MetaColorDevice *color_device = META_COLOR_DEVICE (user_data);
   MetaColorProfile *color_profile;
   g_autoptr (GError) error = NULL;
+
+  color_device->pending_state &= ~PENDING_EDID_PROFILE;
 
   color_profile = meta_color_store_ensure_device_profile_finish (color_store,
                                                                  res,
@@ -434,12 +438,12 @@ ensure_device_profile_cb (GObject      *source_object,
 
       g_cancellable_cancel (color_device->cancellable);
       meta_color_device_notify_ready (color_device, FALSE);
+      return;
     }
 
   meta_topic (META_DEBUG_COLOR, "Color device '%s' generated",
               color_device->cd_device_id);
 
-  color_device->pending_state &= ~PENDING_EDID_PROFILE;
   g_set_object (&color_device->device_profile, color_profile);
 
   if (!meta_color_profile_is_ready (color_profile))
@@ -815,6 +819,31 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
   g_autofree char *vendor_name = NULL;
   cmsHPROFILE lcms_profile;
 
+  if (G_APPROX_VALUE (edid_info->red_x, 0.0, FLT_EPSILON) ||
+      G_APPROX_VALUE (edid_info->red_y, 0.0, FLT_EPSILON) ||
+      G_APPROX_VALUE (edid_info->green_x, 0.0, FLT_EPSILON) ||
+      G_APPROX_VALUE (edid_info->green_y, 0.0, FLT_EPSILON) ||
+      G_APPROX_VALUE (edid_info->blue_x, 0.0, FLT_EPSILON) ||
+      G_APPROX_VALUE (edid_info->blue_y, 0.0, FLT_EPSILON) ||
+      G_APPROX_VALUE (edid_info->white_x, 0.0, FLT_EPSILON) ||
+      G_APPROX_VALUE (edid_info->white_y, 0.0, FLT_EPSILON))
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "EDID for %s contains bogus Color Characteristics",
+                   meta_color_device_get_id (color_device));
+      return NULL;
+    }
+
+  if (edid_info->gamma + FLT_EPSILON < 1.0 ||
+      edid_info->gamma > 4.0)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "EDID for %s contains bogus Display Transfer "
+                   "Characteristics (GAMMA)",
+                   meta_color_device_get_id (color_device));
+      return NULL;
+    }
+
   cd_icc = cd_icc_new ();
 
   chroma.Red.x = edid_info->red_x;
@@ -837,10 +866,19 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
                                          &white_point,
                                          &chroma,
                                          transfer_curve);
-  cmsSetHeaderRenderingIntent (lcms_profile, INTENT_PERCEPTUAL);
-  cmsSetDeviceClass (lcms_profile, cmsSigDisplayClass);
 
   cmsFreeToneCurve (transfer_curve[0]);
+
+  if (!lcms_profile)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "cmsCreateRGBProfileTHR for %s failed",
+                   meta_color_device_get_id (color_device));
+      return NULL;
+    }
+
+  cmsSetHeaderRenderingIntent (lcms_profile, INTENT_PERCEPTUAL);
+  cmsSetDeviceClass (lcms_profile, cmsSigDisplayClass);
 
   if (!cd_icc_load_handle (cd_icc, lcms_profile,
                            CD_ICC_LOAD_FLAGS_PRIMARIES, error))

@@ -367,11 +367,15 @@ build-without-native-backend-and-wayland@x86_64:
     - .test-mutter-base
   script:
     - glib-compile-schemas $GSETTINGS_SCHEMA_DIR
-    - dbus-run-session -- xvfb-run -a -s "$XVFB_SERVER_ARGS"
-        ./.gitlab-ci/run-meson.sh test -C build
-          --no-suite 'mutter/kvm'
-          --no-rebuild
-          --timeout-multiplier 10
+    - xvfb-run -a -s "$XVFB_SERVER_ARGS"
+        ./src/tests/meta-dbus-runner.py
+          --launch=wireplumber
+          meson test
+            -C build
+            --setup plain
+            --no-suite 'mutter/kvm'
+            --no-rebuild
+            --timeout-multiplier 10
   artifacts:
     reports:
       junit: "build/meson-logs/testlog.junit.xml"
@@ -421,9 +425,20 @@ coverage:
     - mkdir coveragereport
     - gcovr --add-tracefile 'coverage-*.json'
         --html-details --print-summary --output coveragereport/index.html
+    - gcovr --add-tracefile 'coverage-*.json'
+        --xml --output coveragereport/coverage.xml
   artifacts:
+    expose_as: 'Coverage Report'
     paths:
       - coveragereport
+      - coveragereport/index.html
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        # TODO: we may need to split this file once it will reach the
+        # gitlab limit size of 10M, or it will stop working:
+        #  https://gitlab.com/gitlab-org/gitlab/-/issues/328772
+        path: coveragereport/coverage.xml
   coverage: '/^lines: (\d+\.\d+\%)/'
   needs:
     - test-mutter@x86_64
@@ -484,8 +499,10 @@ dist-mutter:
     - meson . build --werror --prefix /usr
         -Dbuildtype=debugoptimized
     - glib-compile-schemas $GSETTINGS_SCHEMA_DIR
-    - dbus-run-session -- xvfb-run -a -s "$XVFB_SERVER_ARGS"
-        ./.gitlab-ci/run-meson.sh dist -C build
+    - xvfb-run -a -s "$XVFB_SERVER_ARGS"
+        ./src/tests/meta-dbus-runner.py
+          --launch=wireplumber
+          meson dist -C build
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
@@ -516,8 +533,9 @@ reference:
     - mv build/doc/reference/{cally/cally,clutter/clutter,cogl/cogl,cogl-pango/cogl-pango,meta/meta} references/
   artifacts:
     expire_in: 1 week
+    expose_as: 'Documentation'
     paths:
-      - references
+      - references/
 
 pages:
   stage: deploy

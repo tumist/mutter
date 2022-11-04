@@ -132,15 +132,6 @@ static void     ensure_mru_position_after (MetaWindow *window,
 static void meta_window_unqueue (MetaWindow    *window,
                                  MetaQueueType  queuebits);
 
-static void     update_move           (MetaWindow              *window,
-                                       MetaEdgeResistanceFlags  flags,
-                                       int                      x,
-                                       int                      y);
-static void     update_resize         (MetaWindow              *window,
-                                       MetaEdgeResistanceFlags  flags,
-                                       int                      x,
-                                       int                      y,
-                                       gboolean                 force);
 static gboolean should_be_on_all_workspaces (MetaWindow *window);
 
 static void meta_window_flush_calc_showing   (MetaWindow *window);
@@ -2120,7 +2111,9 @@ meta_window_force_placement (MetaWindow *window,
    */
   window->calc_placement = TRUE;
 
-  flags = META_MOVE_RESIZE_MOVE_ACTION | META_MOVE_RESIZE_RESIZE_ACTION;
+  flags = (META_MOVE_RESIZE_MOVE_ACTION |
+           META_MOVE_RESIZE_RESIZE_ACTION |
+           META_MOVE_RESIZE_CONSTRAIN);
   if (force_move)
     flags |= META_MOVE_RESIZE_FORCE_MOVE;
 
@@ -2461,6 +2454,7 @@ queue_calc_showing_func (MetaWindow *window,
 void
 meta_window_minimize (MetaWindow  *window)
 {
+  g_return_if_fail (META_IS_WINDOW (window));
   g_return_if_fail (!window->override_redirect);
 
   if (!window->has_minimize_func)
@@ -2621,6 +2615,7 @@ meta_window_maximize (MetaWindow        *window,
   MetaRectangle *saved_rect = NULL;
   gboolean maximize_horizontally, maximize_vertically;
 
+  g_return_if_fail (META_IS_WINDOW (window));
   g_return_if_fail (!window->override_redirect);
 
   /* At least one of the two directions ought to be set */
@@ -2681,7 +2676,8 @@ meta_window_maximize (MetaWindow        *window,
       meta_window_move_resize_internal (window,
                                         (META_MOVE_RESIZE_MOVE_ACTION |
                                          META_MOVE_RESIZE_RESIZE_ACTION |
-                                         META_MOVE_RESIZE_STATE_CHANGED),
+                                         META_MOVE_RESIZE_STATE_CHANGED |
+                                         META_MOVE_RESIZE_CONSTRAIN),
                                         META_GRAVITY_NORTH_WEST,
                                         window->unconstrained_rect);
     }
@@ -2894,6 +2890,8 @@ update_edge_constraints (MetaWindow *window)
 void
 meta_window_untile (MetaWindow *window)
 {
+  g_return_if_fail (META_IS_WINDOW (window));
+
   window->tile_monitor_number =
     window->saved_maximize ? window->monitor->number
                            : -1;
@@ -2913,6 +2911,8 @@ meta_window_tile (MetaWindow   *window,
 {
   MetaMaximizeFlags directions;
   MetaRectangle old_frame_rect, old_buffer_rect;
+
+  g_return_if_fail (META_IS_WINDOW (window));
 
   meta_window_get_tile_fraction (window, tile_mode, &window->tile_hfraction);
   window->tile_mode = tile_mode;
@@ -2949,7 +2949,8 @@ meta_window_tile (MetaWindow   *window,
   meta_window_move_resize_internal (window,
                                     (META_MOVE_RESIZE_MOVE_ACTION |
                                      META_MOVE_RESIZE_RESIZE_ACTION |
-                                     META_MOVE_RESIZE_STATE_CHANGED),
+                                     META_MOVE_RESIZE_STATE_CHANGED |
+                                     META_MOVE_RESIZE_CONSTRAIN),
                                     META_GRAVITY_NORTH_WEST,
                                     window->unconstrained_rect);
 
@@ -3053,6 +3054,7 @@ meta_window_unmaximize (MetaWindow        *window,
 {
   gboolean unmaximize_horizontally, unmaximize_vertically;
 
+  g_return_if_fail (META_IS_WINDOW (window));
   g_return_if_fail (!window->override_redirect);
 
   /* At least one of the two directions ought to be set */
@@ -3258,6 +3260,7 @@ meta_window_make_fullscreen_internal (MetaWindow  *window)
 void
 meta_window_make_fullscreen (MetaWindow  *window)
 {
+  g_return_if_fail (META_IS_WINDOW (window));
   g_return_if_fail (!window->override_redirect);
 
   if (!window->fullscreen)
@@ -3275,7 +3278,8 @@ meta_window_make_fullscreen (MetaWindow  *window)
       meta_window_move_resize_internal (window,
                                         (META_MOVE_RESIZE_MOVE_ACTION |
                                          META_MOVE_RESIZE_RESIZE_ACTION |
-                                         META_MOVE_RESIZE_STATE_CHANGED),
+                                         META_MOVE_RESIZE_STATE_CHANGED |
+                                         META_MOVE_RESIZE_CONSTRAIN),
                                         META_GRAVITY_NORTH_WEST,
                                         window->unconstrained_rect);
     }
@@ -3284,6 +3288,7 @@ meta_window_make_fullscreen (MetaWindow  *window)
 void
 meta_window_unmake_fullscreen (MetaWindow  *window)
 {
+  g_return_if_fail (META_IS_WINDOW (window));
   g_return_if_fail (!window->override_redirect);
 
   if (window->fullscreen)
@@ -3581,7 +3586,8 @@ meta_window_reposition (MetaWindow *window)
 {
   meta_window_move_resize_internal (window,
                                     (META_MOVE_RESIZE_MOVE_ACTION |
-                                     META_MOVE_RESIZE_RESIZE_ACTION),
+                                     META_MOVE_RESIZE_RESIZE_ACTION |
+                                     META_MOVE_RESIZE_CONSTRAIN),
                                     META_GRAVITY_NORTH_WEST,
                                     window->rect);
 }
@@ -3855,10 +3861,7 @@ meta_window_move_resize_internal (MetaWindow          *window,
 
   constrained_rect = unconstrained_rect;
   temporary_rect = window->rect;
-  if (flags & (META_MOVE_RESIZE_MOVE_ACTION | META_MOVE_RESIZE_RESIZE_ACTION) &&
-      !(flags & META_MOVE_RESIZE_WAYLAND_FINISH_MOVE_RESIZE) &&
-      !(flags & (META_MOVE_RESIZE_UNMAXIMIZE | META_MOVE_RESIZE_UNFULLSCREEN)) &&
-      window->monitor)
+  if (flags & META_MOVE_RESIZE_CONSTRAIN && window->monitor)
     {
       MetaRectangle old_rect;
       meta_window_get_frame_rect (window, &old_rect);
@@ -3989,7 +3992,9 @@ meta_window_move_frame (MetaWindow *window,
 
   g_return_if_fail (!window->override_redirect);
 
-  flags = (user_op ? META_MOVE_RESIZE_USER_ACTION : 0) | META_MOVE_RESIZE_MOVE_ACTION;
+  flags = ((user_op ? META_MOVE_RESIZE_USER_ACTION : 0) |
+           META_MOVE_RESIZE_MOVE_ACTION |
+           META_MOVE_RESIZE_CONSTRAIN);
   meta_window_move_resize_internal (window, flags, META_GRAVITY_NORTH_WEST, rect);
 }
 
@@ -4020,9 +4025,10 @@ meta_window_move_between_rects (MetaWindow  *window,
   window->saved_rect.y = window->unconstrained_rect.y;
 
   meta_window_move_resize_internal (window,
-                                    move_resize_flags |
-                                    META_MOVE_RESIZE_MOVE_ACTION |
-                                    META_MOVE_RESIZE_RESIZE_ACTION,
+                                    (move_resize_flags |
+                                     META_MOVE_RESIZE_MOVE_ACTION |
+                                     META_MOVE_RESIZE_RESIZE_ACTION |
+                                     META_MOVE_RESIZE_CONSTRAIN),
                                     META_GRAVITY_NORTH_WEST,
                                     window->unconstrained_rect);
 }
@@ -4052,7 +4058,10 @@ meta_window_move_resize_frame (MetaWindow  *window,
 
   g_return_if_fail (!window->override_redirect);
 
-  flags = (user_op ? META_MOVE_RESIZE_USER_ACTION : 0) | META_MOVE_RESIZE_MOVE_ACTION | META_MOVE_RESIZE_RESIZE_ACTION;
+  flags = ((user_op ? META_MOVE_RESIZE_USER_ACTION : 0) |
+           META_MOVE_RESIZE_MOVE_ACTION |
+           META_MOVE_RESIZE_RESIZE_ACTION |
+           META_MOVE_RESIZE_CONSTRAIN);
 
   meta_window_move_resize_internal (window, flags, META_GRAVITY_NORTH_WEST, rect);
 }
@@ -4161,7 +4170,9 @@ meta_window_resize_frame_with_gravity (MetaWindow *window,
       meta_window_update_tile_fraction (window, w, h);
     }
 
-  flags = (user_op ? META_MOVE_RESIZE_USER_ACTION : 0) | META_MOVE_RESIZE_RESIZE_ACTION;
+  flags = ((user_op ? META_MOVE_RESIZE_USER_ACTION : 0) |
+           META_MOVE_RESIZE_RESIZE_ACTION |
+           META_MOVE_RESIZE_CONSTRAIN);
   meta_window_move_resize_internal (window, flags, gravity, rect);
 }
 
@@ -4575,6 +4586,34 @@ meta_window_focus (MetaWindow  *window,
     }
 
   META_WINDOW_GET_CLASS (window)->focus (window, timestamp);
+
+  /* Move to the front of the focusing workspace's MRU list.
+   * We should only be "removing" it from the MRU list if it's
+   * not already there.  Note that it's possible that we might
+   * be processing this FocusIn after we've changed to a
+   * different workspace; we should therefore update the MRU
+   * list only if the window is actually on the active
+   * workspace.
+   */
+  if (workspace_manager->active_workspace &&
+      meta_window_located_on_workspace (window,
+                                        workspace_manager->active_workspace))
+    {
+      GList *link;
+
+      link = g_list_find (workspace_manager->active_workspace->mru_list,
+                          window);
+      g_assert (link);
+
+      workspace_manager->active_workspace->mru_list =
+        g_list_remove_link (workspace_manager->active_workspace->mru_list,
+                            link);
+      g_list_free (link);
+
+      workspace_manager->active_workspace->mru_list =
+        g_list_prepend (workspace_manager->active_workspace->mru_list,
+                        window);
+    }
 
   backend = meta_get_backend ();
   stage = CLUTTER_STAGE (meta_backend_get_stage (backend));
@@ -5030,9 +5069,15 @@ meta_window_update_appears_focused (MetaWindow *window)
   workspace = meta_window_get_workspace (window);
 
   if (workspace && workspace != workspace_manager->active_workspace)
-    appears_focused = window == meta_workspace_get_default_focus_window (workspace);
+    {
+      appears_focused =
+        window == meta_workspace_get_default_focus_window (workspace, NULL) &&
+        meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK;
+    }
   else
-    appears_focused = window->has_focus || window->attached_focus_window;
+    {
+      appears_focused = window->has_focus || window->attached_focus_window;
+    }
 
   if (window->appears_focused == appears_focused)
     return;
@@ -5130,40 +5175,11 @@ void
 meta_window_set_focused_internal (MetaWindow *window,
                                   gboolean    focused)
 {
-  MetaWorkspaceManager *workspace_manager = window->display->workspace_manager;
-
   if (focused)
     {
       window->has_focus = TRUE;
       if (window->override_redirect)
         return;
-
-      /* Move to the front of the focusing workspace's MRU list.
-       * We should only be "removing" it from the MRU list if it's
-       * not already there.  Note that it's possible that we might
-       * be processing this FocusIn after we've changed to a
-       * different workspace; we should therefore update the MRU
-       * list only if the window is actually on the active
-       * workspace.
-       */
-      if (workspace_manager->active_workspace &&
-          meta_window_located_on_workspace (window,
-                                            workspace_manager->active_workspace))
-        {
-          GList* link;
-          link = g_list_find (workspace_manager->active_workspace->mru_list,
-                              window);
-          g_assert (link);
-
-          workspace_manager->active_workspace->mru_list =
-            g_list_remove_link (workspace_manager->active_workspace->mru_list,
-                                link);
-          g_list_free (link);
-
-          workspace_manager->active_workspace->mru_list =
-            g_list_prepend (workspace_manager->active_workspace->mru_list,
-                            window);
-        }
 
       if (window->frame)
         meta_frame_queue_draw (window->frame);
@@ -5740,44 +5756,6 @@ meta_window_titlebar_is_onscreen (MetaWindow *window)
   return is_onscreen;
 }
 
-static gboolean
-check_moveresize_frequency (MetaWindow *window,
-			    gdouble    *remaining)
-{
-  int64_t current_time;
-  const double max_resizes_per_second = 25.0;
-  const double ms_between_resizes = 1000.0 / max_resizes_per_second;
-  double elapsed;
-
-  current_time = g_get_real_time ();
-
-  /* If we are throttling via _NET_WM_SYNC_REQUEST, we don't need
-   * an artificial timeout-based throttled */
-  if (!window->disable_sync &&
-      window->sync_request_alarm != None)
-    return TRUE;
-
-  elapsed = (current_time - window->display->grab_last_moveresize_time) / 1000;
-
-  if (elapsed >= 0.0 && elapsed < ms_between_resizes)
-    {
-      meta_topic (META_DEBUG_RESIZING,
-                  "Delaying move/resize as only %g of %g ms elapsed",
-                  elapsed, ms_between_resizes);
-
-      if (remaining)
-        *remaining = (ms_between_resizes - elapsed);
-
-      return FALSE;
-    }
-
-  meta_topic (META_DEBUG_RESIZING,
-              " Checked moveresize freq, allowing move/resize now (%g of %g seconds elapsed)",
-              elapsed / 1000.0, 1.0 / max_resizes_per_second);
-
-  return TRUE;
-}
-
 static void
 update_move_maybe_tile (MetaWindow *window,
                         int         shake_threshold,
@@ -5847,6 +5825,8 @@ update_move (MetaWindow              *window,
 
   display->grab_latest_motion_x = x;
   display->grab_latest_motion_y = y;
+
+  meta_display_clear_grab_move_resize_later (display);
 
   dx = x - display->grab_anchor_root_x;
   dy = y - display->grab_anchor_root_y;
@@ -6018,33 +5998,59 @@ update_move (MetaWindow              *window,
 }
 
 static gboolean
-update_resize_timeout (gpointer data)
+update_move_cb (gpointer user_data)
 {
-  MetaWindow *window = data;
+  MetaWindow *window = user_data;
 
-  update_resize (window,
-                 window->display->grab_last_edge_resistance_flags,
-                 window->display->grab_latest_motion_x,
-                 window->display->grab_latest_motion_y,
-                 TRUE);
-  return FALSE;
+  window->display->grab_move_resize_later_id = 0;
+
+  update_move (window,
+               window->display->grab_last_edge_resistance_flags,
+               window->display->grab_latest_motion_x,
+               window->display->grab_latest_motion_y);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+queue_update_move (MetaWindow              *window,
+                   MetaEdgeResistanceFlags  flags,
+                   int                      x,
+                   int                      y)
+{
+  MetaCompositor *compositor;
+  MetaLaters *laters;
+
+  window->display->grab_latest_motion_x = x;
+  window->display->grab_latest_motion_y = y;
+
+  if (window->display->grab_move_resize_later_id)
+    return;
+
+  compositor = meta_display_get_compositor (window->display);
+  laters = meta_compositor_get_laters (compositor);
+  window->display->grab_move_resize_later_id =
+    meta_laters_add (laters,
+                     META_LATER_BEFORE_REDRAW,
+                     update_move_cb,
+                     window, NULL);
 }
 
 static void
 update_resize (MetaWindow              *window,
                MetaEdgeResistanceFlags  flags,
                int                      x,
-               int                      y,
-               gboolean                 force)
+               int                      y)
 {
   int dx, dy;
   MetaGravity gravity;
   MetaRectangle new_rect;
   MetaRectangle old_rect;
-  double remaining = 0;
 
   window->display->grab_latest_motion_x = x;
   window->display->grab_latest_motion_y = y;
+
+  meta_display_clear_grab_move_resize_later (window->display);
 
   dx = x - window->display->grab_anchor_root_x;
   dy = y - window->display->grab_anchor_root_y;
@@ -6107,27 +6113,6 @@ update_resize (MetaWindow              *window,
   if (window->sync_request_timeout_id != 0)
     return;
 
-  if (!check_moveresize_frequency (window, &remaining) && !force)
-    {
-      /* we are ignoring an event here, so we schedule a
-       * compensation event when we would otherwise not ignore
-       * an event. Otherwise we can become stuck if the user never
-       * generates another event.
-       */
-      if (!window->display->grab_resize_timeout_id)
-	{
-	  window->display->grab_resize_timeout_id =
-	    g_timeout_add ((int)remaining, update_resize_timeout, window);
-	  g_source_set_name_by_id (window->display->grab_resize_timeout_id,
-                                   "[mutter] update_resize_timeout");
-	}
-
-      return;
-    }
-
-  /* Remove any scheduled compensation events */
-  g_clear_handle_id (&window->display->grab_resize_timeout_id, g_source_remove);
-
   meta_window_get_frame_rect (window, &old_rect);
 
   /* One sided resizing ought to actually be one-sided, despite the fact that
@@ -6155,11 +6140,45 @@ update_resize (MetaWindow              *window,
   meta_window_resize_frame_with_gravity (window, TRUE,
                                          new_rect.width, new_rect.height,
                                          gravity);
+}
 
-  /* Store the latest resize time, if we actually resized. */
-  if (window->rect.width != old_rect.width ||
-      window->rect.height != old_rect.height)
-    window->display->grab_last_moveresize_time = g_get_real_time ();
+static gboolean
+update_resize_cb (gpointer user_data)
+{
+  MetaWindow *window = user_data;
+
+  window->display->grab_move_resize_later_id = 0;
+
+  update_resize (window,
+                 window->display->grab_last_edge_resistance_flags,
+                 window->display->grab_latest_motion_x,
+                 window->display->grab_latest_motion_y);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+queue_update_resize (MetaWindow              *window,
+                     MetaEdgeResistanceFlags  flags,
+                     int                      x,
+                     int                      y)
+{
+  MetaCompositor *compositor;
+  MetaLaters *laters;
+
+  window->display->grab_latest_motion_x = x;
+  window->display->grab_latest_motion_y = y;
+
+  if (window->display->grab_move_resize_later_id)
+    return;
+
+  compositor = meta_display_get_compositor (window->display);
+  laters = meta_compositor_get_laters (compositor);
+  window->display->grab_move_resize_later_id =
+    meta_laters_add (laters,
+                     META_LATER_BEFORE_REDRAW,
+                     update_resize_cb,
+                     window, NULL);
 }
 
 static void
@@ -6183,10 +6202,9 @@ maybe_maximize_tiled_window (MetaWindow *window)
 void
 meta_window_update_resize (MetaWindow *window,
                            MetaEdgeResistanceFlags flags,
-                           int x, int y,
-                           gboolean force)
+                           int x, int y)
 {
-  update_resize (window, flags, x, y, force);
+  update_resize (window, flags, x, y);
 }
 
 static void
@@ -6230,7 +6248,7 @@ end_grab_op (MetaWindow *window,
           if (window->tile_match != NULL)
             flags |= (META_EDGE_RESISTANCE_SNAP | META_EDGE_RESISTANCE_WINDOWS);
 
-          update_resize (window, flags, x, y, TRUE);
+          update_resize (window, flags, x, y);
           maybe_maximize_tiled_window (window);
         }
     }
@@ -6307,14 +6325,14 @@ meta_window_handle_mouse_grab_op_event  (MetaWindow         *window,
       meta_display_check_threshold_reached (window->display, x, y);
       if (meta_grab_op_is_moving (window->display->grab_op))
         {
-          update_move (window, flags, x, y);
+          queue_update_move (window, flags, x, y);
         }
       else if (meta_grab_op_is_resizing (window->display->grab_op))
         {
           if (window->tile_match != NULL)
             flags |= (META_EDGE_RESISTANCE_SNAP | META_EDGE_RESISTANCE_WINDOWS);
 
-          update_resize (window, flags, x, y, FALSE);
+          queue_update_resize (window, flags, x, y);
         }
       return TRUE;
 
