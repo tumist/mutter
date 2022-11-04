@@ -1,4 +1,4 @@
-mutter (43.1-1) UNRELEASED; urgency=medium
+mutter (43.1-1) unstable; urgency=medium
 
   * New upstream release
     - Among other fixes, this avoids a fullscreen window on one display
@@ -6,8 +6,18 @@ mutter (43.1-1) UNRELEASED; urgency=medium
   * Refresh patch series
     - Drop patches that were included upstream
     - Update triple-buffering patch from GNOME/mutter!1441
+  * Set field Upstream-Name in debian/copyright.
+  * d/upstream/metadata: Add
+  * Update symbols file for new upstream release
+  * Reduce entropy of .symbols file.
+    The SONAME changed in version 43~beta, so there's no point in keeping
+    track of whether symbols are older than that version.
+    Similarly, if a symbol was introduced in a prerelease, we want
+    dependent packages to depend on the final release, so there's little
+    point in finer-grained tracking of which specific prerelease each
+    symbol came from.
 
- -- Simon McVittie <smcv@debian.org>  Fri, 04 Nov 2022 19:26:12 +0000
+ -- Simon McVittie <smcv@debian.org>  Fri, 04 Nov 2022 20:08:46 +0000
 
 mutter (43.0-3) unstable; urgency=medium
 
