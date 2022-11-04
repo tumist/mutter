@@ -73,6 +73,7 @@ typedef enum
   META_MOVE_RESIZE_FORCE_UPDATE_MONITOR = 1 << 10,
   META_MOVE_RESIZE_PLACEMENT_CHANGED = 1 << 11,
   META_MOVE_RESIZE_WAYLAND_CLIENT_RESIZE = 1 << 12,
+  META_MOVE_RESIZE_CONSTRAIN = 1 << 13,
 } MetaMoveResizeFlags;
 
 typedef enum
@@ -864,10 +865,10 @@ cairo_surface_t * meta_window_get_mini_icon (MetaWindow *window);
 void meta_window_set_urgent (MetaWindow *window,
                              gboolean    urgent);
 
-void meta_window_update_resize (MetaWindow *window,
-                                MetaEdgeResistanceFlags flags,
-                                int x, int y,
-                                gboolean force);
+void meta_window_update_resize (MetaWindow              *window,
+                                MetaEdgeResistanceFlags  flags,
+                                int                      x,
+                                int                      y);
 
 void meta_window_move_resize_internal (MetaWindow          *window,
                                        MetaMoveResizeFlags  flags,

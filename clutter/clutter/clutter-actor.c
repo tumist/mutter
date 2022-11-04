@@ -1484,22 +1484,6 @@ clutter_actor_update_map_state (ClutterActor  *self,
 #endif
 }
 
-static void
-queue_update_stage_views (ClutterActor *actor)
-{
-  while (actor && !actor->priv->needs_update_stage_views)
-    {
-      actor->priv->needs_update_stage_views = TRUE;
-
-      /* We don't really need to update the stage-views of the actors up the
-       * hierarchy, we set the flag anyway though so we can avoid traversing
-       * the whole scenegraph when looking for actors which need an update
-       * in clutter_actor_finish_layout().
-       */
-      actor = actor->priv->parent;
-    }
-}
-
 static void queue_update_paint_volume (ClutterActor *actor);
 
 static void
@@ -1544,18 +1528,6 @@ clutter_actor_real_map (ClutterActor *self)
 
   if (priv->unmapped_paint_branch_counter == 0)
     {
-      /* We skip unmapped actors when updating the stage-views list, so if
-       * an actors list got invalidated while it was unmapped make sure to
-       * set priv->needs_update_stage_views to TRUE for all actors up the
-       * hierarchy now.
-       */
-      if (priv->needs_update_stage_views)
-        {
-          /* Avoid the early return in queue_update_stage_views() */
-          priv->needs_update_stage_views = FALSE;
-          queue_update_stage_views (self);
-        }
-
       /* Avoid the early return in clutter_actor_queue_relayout() */
       priv->needs_width_request = FALSE;
       priv->needs_height_request = FALSE;
@@ -2141,10 +2113,16 @@ unrealize_actor_before_children_cb (ClutterActor *self,
                                     int depth,
                                     void *user_data)
 {
+  ClutterActor *stage;
+
   /* If an actor is already unrealized we know its children have also
    * already been unrealized... */
   if (!CLUTTER_ACTOR_IS_REALIZED (self))
     return CLUTTER_ACTOR_TRAVERSE_VISIT_SKIP_CHILDREN;
+
+  stage = _clutter_actor_get_stage_internal (self);
+  if (stage != NULL)
+    clutter_actor_clear_grabs (self);
 
   g_signal_emit (self, actor_signals[UNREALIZE], 0);
 
@@ -2501,7 +2479,7 @@ clutter_actor_notify_if_geometry_changed (ClutterActor          *self,
 static void
 absolute_geometry_changed (ClutterActor *actor)
 {
-  queue_update_stage_views (actor);
+  actor->priv->needs_update_stage_views = TRUE;
 }
 
 static ClutterActorTraverseVisitFlags
@@ -5620,7 +5598,7 @@ clutter_actor_finalize (GObject *object)
                 _clutter_actor_get_debug_name ((ClutterActor *) object),
                 g_type_name (G_OBJECT_TYPE (object)));
 
-  /* No new grabs should have happened after unmapping */
+  /* No new grabs should have happened after unrealizing */
   g_assert (priv->grabs == NULL);
   g_free (priv->name);
 
@@ -15714,6 +15692,10 @@ clutter_actor_is_effectively_on_stage_view (ClutterActor     *self,
   ClutterActor *actor;
 
   g_return_val_if_fail (CLUTTER_IS_ACTOR (self), FALSE);
+
+  if (!CLUTTER_ACTOR_IS_MAPPED (self) &&
+      !clutter_actor_has_mapped_clones (self))
+    return FALSE;
 
   if (g_list_find (self->priv->stage_views, view))
     return TRUE;

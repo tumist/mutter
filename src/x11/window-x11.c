@@ -507,7 +507,9 @@ meta_window_apply_session_info (MetaWindow *window,
       window->size_hints.win_gravity = info->gravity;
       gravity = window->size_hints.win_gravity;
 
-      flags = META_MOVE_RESIZE_MOVE_ACTION | META_MOVE_RESIZE_RESIZE_ACTION;
+      flags = (META_MOVE_RESIZE_MOVE_ACTION |
+               META_MOVE_RESIZE_RESIZE_ACTION |
+               META_MOVE_RESIZE_CONSTRAIN);
 
       adjust_for_gravity (window, FALSE, gravity, &rect);
       meta_window_client_rect_to_frame_rect (window, &rect, &rect);
@@ -575,7 +577,10 @@ meta_window_x11_manage (MetaWindow *window)
       rect.width = window->size_hints.width;
       rect.height = window->size_hints.height;
 
-      flags = META_MOVE_RESIZE_CONFIGURE_REQUEST | META_MOVE_RESIZE_MOVE_ACTION | META_MOVE_RESIZE_RESIZE_ACTION;
+      flags = (META_MOVE_RESIZE_CONFIGURE_REQUEST |
+               META_MOVE_RESIZE_MOVE_ACTION |
+               META_MOVE_RESIZE_RESIZE_ACTION |
+               META_MOVE_RESIZE_CONSTRAIN);
 
       adjust_for_gravity (window, TRUE, gravity, &rect);
       meta_window_client_rect_to_frame_rect (window, &rect, &rect);
@@ -901,7 +906,6 @@ maybe_focus_default_window (MetaDisplay *display,
                             guint32      timestamp)
 {
   MetaWorkspace *workspace;
-  MetaStack *stack = display->stack;
   g_autoptr (GList) focusable_windows = NULL;
   g_autoptr (GQueue) focus_candidates = NULL;
   GList *l;
@@ -917,7 +921,7 @@ maybe_focus_default_window (MetaDisplay *display,
     * focused window, will stop the chained requests.
     */
   focusable_windows =
-    meta_stack_get_default_focus_candidates (stack, workspace);
+    meta_workspace_get_default_focus_candidates (workspace);
   focus_candidates = g_queue_new ();
 
   for (l = g_list_last (focusable_windows); l; l = l->prev)
@@ -1231,8 +1235,7 @@ sync_request_timeout (gpointer data)
       meta_window_update_resize (window,
                                  window->display->grab_last_edge_resistance_flags,
                                  window->display->grab_latest_motion_x,
-                                 window->display->grab_latest_motion_y,
-                                 TRUE);
+                                 window->display->grab_latest_motion_y);
     }
 
   return FALSE;
@@ -2701,9 +2704,9 @@ meta_window_move_resize_request (MetaWindow  *window,
    */
   flags = META_MOVE_RESIZE_CONFIGURE_REQUEST;
   if (value_mask & (CWX | CWY))
-    flags |= META_MOVE_RESIZE_MOVE_ACTION;
+    flags |= META_MOVE_RESIZE_MOVE_ACTION | META_MOVE_RESIZE_CONSTRAIN;
   if (value_mask & (CWWidth | CWHeight))
-    flags |= META_MOVE_RESIZE_RESIZE_ACTION;
+    flags |= META_MOVE_RESIZE_RESIZE_ACTION | META_MOVE_RESIZE_CONSTRAIN;
 
   if (flags & (META_MOVE_RESIZE_MOVE_ACTION | META_MOVE_RESIZE_RESIZE_ACTION))
     {
@@ -3601,7 +3604,11 @@ is_our_xwindow (MetaX11Display    *x11_display,
   }
 
   /* Any windows created via meta_create_offscreen_window */
-  if (attrs->override_redirect && attrs->x == -100 && attrs->y == -100 && attrs->width == 1 && attrs->height == 1)
+  if (attrs->override_redirect &&
+      attrs->x == -100 &&
+      attrs->y == -100 &&
+      attrs->width == 1 &&
+      attrs->height == 1)
     return TRUE;
 
   return FALSE;
@@ -4152,8 +4159,7 @@ meta_window_x11_update_sync_request_counter (MetaWindow *window,
           meta_window_update_resize (window,
                                      window->display->grab_last_edge_resistance_flags,
                                      window->display->grab_latest_motion_x,
-                                     window->display->grab_latest_motion_y,
-                                     TRUE);
+                                     window->display->grab_latest_motion_y);
         }
     }
 
@@ -4274,14 +4280,6 @@ meta_window_x11_get_client_rect (MetaWindowX11 *window_x11)
 }
 
 static gboolean
-has_requested_bypass_compositor (MetaWindowX11 *window_x11)
-{
-  MetaWindowX11Private *priv = meta_window_x11_get_instance_private (window_x11);
-
-  return priv->bypass_compositor == META_BYPASS_COMPOSITOR_HINT_ON;
-}
-
-static gboolean
 has_requested_dont_bypass_compositor (MetaWindowX11 *window_x11)
 {
   MetaWindowX11Private *priv = meta_window_x11_get_instance_private (window_x11);
@@ -4310,9 +4308,6 @@ meta_window_x11_can_unredirect (MetaWindowX11 *window_x11)
     return TRUE;
 
   if (meta_window_is_screen_sized (window))
-    return TRUE;
-
-  if (has_requested_bypass_compositor (window_x11))
     return TRUE;
 
   if (window->override_redirect)

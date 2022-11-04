@@ -183,11 +183,9 @@ struct _MetaDisplay
   MetaRectangle grab_initial_window_pos;
   int         grab_initial_x, grab_initial_y;  /* These are only relevant for */
   gboolean    grab_threshold_movement_reached; /* raise_on_click == FALSE.    */
-  int64_t     grab_last_moveresize_time;
   MetaEdgeResistanceData *grab_edge_resistance_data;
   unsigned int grab_last_edge_resistance_flags;
-
-  int	      grab_resize_timeout_id;
+  unsigned int grab_move_resize_later_id;
 
   MetaKeyBindingManager key_binding_manager;
 
@@ -342,6 +340,8 @@ gboolean meta_grab_op_is_resizing (MetaGrabOp op);
 gboolean meta_grab_op_is_mouse    (MetaGrabOp op);
 gboolean meta_grab_op_is_keyboard (MetaGrabOp op);
 
+void meta_display_clear_grab_move_resize_later (MetaDisplay *display);
+
 void meta_display_queue_autoraise_callback  (MetaDisplay *display,
                                              MetaWindow  *window);
 void meta_display_remove_autoraise_callback (MetaDisplay *display);
@@ -410,9 +410,6 @@ gboolean meta_display_apply_startup_properties (MetaDisplay *display,
 
 void meta_display_queue_workarea_recalc  (MetaDisplay *display);
 void meta_display_queue_check_fullscreen (MetaDisplay *display);
-
-MetaWindow *meta_display_get_pointer_window (MetaDisplay *display,
-                                             MetaWindow  *not_this_one);
 
 MetaWindow *meta_display_get_window_from_id (MetaDisplay *display,
                                              uint64_t     window_id);
