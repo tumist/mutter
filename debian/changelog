@@ -1,8 +1,13 @@
 mutter (43.1-1) UNRELEASED; urgency=medium
 
   * New upstream release
+    - Among other fixes, this avoids a fullscreen window on one display
+      being replicated on another display (Closes: #1023256, LP: #1990563)
+  * Refresh patch series
+    - Drop patches that were included upstream
+    - Update triple-buffering patch from GNOME/mutter!1441
 
- -- Simon McVittie <smcv@debian.org>  Fri, 04 Nov 2022 14:58:49 +0000
+ -- Simon McVittie <smcv@debian.org>  Fri, 04 Nov 2022 19:26:12 +0000
 
 mutter (43.0-3) unstable; urgency=medium
 
