@@ -1,6 +1,6 @@
 Tests: libmutter-11-dev
 Depends: build-essential,
-         dbus,
+         dbus-daemon,
          libmutter-11-dev,
          xauth,
          xvfb
