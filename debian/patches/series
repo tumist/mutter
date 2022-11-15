@@ -10,3 +10,4 @@ debian/tests-skip-monitor-width-size-check-as-it-may-lead-to-une.patch
 debian/tests-Tag-unstable-tests-as-flaky.patch
 debian/wayland-data-device-Allow-any-drag-timestamp-as-drag-star.patch
 debian/Support-Dynamic-triple-double-buffering.patch
+debian/tests-Disable-restore-size-test.patch
