@@ -1,3 +1,13 @@
+mutter (43.1-2) unstable; urgency=medium
+
+  * Team upload
+  * Disable restore-size test.
+    This avoids intermittent FTBFS, especially on armel and armhf.
+  * Build-/test-depend on dbus-daemon instead of dbus
+  * d/upstream/metadata: Add Repository field
+
+ -- Simon McVittie <smcv@debian.org>  Tue, 15 Nov 2022 10:32:45 +0000
+
 mutter (43.1-1) unstable; urgency=medium
 
   * Team upload
