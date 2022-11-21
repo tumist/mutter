@@ -1,3 +1,9 @@
+mutter (43.0-1ubuntu5) lunar; urgency=medium
+
+  * Revert "debian/rules: Ignore test failures on armhf"
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 21 Nov 2022 18:08:23 -0500
+
 mutter (43.0-1ubuntu4) kinetic; urgency=medium
 
   * debian/rules: Ignore test failures on armhf.
