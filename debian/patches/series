@@ -11,3 +11,4 @@ debian/tests-Tag-unstable-tests-as-flaky.patch
 debian/wayland-data-device-Allow-any-drag-timestamp-as-drag-star.patch
 debian/Support-Dynamic-triple-double-buffering.patch
 debian/tests-Disable-restore-size-test.patch
+workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch

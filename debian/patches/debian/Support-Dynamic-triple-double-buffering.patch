@@ -1128,10 +1128,10 @@ index 648de51..53d7629 100644
  
  static gboolean
 diff --git a/src/backends/native/meta-kms-impl-device.c b/src/backends/native/meta-kms-impl-device.c
-index b1dd321..c42320a 100644
+index d9ea276..4eeb182 100644
 --- a/src/backends/native/meta-kms-impl-device.c
 +++ b/src/backends/native/meta-kms-impl-device.c
-@@ -1206,8 +1206,12 @@ meta_kms_impl_device_init_mode_setting (MetaKmsImplDevice  *impl_device,
+@@ -1204,8 +1204,12 @@ meta_kms_impl_device_init_mode_setting (MetaKmsImplDevice  *impl_device,
  void
  meta_kms_impl_device_prepare_shutdown (MetaKmsImplDevice *impl_device)
  {
