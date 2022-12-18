@@ -1,3 +1,15 @@
+mutter (43.2-2) unstable; urgency=medium
+
+  * Team upload
+  * d/p/workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch:
+    Add proposed patch to avoid crashing on an invalid argument
+  * d/p/tests-Break-up-stacking-installed-tests-into-more-smaller.patch:
+    Add proposed patch to have more, smaller installed-tests.
+    As well as doing what it was intended to do, this also avoids a crash
+    during autopkgtest. (Mitigates: #1024438)
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 18 Dec 2022 21:29:01 +0000
+
 mutter (43.2-1) unstable; urgency=medium
 
   * New upstream release
