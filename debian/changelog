@@ -1,3 +1,10 @@
+mutter (43.2-3) unstable; urgency=medium
+
+  * Team upload
+  * Rebuild source package with non-expired signing key
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 18 Dec 2022 22:32:32 +0000
+
 mutter (43.2-2) unstable; urgency=medium
 
   * Team upload
