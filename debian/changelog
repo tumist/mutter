@@ -1,3 +1,11 @@
+mutter (43.2-4) unstable; urgency=medium
+
+  * Team upload
+  * Mark xwayland test-case as known to be flaky on 32-bit ARM.
+    Mitigates: #1026445
+
+ -- Simon McVittie <smcv@debian.org>  Tue, 20 Dec 2022 12:48:02 +0000
+
 mutter (43.2-3) unstable; urgency=medium
 
   * Team upload
