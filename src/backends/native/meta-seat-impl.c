@@ -916,7 +916,7 @@ meta_seat_impl_notify_discrete_scroll_in_impl (MetaSeatImpl        *seat_impl,
 {
   MetaInputDeviceNative *evdev_device;
   double dx = 0, dy = 0;
-  int discrete_dx = 0, discrete_dy = 0;
+  int low_res_value = 0;
 
   /* Convert into DISCRETE_SCROLL_STEP range. 120/DISCRETE_SCROLL_STEP = 12.0 */
   dx = dx_value120 / 12.0;
@@ -949,23 +949,29 @@ meta_seat_impl_notify_discrete_scroll_in_impl (MetaSeatImpl        *seat_impl,
 
   evdev_device->value120.acc_dx += dx_value120;
   evdev_device->value120.acc_dy += dy_value120;
-  discrete_dx = (evdev_device->value120.acc_dx / 120);
-  discrete_dy = (evdev_device->value120.acc_dy / 120);
 
-  if (discrete_dx != 0)
+  if (abs (evdev_device->value120.acc_dx) >= 60)
     {
-      evdev_device->value120.acc_dx -= (discrete_dx * 120);
+      low_res_value = (evdev_device->value120.acc_dx / 120);
+      if (low_res_value == 0)
+        low_res_value = (dx_value120 > 0) ? 1 : -1;
+
       notify_discrete_scroll (input_device, time_us,
-                              discrete_to_direction (discrete_dx, 0),
+                              discrete_to_direction (low_res_value, 0),
                               scroll_source, FALSE);
+      evdev_device->value120.acc_dx -= (low_res_value * 120);
     }
 
-  if (discrete_dy != 0)
+  if (abs (evdev_device->value120.acc_dy) >= 60)
     {
-      evdev_device->value120.acc_dy -= (discrete_dy * 120);
+      low_res_value = (evdev_device->value120.acc_dy / 120);
+      if (low_res_value == 0)
+        low_res_value = (dy_value120 > 0) ? 1 : -1;
+
       notify_discrete_scroll (input_device, time_us,
-                              discrete_to_direction (0, discrete_dy),
+                              discrete_to_direction (0, low_res_value),
                               scroll_source, FALSE);
+      evdev_device->value120.acc_dy -= (low_res_value * 120);
     }
 }
 
@@ -3617,16 +3623,30 @@ ensure_pointer_onscreen (MetaSeatImpl *seat_impl)
                                   coords.x, coords.y, NULL);
 }
 
+typedef struct
+{
+  MetaViewportInfo *viewports;
+  GMutex mutex;
+  GCond cond;
+  gboolean constrained;
+} SetViewportsData;
+
 static gboolean
 set_viewports (GTask *task)
 {
   MetaSeatImpl *seat_impl = g_task_get_source_object (task);
-  MetaViewportInfo *viewports = g_task_get_task_data (task);
+  SetViewportsData *data = g_task_get_task_data (task);
+  MetaViewportInfo *viewports = data->viewports;
 
   g_set_object (&seat_impl->viewports, viewports);
   g_task_return_boolean (task, TRUE);
 
   ensure_pointer_onscreen (seat_impl);
+
+  g_mutex_lock (&data->mutex);
+  data->constrained = TRUE;
+  g_cond_signal (&data->cond);
+  g_mutex_unlock (&data->mutex);
 
   return G_SOURCE_REMOVE;
 }
@@ -3635,15 +3655,28 @@ void
 meta_seat_impl_set_viewports (MetaSeatImpl     *seat_impl,
                               MetaViewportInfo *viewports)
 {
+  SetViewportsData data = {};
   GTask *task;
 
   g_return_if_fail (META_IS_SEAT_IMPL (seat_impl));
 
+  data.viewports = viewports;
+  g_mutex_init (&data.mutex);
+  g_cond_init (&data.cond);
+
   task = g_task_new (seat_impl, NULL, NULL, NULL);
-  g_task_set_task_data (task, g_object_ref (viewports), g_object_unref);
+  g_task_set_task_data (task, &data, NULL);
   meta_seat_impl_run_input_task (seat_impl, task,
                                  (GSourceFunc) set_viewports);
   g_object_unref (task);
+
+  g_mutex_lock (&data.mutex);
+  while (!data.constrained)
+    g_cond_wait (&data.cond, &data.mutex);
+  g_mutex_unlock (&data.mutex);
+
+  g_mutex_clear (&data.mutex);
+  g_cond_clear (&data.cond);
 }
 
 MetaSeatImpl *

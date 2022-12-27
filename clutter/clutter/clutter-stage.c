@@ -3112,7 +3112,7 @@ clutter_stage_peek_stage_views (ClutterStage *stage)
 void
 clutter_stage_clear_stage_views (ClutterStage *stage)
 {
-  clutter_actor_clear_stage_views_recursive (CLUTTER_ACTOR (stage));
+  clutter_actor_clear_stage_views_recursive (CLUTTER_ACTOR (stage), FALSE);
 }
 
 GList *
@@ -3790,6 +3790,9 @@ clutter_stage_grab (ClutterStage *stage,
 
   g_return_val_if_fail (CLUTTER_IS_STAGE (stage), NULL);
   g_return_val_if_fail (CLUTTER_IS_ACTOR (actor), NULL);
+  g_return_val_if_fail (stage ==
+                        (ClutterStage *) _clutter_actor_get_stage_internal (actor),
+                        NULL);
 
   priv = stage->priv;
 

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/mutter/issues\n"
-"POT-Creation-Date: 2022-07-21 22:51+0000\n"
+"POT-Creation-Date: 2022-11-17 09:51+0000\n"
 "Last-Translator: Нанба Наала <naala-nanba@rambler.ru>\n"
 "Language-Team: Abkhazian <daniel.abzakh@gmail.com>\n"
 "Language: ab\n"
@@ -9,6 +9,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-DamnedLies-Scope: partial\n"
 
 #: data/50-mutter-navigation.xml:6
 msgid "Navigation"
@@ -200,7 +201,7 @@ msgstr ""
 
 #: data/50-mutter-windows.xml:18
 msgid "Close window"
-msgstr ""
+msgstr "Аҧенџьыр аркра"
 
 #: data/50-mutter-windows.xml:20
 msgid "Hide window"
@@ -415,51 +416,51 @@ msgstr ""
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:12
 msgid "Switch to VT 1"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 1"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:16
 msgid "Switch to VT 2"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 2"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:20
 msgid "Switch to VT 3"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 3"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:24
 msgid "Switch to VT 4"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 4"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:28
 msgid "Switch to VT 5"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 5"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:32
 msgid "Switch to VT 6"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 6"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:36
 msgid "Switch to VT 7"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 7"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:40
 msgid "Switch to VT 8"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 8"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:44
 msgid "Switch to VT 9"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 9"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:48
 msgid "Switch to VT 10"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 10"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:52
 msgid "Switch to VT 11"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 11"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:56
 msgid "Switch to VT 12"
-msgstr ""
+msgstr "Ихыҭҳәаау атерминал ахь аиасра 12"
 
 #: data/org.gnome.mutter.wayland.gschema.xml.in:60
 msgid "Re-enable shortcuts"
@@ -512,26 +513,28 @@ msgid ""
 "needs to be restarted for this setting to take effect."
 msgstr ""
 
-#: src/backends/meta-monitor.c:246
+#: src/backends/meta-monitor.c:253
 msgid "Built-in display"
 msgstr ""
 
-#: src/backends/meta-monitor.c:275
+#: src/backends/meta-monitor.c:280
 msgid "Unknown"
-msgstr ""
+msgstr "Еилкаам"
 
-#: src/backends/meta-monitor.c:277
+#: src/backends/meta-monitor.c:282
 msgid "Unknown Display"
 msgstr ""
+"This is a monitor vendor name, followed by a size in inches, like 'Dell "
+"15quta1'"
 
-#: src/backends/meta-monitor.c:285
+#: src/backends/meta-monitor.c:290
 #, c-format
 msgctxt ""
 "This is a monitor vendor name, followed by a size in inches, like 'Dell 15\"'"
 msgid "%s %s"
 msgstr ""
 
-#: src/backends/meta-monitor.c:293
+#: src/backends/meta-monitor.c:298
 #, c-format
 msgctxt ""
 "This is a monitor vendor name followed by product/model name where size in "
@@ -539,14 +542,9 @@ msgctxt ""
 msgid "%s %s"
 msgstr ""
 
-#. Translators: this string will appear in Sysprof
-#: src/backends/meta-profiler.c:79
-msgid "Compositor"
-msgstr ""
-
 #. This probably means that a non-WM compositor like xcompmgr is running;
 #. * we have no way to get it to exit
-#: src/compositor/compositor.c:393
+#: src/compositor/compositor.c:400
 #, c-format
 msgid ""
 "Another compositing manager is already running on screen %i on display “%s”."
@@ -623,7 +621,7 @@ msgstr ""
 #. TRANSLATORS: This string refers to a button that switches between
 #. * different modes.
 #.
-#: src/core/meta-pad-action-mapper.c:842
+#: src/core/meta-pad-action-mapper.c:848
 #, c-format
 msgid "Mode Switch (Group %d)"
 msgstr ""
@@ -631,12 +629,17 @@ msgstr ""
 #. TRANSLATORS: This string refers to an action, cycles drawing tablets'
 #. * mapping through the available outputs.
 #.
-#: src/core/meta-pad-action-mapper.c:865
+#: src/core/meta-pad-action-mapper.c:871
 msgid "Switch monitor"
 msgstr ""
 
-#: src/core/meta-pad-action-mapper.c:867
+#: src/core/meta-pad-action-mapper.c:873
 msgid "Show on-screen help"
+msgstr ""
+
+#. Translators: this string will appear in Sysprof
+#: src/core/meta-profiler.c:80 src/core/meta-profiler.c:217
+msgid "Compositor"
 msgstr ""
 
 #: src/core/mutter.c:74
@@ -650,10 +653,14 @@ msgstr ""
 #: src/core/prefs.c:1913
 #, c-format
 msgid "Workspace %d"
-msgstr ""
+msgstr "Аусуратә ҵакыра %d"
 
-#: src/core/util.c:142
+#: src/core/util.c:143
 msgid "Mutter was compiled without support for verbose mode"
+msgstr "Mutter акомпилиациа азун арежим verbose ацхыраарада"
+
+#: src/core/workspace.c:536
+msgid "Workspace switched"
 msgstr ""
 
 #: src/wayland/meta-wayland-tablet-pad.c:520
@@ -661,23 +668,23 @@ msgstr ""
 msgid "Mode Switch: Mode %d"
 msgstr ""
 
-#: src/x11/meta-x11-display.c:673
+#: src/x11/meta-x11-display.c:657
 #, c-format
 msgid ""
 "Display “%s” already has a window manager; try using the --replace option to "
 "replace the current window manager."
 msgstr ""
 
-#: src/x11/meta-x11-display.c:1067
+#: src/x11/meta-x11-display.c:1048
 msgid "Failed to initialize GDK"
 msgstr ""
 
-#: src/x11/meta-x11-display.c:1091
+#: src/x11/meta-x11-display.c:1074
 #, c-format
 msgid "Failed to open X Window System display “%s”"
 msgstr ""
 
-#: src/x11/meta-x11-display.c:1199
+#: src/x11/meta-x11-display.c:1187
 #, c-format
 msgid "Screen %d on display “%s” is invalid"
 msgstr ""

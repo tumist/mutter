@@ -74,10 +74,6 @@
 #include "meta/meta-enum-types.h"
 #include "meta/util.h"
 
-#ifdef HAVE_PROFILER
-#include "backends/meta-profiler.h"
-#endif
-
 #ifdef HAVE_REMOTE_DESKTOP
 #include "backends/meta-dbus-session-watcher.h"
 #include "backends/meta-remote-access-controller-private.h"
@@ -121,8 +117,6 @@ static guint signals[N_SIGNALS];
 
 static MetaBackend *_backend;
 
-static gboolean stage_views_disabled = FALSE;
-
 #define HIDDEN_POINTER_TIMEOUT 300 /* ms */
 
 /**
@@ -158,10 +152,6 @@ struct _MetaBackendPrivate
   MetaDbusSessionWatcher *dbus_session_watcher;
   MetaScreenCast *screen_cast;
   MetaRemoteDesktop *remote_desktop;
-#endif
-
-#ifdef HAVE_PROFILER
-  MetaProfiler *profiler;
 #endif
 
 #ifdef HAVE_LIBWACOM
@@ -263,10 +253,6 @@ meta_backend_dispose (GObject *object)
   g_clear_handle_id (&priv->device_update_idle_id, g_source_remove);
 
   g_clear_object (&priv->settings);
-
-#ifdef HAVE_PROFILER
-  g_clear_object (&priv->profiler);
-#endif
 
   g_clear_pointer (&priv->default_seat, clutter_seat_destroy);
   g_clear_pointer (&priv->stage, clutter_actor_destroy);
@@ -540,6 +526,13 @@ on_stage_shown_cb (MetaBackend *backend)
 }
 
 static void
+on_prepare_shutdown (MetaContext *context,
+                     MetaBackend *backend)
+{
+  g_signal_emit (backend, signals[PREPARE_SHUTDOWN], 0);
+}
+
+static void
 meta_backend_real_post_init (MetaBackend *backend)
 {
   MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
@@ -599,6 +592,9 @@ meta_backend_real_post_init (MetaBackend *backend)
     }
 
   meta_monitor_manager_post_init (priv->monitor_manager);
+
+  g_signal_connect (priv->context, "prepare-shutdown",
+                    G_CALLBACK (on_prepare_shutdown), backend);
 }
 
 static gboolean
@@ -874,7 +870,6 @@ meta_backend_get_property (GObject    *object,
 static void
 meta_backend_class_init (MetaBackendClass *klass)
 {
-  const gchar *mutter_stage_views;
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->dispose = meta_backend_dispose;
@@ -955,9 +950,6 @@ meta_backend_class_init (MetaBackendClass *klass)
                   0,
                   NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
-
-  mutter_stage_views = g_getenv ("MUTTER_STAGE_VIEWS");
-  stage_views_disabled = g_strcmp0 (mutter_stage_views, "0") == 0;
 }
 
 static MetaMonitorManager *
@@ -1225,10 +1217,6 @@ meta_backend_initable_init (GInitable     *initable,
              priv->cancellable,
              system_bus_gotten_cb,
              backend);
-
-#ifdef HAVE_PROFILER
-  priv->profiler = meta_profiler_new ();
-#endif
 
   if (!init_clutter (backend, error))
     return FALSE;
@@ -1603,33 +1591,10 @@ meta_backend_get_clutter_backend (MetaBackend *backend)
   return clutter_context_get_backend (clutter_context);
 }
 
-void
-meta_backend_prepare_shutdown (MetaBackend *backend)
-{
-  g_signal_emit (backend, signals[PREPARE_SHUTDOWN], 0);
-}
-
 MetaBackendCapabilities
 meta_backend_get_capabilities (MetaBackend *backend)
 {
   return META_BACKEND_GET_CLASS (backend)->get_capabilities (backend);
-}
-
-/**
- * meta_is_stage_views_enabled:
- *
- * Returns whether the #ClutterStage can be rendered using multiple stage views.
- * In practice, this means we can define a separate framebuffer for each
- * #MetaLogicalMonitor, rather than rendering everything into a single
- * framebuffer. For example: in X11, onle one single framebuffer is allowed.
- */
-gboolean
-meta_is_stage_views_enabled (void)
-{
-  if (!meta_is_wayland_compositor ())
-    return FALSE;
-
-  return !stage_views_disabled;
 }
 
 gboolean
@@ -1639,9 +1604,6 @@ meta_is_stage_views_scaled (void)
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitorLayoutMode layout_mode;
-
-  if (!meta_is_stage_views_enabled ())
-    return FALSE;
 
   layout_mode = monitor_manager->layout_mode;
 

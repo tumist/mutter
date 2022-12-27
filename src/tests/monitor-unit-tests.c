@@ -169,15 +169,6 @@ static MetaTestClient *x11_monitor_test_client = NULL;
 #define X11_TEST_CLIENT_NAME "x11_monitor_test_client"
 #define X11_TEST_CLIENT_WINDOW "window1"
 
-static gboolean
-monitor_tests_alarm_filter (MetaX11Display        *x11_display,
-                            XSyncAlarmNotifyEvent *event,
-                            gpointer               data)
-{
-  return meta_test_client_process_x11_event (x11_monitor_test_client,
-                                             x11_display, event);
-}
-
 static void
 on_monitors_changed (gboolean *monitors_changed)
 {
@@ -202,9 +193,6 @@ create_monitor_test_clients (MetaContext *context)
                                                   &error);
   if (!x11_monitor_test_client)
     g_error ("Failed to launch X11 test client: %s", error->message);
-
-  meta_x11_display_set_alarm_filter (meta_get_display ()->x11_display,
-                                     monitor_tests_alarm_filter, NULL);
 
   if (!meta_test_client_do (wayland_monitor_test_client, &error,
                             "create", WAYLAND_TEST_CLIENT_WINDOW,
@@ -259,9 +247,6 @@ destroy_monitor_test_clients (void)
 
   meta_test_client_destroy (wayland_monitor_test_client);
   meta_test_client_destroy (x11_monitor_test_client);
-
-  meta_x11_display_set_alarm_filter (meta_get_display ()->x11_display,
-                                     NULL, NULL);
 }
 
 static void
@@ -1532,12 +1517,6 @@ meta_test_monitor_hidpi_linear_config (void)
     }
   };
   MetaMonitorTestSetup *test_setup;
-
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
 
   test_setup = meta_create_monitor_test_setup (test_backend,
                                                &test_case.setup,
@@ -3094,12 +3073,6 @@ meta_test_monitor_lid_scaled_closed_opened (void)
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
 
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
-
   test_setup = meta_create_monitor_test_setup (test_backend,
                                                &test_case.setup,
                                                MONITOR_TEST_FLAG_NONE);
@@ -4523,12 +4496,6 @@ meta_test_monitor_orientation_initial_stored_rotated (void)
   MetaOrientation orientation;
   unsigned int times_signalled = 0;
 
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
-
   g_test_message ("%s", G_STRFUNC);
   orientation_mock = meta_sensors_proxy_mock_get ();
   touch_device = meta_test_add_touch_device (backend);
@@ -4682,12 +4649,6 @@ meta_test_monitor_orientation_initial_stored_rotated_no_touch (void)
   g_autoptr (MetaSensorsProxyAutoResetMock) orientation_mock = NULL;
   MetaOrientation orientation;
   unsigned int times_signalled = 0;
-
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
 
   g_test_message ("%s", G_STRFUNC);
   orientation_mock = meta_sensors_proxy_mock_get ();
@@ -5960,12 +5921,6 @@ meta_test_monitor_custom_scale_config (void)
   };
   MetaMonitorTestSetup *test_setup;
 
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
-
   test_setup = meta_create_monitor_test_setup (test_backend,
                                                &test_case.setup,
                                                MONITOR_TEST_FLAG_NONE);
@@ -6062,12 +6017,6 @@ meta_test_monitor_custom_fractional_scale_config (void)
   };
   MetaMonitorTestSetup *test_setup;
 
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
-
   test_setup = meta_create_monitor_test_setup (test_backend,
                                                &test_case.setup,
                                                MONITOR_TEST_FLAG_NONE);
@@ -6163,12 +6112,6 @@ meta_test_monitor_custom_high_precision_fractional_scale_config (void)
     }
   };
   MetaMonitorTestSetup *test_setup;
-
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
 
   test_setup = meta_create_monitor_test_setup (test_backend,
                                                &test_case.setup,
@@ -6307,12 +6250,6 @@ meta_test_monitor_custom_tiled_config (void)
     }
   };
   MetaMonitorTestSetup *test_setup;
-
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
 
   test_setup = meta_create_monitor_test_setup (test_backend,
                                                &test_case.setup,
@@ -6470,12 +6407,6 @@ meta_test_monitor_custom_tiled_custom_resolution_config (void)
     }
   };
   MetaMonitorTestSetup *test_setup;
-
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
 
   test_setup = meta_create_monitor_test_setup (test_backend,
                                                &test_case.setup,
@@ -7620,12 +7551,6 @@ meta_test_monitor_custom_second_rotated_nonnative_config (void)
     meta_backend_get_monitor_manager (backend);
   MetaMonitorManagerTest *monitor_manager_test =
     META_MONITOR_MANAGER_TEST (monitor_manager);
-
-  if (!meta_is_stage_views_enabled ())
-    {
-      g_test_skip ("Not using stage views");
-      return;
-    }
 
   meta_monitor_manager_test_set_handles_transforms (monitor_manager_test,
                                                     FALSE);

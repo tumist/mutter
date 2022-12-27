@@ -184,6 +184,12 @@ surface_from_xdg_toplevel_resource (struct wl_resource *resource)
   return surface_from_xdg_surface_resource (resource);
 }
 
+static MetaWaylandXdgPopup *
+meta_wayland_xdg_popup_from_surface (MetaWaylandSurface *surface)
+{
+  return META_WAYLAND_XDG_POPUP (surface->role);
+}
+
 static void
 meta_wayland_xdg_surface_reset (MetaWaylandXdgSurface *xdg_surface)
 {
@@ -836,7 +842,9 @@ meta_wayland_xdg_toplevel_post_apply_state (MetaWaylandSurfaceRole  *surface_rol
   window_geometry = meta_wayland_xdg_surface_get_window_geometry (xdg_surface);
   geometry_changed = !meta_rectangle_equal (&old_geometry, &window_geometry);
 
-  if (geometry_changed || pending->has_acked_configure_serial)
+  if (geometry_changed ||
+      pending->derived.surface_size_changed ||
+      pending->has_acked_configure_serial)
     {
       meta_window_wayland_finish_move_resize (window, window_geometry, pending);
     }
@@ -1130,6 +1138,37 @@ finish_popup_setup (MetaWaylandXdgPopup *xdg_popup)
 }
 
 static void
+dismiss_invalid_popup (MetaWaylandXdgPopup *xdg_popup)
+{
+  if (xdg_popup->popup)
+    {
+      while (TRUE)
+        {
+          MetaWaylandSurface *top_popup_surface;
+          MetaWaylandXdgPopup *top_xdg_popup;
+
+          top_popup_surface =
+            meta_wayland_popup_get_top_popup (xdg_popup->popup);
+          if (!top_popup_surface)
+            break;
+
+          top_xdg_popup = meta_wayland_xdg_popup_from_surface (top_popup_surface);
+
+          xdg_popup_send_popup_done (top_xdg_popup->resource);
+          meta_wayland_popup_destroy (top_xdg_popup->popup);
+
+          if (top_xdg_popup == xdg_popup)
+            break;
+        }
+    }
+  else
+    {
+      xdg_popup_send_popup_done (xdg_popup->resource);
+      meta_wayland_xdg_popup_unmap (xdg_popup);
+    }
+}
+
+static void
 meta_wayland_xdg_popup_apply_state (MetaWaylandSurfaceRole  *surface_role,
                                     MetaWaylandSurfaceState *pending)
 {
@@ -1174,10 +1213,14 @@ meta_wayland_xdg_popup_post_apply_state (MetaWaylandSurfaceRole  *surface_role,
   MetaWaylandXdgSurface *xdg_surface = META_WAYLAND_XDG_SURFACE (surface_role);
   MetaWaylandSurface *surface =
     meta_wayland_surface_role_get_surface (surface_role);
+  MetaWaylandXdgSurfacePrivate *xdg_surface_priv =
+    meta_wayland_xdg_surface_get_instance_private (xdg_surface);
   MetaWaylandSurfaceRoleClass *surface_role_class =
     META_WAYLAND_SURFACE_ROLE_CLASS (meta_wayland_xdg_popup_parent_class);
   MetaWindow *window;
   MetaWindow *parent_window;
+  MetaRectangle old_geometry;
+  MetaRectangle window_geometry;
   MetaRectangle buffer_rect;
   MetaRectangle parent_buffer_rect;
 
@@ -1190,13 +1233,12 @@ meta_wayland_xdg_popup_post_apply_state (MetaWaylandSurfaceRole  *surface_role,
 
   surface_role_class->post_apply_state (surface_role, pending);
 
-  if (pending->has_acked_configure_serial)
-    {
-      MetaRectangle window_geometry;
-
-      window_geometry = meta_wayland_xdg_surface_get_window_geometry (xdg_surface);
-      meta_window_wayland_finish_move_resize (window, window_geometry, pending);
-    }
+  window_geometry = meta_wayland_xdg_surface_get_window_geometry (xdg_surface);
+  old_geometry = xdg_surface_priv->geometry;
+  if (!meta_rectangle_equal (&old_geometry, &window_geometry) ||
+      pending->derived.surface_size_changed ||
+      pending->has_acked_configure_serial)
+    meta_window_wayland_finish_move_resize (window, window_geometry, pending);
 
   parent_window = meta_wayland_surface_get_window (xdg_popup->parent_surface);
   meta_window_get_buffer_rect (window, &buffer_rect);
@@ -1206,7 +1248,7 @@ meta_wayland_xdg_popup_post_apply_state (MetaWaylandSurfaceRole  *surface_role,
     {
       g_warning ("Buggy client caused popup to be placed outside of "
                  "parent window");
-      dismiss_popup (xdg_popup);
+      dismiss_invalid_popup (xdg_popup);
     }
 }
 

@@ -735,23 +735,6 @@ prepare_auth_file (MetaXWaylandManager  *manager,
 }
 
 static void
-add_local_user_to_xhost (Display *xdisplay)
-{
-  XHostAddress host_entry;
-  XServerInterpretedAddress siaddr;
-
-  siaddr.type = (char *) "localuser";
-  siaddr.typelength = strlen (siaddr.type);
-  siaddr.value = (char *) g_get_user_name();
-  siaddr.valuelength = strlen (siaddr.value);
-
-  host_entry.family = FamilyServerInterpreted;
-  host_entry.address = (char *) &siaddr;
-
-  XAddHost (xdisplay, &host_entry);
-}
-
-static void
 on_init_x11_cb (MetaDisplay  *display,
                 GAsyncResult *result,
                 gpointer      user_data)
@@ -793,14 +776,6 @@ meta_xwayland_start_xserver (MetaXWaylandManager *manager,
                              GAsyncReadyCallback  callback,
                              gpointer             user_data)
 {
-  struct {
-    const char *extension_name;
-    MetaXwaylandExtension disable_extension;
-  } x11_extension_names[] = {
-    { "SECURITY", META_XWAYLAND_EXTENSION_SECURITY },
-    { "XTEST", META_XWAYLAND_EXTENSION_XTEST },
-  };
-
   int xwayland_client_fd[2];
   int displayfd[2];
   g_autoptr(GSubprocessLauncher) launcher = NULL;
@@ -818,6 +793,13 @@ meta_xwayland_start_xserver (MetaXWaylandManager *manager,
   MetaX11DisplayPolicy x11_display_policy =
     meta_context_get_x11_display_policy (compositor->context);
 #endif
+  struct {
+    const char *extension_name;
+    MetaXwaylandExtension disable_extension;
+  } x11_extension_names[] = {
+    { "SECURITY", META_XWAYLAND_EXTENSION_SECURITY },
+    { "XTEST", META_XWAYLAND_EXTENSION_XTEST },
+  };
 
   task = g_task_new (NULL, cancellable, callback, user_data);
   g_task_set_source_tag (task, meta_xwayland_start_xserver);
@@ -1136,8 +1118,6 @@ meta_xwayland_setup_xdisplay (MetaXWaylandManager *manager,
 #endif
 
   XFixesSetClientDisconnectMode (xdisplay, XFixesClientDisconnectFlagTerminate);
-
-  add_local_user_to_xhost (xdisplay);
 }
 
 static void

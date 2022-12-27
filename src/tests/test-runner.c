@@ -29,7 +29,7 @@
 #include "meta-test/meta-context-test.h"
 #include "meta/util.h"
 #include "meta/window.h"
-#include "meta/meta-workspace-manager.h"
+#include "core/meta-workspace-manager-private.h"
 #include "tests/meta-test-utils.h"
 #include "ui/ui.h"
 #include "wayland/meta-wayland.h"
@@ -38,6 +38,7 @@
 typedef struct {
   MetaContext *context;
   GHashTable *clients;
+  MetaX11AlarmFilter *alarm_filter;
   MetaAsyncWaiter *waiter;
   GString *warning_messages;
   GMainLoop *loop;
@@ -51,20 +52,9 @@ test_case_alarm_filter (MetaX11Display        *x11_display,
                         gpointer               data)
 {
   TestCase *test = data;
-  GHashTableIter iter;
-  gpointer key, value;
 
   if (meta_async_waiter_process_x11_event (test->waiter, x11_display, event))
     return TRUE;
-
-  g_hash_table_iter_init (&iter, test->clients);
-  while (g_hash_table_iter_next (&iter, &key, &value))
-    {
-      MetaTestClient *client = value;
-
-      if (meta_test_client_process_x11_event (client, x11_display, event))
-        return TRUE;
-    }
 
   return FALSE;
 }
@@ -73,8 +63,12 @@ static void
 on_x11_display_opened (MetaDisplay *display,
                        TestCase    *test)
 {
-  meta_x11_display_set_alarm_filter (display->x11_display,
-                                     test_case_alarm_filter, test);
+  MetaX11Display *x11_display = meta_display_get_x11_display (display);
+
+  test->alarm_filter =
+    meta_x11_display_add_alarm_filter (x11_display,
+                                       test_case_alarm_filter,
+                                       test);
   test->waiter = meta_async_waiter_new (display->x11_display);
 }
 
@@ -224,10 +218,11 @@ test_case_parse_window_id (TestCase        *test,
 }
 
 static gboolean
-test_case_assert_stacking (TestCase *test,
-                           char    **expected_windows,
-                           int       n_expected_windows,
-                           GError  **error)
+test_case_assert_stacking (TestCase       *test,
+                           char          **expected_windows,
+                           int             n_expected_windows,
+                           MetaWorkspace  *workspace,
+                           GError        **error)
 {
   MetaDisplay *display = meta_get_display ();
   guint64 *windows;
@@ -240,6 +235,10 @@ test_case_assert_stacking (TestCase *test,
   for (i = 0; i < n_windows; i++)
     {
       MetaWindow *window = meta_display_lookup_stack_id (display, windows[i]);
+
+      if (workspace && !meta_window_located_on_workspace (window, workspace))
+        continue;
+
       if (window != NULL && window->title)
         {
           /* See comment in meta_ui_new() about why the dummy window for GTK+ theming
@@ -893,7 +892,7 @@ test_case_do (TestCase *test,
     }
   else if (strcmp (argv[0], "assert_stacking") == 0)
     {
-      if (!test_case_assert_stacking (test, argv + 1, argc - 1, error))
+      if (!test_case_assert_stacking (test, argv + 1, argc - 1, NULL, error))
         return FALSE;
 
       if (!test_case_check_xserver_stacking (test, error))
@@ -1030,6 +1029,152 @@ test_case_do (TestCase *test,
                                      crtc_mode_info->refresh_rate);
       meta_monitor_manager_reload (monitor_manager);
     }
+  else if (strcmp (argv[0], "num_workspaces") == 0)
+    {
+      if (argc != 2)
+        BAD_COMMAND("usage: %s <num>", argv[0]);
+
+      MetaDisplay *display = meta_get_display ();
+      MetaWorkspaceManager *workspace_manager =
+        meta_display_get_workspace_manager (display);
+      uint32_t timestamp = meta_display_get_current_time_roundtrip (display);
+      int num = atoi (argv[1]);
+      meta_workspace_manager_update_num_workspaces (workspace_manager,
+                                                    timestamp, num);
+    }
+  else if (strcmp (argv[0], "activate_workspace") == 0)
+    {
+      if (argc != 2)
+        BAD_COMMAND("usage: %s <workspace-index>", argv[0]);
+
+      MetaDisplay *display = meta_get_display ();
+      MetaWorkspaceManager *workspace_manager =
+        meta_display_get_workspace_manager (display);
+
+      int index = atoi (argv[1]);
+      if (index >= meta_workspace_manager_get_n_workspaces (workspace_manager))
+        return FALSE;
+
+      MetaWorkspace *workspace =
+        meta_workspace_manager_get_workspace_by_index (workspace_manager,
+                                                       index);
+      uint32_t timestamp = meta_display_get_current_time_roundtrip (display);
+      meta_workspace_activate (workspace, timestamp);
+    }
+  else if (strcmp (argv[0], "activate_workspace_with_focus") == 0)
+    {
+      if (argc != 3)
+        BAD_COMMAND("usage: %s <workspace-index> <window-id>", argv[0]);
+
+      MetaTestClient *client;
+      const char *window_id;
+      if (!test_case_parse_window_id (test, argv[2], &client, &window_id, error))
+        return FALSE;
+
+      MetaWindow *window;
+      window = meta_test_client_find_window (client, window_id, error);
+      if (!window)
+        return FALSE;
+
+      MetaDisplay *display = meta_get_display ();
+      MetaWorkspaceManager *workspace_manager =
+        meta_display_get_workspace_manager (display);
+
+      int index = atoi (argv[1]);
+      if (index >= meta_workspace_manager_get_n_workspaces (workspace_manager))
+        return FALSE;
+
+      MetaWorkspace *workspace =
+        meta_workspace_manager_get_workspace_by_index (workspace_manager,
+                                                       index);
+      uint32_t timestamp = meta_display_get_current_time_roundtrip (display);
+      meta_workspace_activate_with_focus (workspace, window, timestamp);
+    }
+  else if (strcmp (argv[0], "assert_stacking_workspace") == 0)
+    {
+      if (argc < 2)
+        BAD_COMMAND("usage: %s <workspace-index> [<window-id1> ...]", argv[0]);
+
+      MetaDisplay *display = meta_get_display ();
+      MetaWorkspaceManager *workspace_manager =
+        meta_display_get_workspace_manager (display);
+
+      int index = atoi (argv[1]);
+      if (index >= meta_workspace_manager_get_n_workspaces (workspace_manager))
+        return FALSE;
+
+      MetaWorkspace *workspace =
+        meta_workspace_manager_get_workspace_by_index (workspace_manager,
+                                                       index);
+
+      if (!test_case_assert_stacking (test, argv + 2, argc - 2, workspace, error))
+        return FALSE;
+
+      if (!test_case_check_xserver_stacking (test, error))
+        return FALSE;
+    }
+  else if (strcmp (argv[0], "window_to_workspace") == 0)
+    {
+      if (argc != 3)
+        BAD_COMMAND("usage: %s <window-id> <workspace-index>", argv[0]);
+
+      MetaTestClient *client;
+      const char *window_id;
+      if (!test_case_parse_window_id (test, argv[1], &client, &window_id, error))
+        return FALSE;
+
+      MetaWindow *window;
+      window = meta_test_client_find_window (client, window_id, error);
+      if (!window)
+        return FALSE;
+
+      MetaDisplay *display = meta_get_display ();
+      MetaWorkspaceManager *workspace_manager =
+        meta_display_get_workspace_manager (display);
+
+      int index = atoi (argv[2]);
+      if (index >= meta_workspace_manager_get_n_workspaces (workspace_manager))
+        return FALSE;
+
+      MetaWorkspace *workspace =
+        meta_workspace_manager_get_workspace_by_index (workspace_manager,
+                                                       index);
+
+      meta_window_change_workspace (window, workspace);
+    }
+  else if (strcmp (argv[0], "make_above") == 0)
+    {
+      if (argc != 3 ||
+          (g_ascii_strcasecmp (argv[2], "true") != 0 &&
+           g_ascii_strcasecmp (argv[2], "false") != 0))
+        BAD_COMMAND("usage: %s <client-id>/<window-id> [true|false]",
+                    argv[0]);
+
+      MetaTestClient *client;
+      const char *window_id;
+      if (!test_case_parse_window_id (test, argv[1], &client, &window_id, error))
+        return FALSE;
+
+      MetaWindow *window;
+      window = meta_test_client_find_window (client, window_id, error);
+      if (!window)
+        return FALSE;
+
+      if (g_ascii_strcasecmp (argv[2], "true") == 0)
+        meta_window_make_above (window);
+      else
+        meta_window_unmake_above (window);
+    }
+  else if (strcmp (argv[0], "focus_default_window") == 0)
+    {
+      if (argc != 1)
+        BAD_COMMAND("usage: %s", argv[0]);
+
+      MetaDisplay *display = meta_get_display ();
+      uint32_t timestamp = meta_display_get_current_time_roundtrip (display);
+
+      meta_display_focus_default_window (display, timestamp);
+    }
   else
     {
       BAD_COMMAND("Unknown command %s", argv[0]);
@@ -1061,7 +1206,7 @@ test_case_destroy (TestCase *test,
   if (!test_case_wait (test, error))
     return FALSE;
 
-  if (!test_case_assert_stacking (test, NULL, 0, error))
+  if (!test_case_assert_stacking (test, NULL, 0, NULL, error))
     return FALSE;
 
   g_hash_table_iter_init (&iter, test->clients);
@@ -1072,8 +1217,11 @@ test_case_destroy (TestCase *test,
 
   display = meta_get_display ();
   g_clear_signal_handler (&test->x11_display_opened_handler_id, display);
-  if (display->x11_display)
-    meta_x11_display_set_alarm_filter (display->x11_display, NULL, NULL);
+  if (display->x11_display && test->alarm_filter)
+    {
+      meta_x11_display_remove_alarm_filter (display->x11_display,
+                                            test->alarm_filter);
+    }
 
   g_hash_table_destroy (test->clients);
   g_object_unref (test->virtual_monitor);

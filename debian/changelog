@@ -1,3 +1,84 @@
+mutter (43.2-4) unstable; urgency=medium
+
+  * Team upload
+  * Mark xwayland test-case as known to be flaky on 32-bit ARM.
+    Mitigates: #1026445
+
+ -- Simon McVittie <smcv@debian.org>  Tue, 20 Dec 2022 12:48:02 +0000
+
+mutter (43.2-3) unstable; urgency=medium
+
+  * Team upload
+  * Rebuild source package with non-expired signing key
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 18 Dec 2022 22:32:32 +0000
+
+mutter (43.2-2) unstable; urgency=medium
+
+  * Team upload
+  * d/p/workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch:
+    Add proposed patch to avoid crashing on an invalid argument
+  * d/p/tests-Break-up-stacking-installed-tests-into-more-smaller.patch:
+    Add proposed patch to have more, smaller installed-tests.
+    As well as doing what it was intended to do, this also avoids a crash
+    during autopkgtest. (Mitigates: #1024438)
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 18 Dec 2022 21:29:01 +0000
+
+mutter (43.2-1) unstable; urgency=medium
+
+  * New upstream release
+  * Update symbols files
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Sat, 10 Dec 2022 16:46:15 -0500
+
+mutter (43.1-2) unstable; urgency=medium
+
+  * Team upload
+  * Disable restore-size test.
+    This avoids intermittent FTBFS, especially on armel and armhf.
+  * Build-/test-depend on dbus-daemon instead of dbus
+  * d/upstream/metadata: Add Repository field
+
+ -- Simon McVittie <smcv@debian.org>  Tue, 15 Nov 2022 10:32:45 +0000
+
+mutter (43.1-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream release
+    - Among other fixes, this avoids a fullscreen window on one display
+      being replicated on another display (Closes: #1023256, LP: #1990563)
+  * Refresh patch series
+    - Drop patches that were included upstream
+    - Update triple-buffering patch from GNOME/mutter!1441
+  * Set field Upstream-Name in debian/copyright.
+  * d/upstream/metadata: Add
+  * Update symbols file for new upstream release
+  * Reduce entropy of .symbols file.
+    The SONAME changed in version 43~beta, so there's no point in keeping
+    track of whether symbols are older than that version.
+    Similarly, if a symbol was introduced in a prerelease, we want
+    dependent packages to depend on the final release, so there's little
+    point in finer-grained tracking of which specific prerelease each
+    symbol came from.
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 04 Nov 2022 20:09:07 +0000
+
+mutter (43.0-3) unstable; urgency=medium
+
+  * Cherry-pick patch to fix Night Light availability in GNOME Settings
+    (Closes: #1020941) (LP: #1990207)
+  * Cherry-pick patches to avoid crash when ICC color profile is invalid
+    (Closes: #1021680) (LP: #1993114)
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 17 Oct 2022 06:57:50 -0400
+
+mutter (43.0-2) unstable; urgency=medium
+
+  * Release to unstable (Closes: #1009990, #1019266, #1020515)
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 27 Sep 2022 19:00:48 -0400
+
 mutter (43.0-1ubuntu5) lunar; urgency=medium
 
   * Revert "debian/rules: Ignore test failures on armhf"

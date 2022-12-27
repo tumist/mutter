@@ -27,7 +27,6 @@
 
 #include "backends/meta-screen-cast-window.h"
 #include "compositor/compositor-private.h"
-#include "compositor/meta-cullable.h"
 #include "compositor/meta-shaped-texture-private.h"
 #include "compositor/meta-surface-actor-x11.h"
 #include "compositor/meta-surface-actor.h"
@@ -114,13 +113,10 @@ static MetaSurfaceActor * meta_window_actor_real_get_scanout_candidate (MetaWind
 static void meta_window_actor_real_assign_surface_actor (MetaWindowActor  *self,
                                                          MetaSurfaceActor *surface_actor);
 
-static void cullable_iface_init (MetaCullableInterface *iface);
-
 static void screen_cast_window_iface_init (MetaScreenCastWindowInterface *iface);
 
 G_DEFINE_ABSTRACT_TYPE_WITH_CODE (MetaWindowActor, meta_window_actor, CLUTTER_TYPE_ACTOR,
                                   G_ADD_PRIVATE (MetaWindowActor)
-                                  G_IMPLEMENT_INTERFACE (META_TYPE_CULLABLE, cullable_iface_init)
                                   G_IMPLEMENT_INTERFACE (META_TYPE_SCREEN_CAST_WINDOW, screen_cast_window_iface_init));
 
 static void
@@ -274,16 +270,6 @@ static void
 meta_window_actor_set_frozen (MetaWindowActor *self,
                               gboolean         frozen)
 {
-  ClutterActor *child;
-  ClutterActorIter iter;
-
-  clutter_actor_iter_init (&iter, CLUTTER_ACTOR (self));
-  while (clutter_actor_iter_next (&iter, &child))
-    {
-      if (META_IS_SURFACE_ACTOR (child))
-        meta_surface_actor_set_frozen (META_SURFACE_ACTOR (child), frozen);
-    }
-
   META_WINDOW_ACTOR_GET_CLASS (self)->set_frozen (self, frozen);
 }
 
@@ -468,12 +454,7 @@ meta_window_actor_dispose (GObject *object)
 
   g_clear_object (&priv->window);
 
-  if (priv->surface)
-    {
-      clutter_actor_remove_child (CLUTTER_ACTOR (self),
-                                  CLUTTER_ACTOR (priv->surface));
-      g_clear_object (&priv->surface);
-    }
+  g_clear_object (&priv->surface);
 
   G_OBJECT_CLASS (meta_window_actor_parent_class)->dispose (object);
 }
@@ -843,17 +824,17 @@ meta_window_actor_sync_actor_geometry (MetaWindowActor *self,
 {
   MetaWindowActorPrivate *priv =
     meta_window_actor_get_instance_private (self);
-  MetaRectangle window_rect;
+  MetaRectangle actor_rect;
   ClutterActor *actor = CLUTTER_ACTOR (self);
   MetaWindowActorChanges changes = 0;
 
-  meta_window_get_buffer_rect (priv->window, &window_rect);
+  meta_window_get_buffer_rect (priv->window, &actor_rect);
 
   /* When running as a Wayland compositor we catch size changes when new
    * buffers are attached */
   if (META_IS_SURFACE_ACTOR_X11 (priv->surface))
     meta_surface_actor_x11_set_size (META_SURFACE_ACTOR_X11 (priv->surface),
-                                     window_rect.width, window_rect.height);
+                                     actor_rect.width, actor_rect.height);
 
   /* Normally we want freezing a window to also freeze its position; this allows
    * windows to atomically move and resize together, either under app control,
@@ -864,6 +845,8 @@ meta_window_actor_sync_actor_geometry (MetaWindowActor *self,
    */
   if (meta_window_actor_is_frozen (self) && !did_placement)
     return META_WINDOW_ACTOR_CHANGE_POSITION | META_WINDOW_ACTOR_CHANGE_SIZE;
+
+  META_WINDOW_ACTOR_GET_CLASS (self)->sync_geometry (self, &actor_rect);
 
   if (clutter_actor_has_allocation (actor))
     {
@@ -878,10 +861,10 @@ meta_window_actor_sync_actor_geometry (MetaWindowActor *self,
       old_width = box.x2 - box.x1;
       old_height = box.y2 - box.y1;
 
-      if (old_x != window_rect.x || old_y != window_rect.y)
+      if (old_x != actor_rect.x || old_y != actor_rect.y)
         changes |= META_WINDOW_ACTOR_CHANGE_POSITION;
 
-      if (old_width != window_rect.width || old_height != window_rect.height)
+      if (old_width != actor_rect.width || old_height != actor_rect.height)
         changes |= META_WINDOW_ACTOR_CHANGE_SIZE;
     }
   else
@@ -890,10 +873,10 @@ meta_window_actor_sync_actor_geometry (MetaWindowActor *self,
     }
 
   if (changes & META_WINDOW_ACTOR_CHANGE_POSITION)
-    clutter_actor_set_position (actor, window_rect.x, window_rect.y);
+    clutter_actor_set_position (actor, actor_rect.x, actor_rect.y);
 
   if (changes & META_WINDOW_ACTOR_CHANGE_SIZE)
-    clutter_actor_set_size (actor, window_rect.width, window_rect.height);
+    clutter_actor_set_size (actor, actor_rect.width, actor_rect.height);
 
   return changes;
 }
@@ -1034,28 +1017,6 @@ see_region (cairo_region_t *region,
   cairo_surface_destroy (surface);
 }
 #endif
-
-
-static void
-meta_window_actor_cull_out (MetaCullable   *cullable,
-                            cairo_region_t *unobscured_region,
-                            cairo_region_t *clip_region)
-{
-  meta_cullable_cull_out_children (cullable, unobscured_region, clip_region);
-}
-
-static void
-meta_window_actor_reset_culling (MetaCullable *cullable)
-{
-  meta_cullable_reset_culling_children (cullable);
-}
-
-static void
-cullable_iface_init (MetaCullableInterface *iface)
-{
-  iface->cull_out = meta_window_actor_cull_out;
-  iface->reset_culling = meta_window_actor_reset_culling;
-}
 
 void
 meta_window_actor_sync_visibility (MetaWindowActor *self)
@@ -1508,6 +1469,12 @@ create_framebuffer_from_window_actor (MetaWindowActor  *self,
   return framebuffer;
 }
 
+static gboolean
+meta_window_actor_is_single_surface_actor (MetaWindowActor *self)
+{
+  return META_WINDOW_ACTOR_GET_CLASS (self)->is_single_surface_actor (self);
+}
+
 /**
  * meta_window_actor_get_image:
  * @self: A #MetaWindowActor
@@ -1541,7 +1508,7 @@ meta_window_actor_get_image (MetaWindowActor *self,
 
   stex = meta_surface_actor_get_texture (priv->surface);
   if (!meta_shaped_texture_should_get_via_offscreen (stex) &&
-      clutter_actor_get_n_children (actor) == 1)
+      meta_window_actor_is_single_surface_actor (self))
     {
       MetaRectangle *surface_clip = NULL;
 
