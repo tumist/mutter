@@ -1,3 +1,10 @@
+mutter (43.2-4ubuntu1) lunar; urgency=medium
+
+  * Merge with Debian. Remaining change:
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 27 Dec 2022 15:00:07 -0900
+
 mutter (43.2-4) unstable; urgency=medium
 
   * Team upload
@@ -5510,4 +5517,3 @@ metacity (2.3.34-1) unstable; urgency=low
   * Initial Release. (Closes: #107181)
 
  -- Thom May <thom@debian.org>  Sun, 10 Feb 2002 12:03:22 +0000
-
