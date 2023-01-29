@@ -1,5 +1,6 @@
-mutter (43.2-6) UNRELEASED; urgency=medium
+mutter (43.2-6) unstable; urgency=medium
 
+  * Team upload
   * d/patches: Update to upstream gnome-43 branch commit 43.2-29-g35763ca0cc
     - Avoid lag while altering the split point between edge-tiled windows
       on the left and right halves of the screen (mutter#2246)
@@ -31,8 +32,15 @@ mutter (43.2-6) UNRELEASED; urgency=medium
     - Translation updates: ru
   * d/patches: Sort closest-to-upstream first
   * d/patches: Improve metadata
+  * d/control.in: Drop Multi-Arch from libmutter-test-11.
+    The test library is not usefully multiarch, because it depends on a
+    matching architecture of mutter.
+  * lintian-overrides: Silence a false positive for libegl1-mesa-dev
+    libegl1-mesa-dev is not transitional or obsolete, see lintian/lintian!452.
+  * d/copyright: Add a missing short name field
+  * d/control.in: Standards-Version: 4.6.2 (no changes required)
 
- -- Simon McVittie <smcv@debian.org>  Sun, 29 Jan 2023 13:53:38 +0000
+ -- Simon McVittie <smcv@debian.org>  Sun, 29 Jan 2023 15:26:48 +0000
 
 mutter (43.2-5) unstable; urgency=medium
 
