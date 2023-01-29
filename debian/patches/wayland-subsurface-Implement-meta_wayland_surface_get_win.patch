@@ -1,0 +1,55 @@
+From: Robert Mader <robert.mader@collabora.com>
+Date: Wed, 2 Nov 2022 19:35:35 +0100
+Subject: wayland/subsurface: Implement meta_wayland_surface_get_window()
+
+Subsurfaces are special regarding windows as they don't have a window,
+but usually have an ancestor which does. All current users of
+`get_window()` are either used for known surface roles, such as xdg-*
+ones, or, as is the case for pointer constrains, would actually want to
+get the ancestors window.
+
+Thus implement `get_window()` to allow pointer constrains to work.
+
+(cherry picked from commit 8af356c2c791a236977bbcc347e8d4378b6587ea)
+
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2223
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2717
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:a036bfb7fdfaafd1c05fac959d3ef5302fc81516
+---
+ src/wayland/meta-wayland-subsurface.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/src/wayland/meta-wayland-subsurface.c b/src/wayland/meta-wayland-subsurface.c
+index 6a23c86..5441e75 100644
+--- a/src/wayland/meta-wayland-subsurface.c
++++ b/src/wayland/meta-wayland-subsurface.c
+@@ -193,6 +193,20 @@ meta_wayland_subsurface_get_toplevel (MetaWaylandSurfaceRole *surface_role)
+     return NULL;
+ }
+ 
++static MetaWindow *
++meta_wayland_subsurface_get_window (MetaWaylandSurfaceRole *surface_role)
++{
++  MetaWaylandSurface *surface =
++    meta_wayland_surface_role_get_surface (surface_role);
++  MetaWaylandSurface *parent;
++
++  parent = surface->sub.parent;
++  if (parent)
++    return meta_wayland_surface_get_window (parent);
++  else
++    return NULL;
++}
++
+ static gboolean
+ meta_wayland_subsurface_should_cache_state (MetaWaylandSurfaceRole *surface_role)
+ {
+@@ -276,6 +290,7 @@ meta_wayland_subsurface_class_init (MetaWaylandSubsurfaceClass *klass)
+ 
+   surface_role_class->assigned = meta_wayland_subsurface_assigned;
+   surface_role_class->get_toplevel = meta_wayland_subsurface_get_toplevel;
++  surface_role_class->get_window = meta_wayland_subsurface_get_window;
+   surface_role_class->should_cache_state = meta_wayland_subsurface_should_cache_state;
+   surface_role_class->notify_subsurface_state_changed =
+     meta_wayland_subsurface_notify_subsurface_state_changed;

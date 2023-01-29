@@ -1,0 +1,86 @@
+From: Robert Mader <robert.mader@posteo.de>
+Date: Fri, 16 Dec 2022 20:27:32 +0100
+Subject: Revert "clutter/actor: Stop transitions in children when removing"
+
+This reverts commit 74dd9037dc9a9a37e4df04c6f4776296683da6a0.
+
+It apparently caused regressions for some extensions.
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:099cd549a9356fd04f86605edb9ae47bf520e6c1
+---
+ clutter/clutter/clutter-actor-private.h |  3 +--
+ clutter/clutter/clutter-actor.c         | 11 +++--------
+ clutter/clutter/clutter-stage.c         |  2 +-
+ 3 files changed, 5 insertions(+), 11 deletions(-)
+
+diff --git a/clutter/clutter/clutter-actor-private.h b/clutter/clutter/clutter-actor-private.h
+index 0dd0385..7647054 100644
+--- a/clutter/clutter/clutter-actor-private.h
++++ b/clutter/clutter/clutter-actor-private.h
+@@ -255,8 +255,7 @@ void                            _clutter_actor_attach_clone
+ void                            _clutter_actor_detach_clone                             (ClutterActor *actor,
+                                                                                          ClutterActor *clone);
+ void                            _clutter_actor_queue_only_relayout                      (ClutterActor *actor);
+-void                            clutter_actor_clear_stage_views_recursive               (ClutterActor *actor,
+-                                                                                         gboolean      stop_transitions);
++void                            clutter_actor_clear_stage_views_recursive               (ClutterActor *actor);
+ 
+ float                           clutter_actor_get_real_resource_scale                   (ClutterActor *actor);
+ 
+diff --git a/clutter/clutter/clutter-actor.c b/clutter/clutter/clutter-actor.c
+index e52fbb5..75f86e4 100644
+--- a/clutter/clutter/clutter-actor.c
++++ b/clutter/clutter/clutter-actor.c
+@@ -4256,7 +4256,7 @@ clutter_actor_remove_child_internal (ClutterActor                 *self,
+    * cleared as the child and its children leave the actor tree.
+    */
+   if (clear_stage_views && !CLUTTER_ACTOR_IN_DESTRUCTION (child))
+-    clutter_actor_clear_stage_views_recursive (child, stop_transitions);
++    clutter_actor_clear_stage_views_recursive (child);
+ 
+   if (emit_parent_set && !CLUTTER_ACTOR_IN_DESTRUCTION (child))
+     g_signal_emit (child, actor_signals[PARENT_SET], 0, self);
+@@ -15402,12 +15402,8 @@ clear_stage_views_cb (ClutterActor *actor,
+                       int           depth,
+                       gpointer      user_data)
+ {
+-  gboolean stop_transitions = GPOINTER_TO_INT (user_data);
+   g_autoptr (GList) old_stage_views = NULL;
+ 
+-  if (stop_transitions)
+-    _clutter_actor_stop_transitions (actor);
+-
+   actor->priv->needs_update_stage_views = TRUE;
+ 
+   old_stage_views = g_steal_pointer (&actor->priv->stage_views);
+@@ -15433,14 +15429,13 @@ maybe_emit_stage_views_changed_cb (ClutterActor *actor,
+ }
+ 
+ void
+-clutter_actor_clear_stage_views_recursive (ClutterActor *self,
+-                                           gboolean      stop_transitions)
++clutter_actor_clear_stage_views_recursive (ClutterActor *self)
+ {
+   _clutter_actor_traverse (self,
+                            CLUTTER_ACTOR_TRAVERSE_DEPTH_FIRST,
+                            clear_stage_views_cb,
+                            NULL,
+-                           GINT_TO_POINTER (stop_transitions));
++                           NULL);
+   _clutter_actor_traverse (self,
+                            CLUTTER_ACTOR_TRAVERSE_DEPTH_FIRST,
+                            maybe_emit_stage_views_changed_cb,
+diff --git a/clutter/clutter/clutter-stage.c b/clutter/clutter/clutter-stage.c
+index d3ef4fd..7d24cf4 100644
+--- a/clutter/clutter/clutter-stage.c
++++ b/clutter/clutter/clutter-stage.c
+@@ -3112,7 +3112,7 @@ clutter_stage_peek_stage_views (ClutterStage *stage)
+ void
+ clutter_stage_clear_stage_views (ClutterStage *stage)
+ {
+-  clutter_actor_clear_stage_views_recursive (CLUTTER_ACTOR (stage), FALSE);
++  clutter_actor_clear_stage_views_recursive (CLUTTER_ACTOR (stage));
+ }
+ 
+ GList *

@@ -1,0 +1,63 @@
+From: Sebastian Wick <sebastian.wick@redhat.com>
+Date: Wed, 7 Dec 2022 18:19:39 +0100
+Subject: workspace: Focus the default window only if no window is focused
+
+This might happen when the workspace is not switched and
+focus_default_window is called or when 'workspace on primary display
+only' is enabled, a secondary display exists and the workspace is
+switched.
+
+(cherry picked from commit 058981dc12b294b84040147eab247ac72da3011c)
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2747
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:d5dd42694d64b4cc8fac65aeb937471af8bdf27b
+---
+ src/core/workspace.c | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/src/core/workspace.c b/src/core/workspace.c
+index 03b177e..c1360a4 100644
+--- a/src/core/workspace.c
++++ b/src/core/workspace.c
+@@ -1316,15 +1316,40 @@ meta_workspace_get_name (MetaWorkspace *workspace)
+   return meta_prefs_get_workspace_name (meta_workspace_index (workspace));
+ }
+ 
++static MetaWindow *
++get_focused_workspace_window (MetaWorkspace *workspace)
++{
++  g_autoptr (GList) windows = NULL;
++  GList *l;
++
++  windows = meta_workspace_list_windows (workspace);
++
++  for (l = windows; l != NULL; l = l->next)
++    {
++      MetaWindow *window = l->data;
++
++      if (meta_window_has_focus (window))
++        return window;
++    }
++
++  return NULL;
++}
++
+ void
+ meta_workspace_focus_default_window (MetaWorkspace *workspace,
+                                      MetaWindow    *not_this_one,
+                                      guint32        timestamp)
+ {
++  MetaWindow *focus;
++
+   if (timestamp == META_CURRENT_TIME)
+     meta_warning ("META_CURRENT_TIME used to choose focus window; "
+                   "focus window may not be correct.");
+ 
++  focus = get_focused_workspace_window (workspace);
++  if (focus != NULL && focus != not_this_one)
++    return;
++
+   if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK ||
+       !workspace->display->mouse_mode)
+     {

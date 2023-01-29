@@ -1,0 +1,47 @@
+From: Georges Basile Stavracas Neto <georges.stavracas@gmail.com>
+Date: Sat, 3 Dec 2022 10:24:25 -0300
+Subject: window-actor: Apply resource scale to cursor position
+
+meta_screen_cast_window_stream_src_set_cursor_metadata() relies
+entirely on meta_screen_cast_window_transform_cursor_position()
+to return the correct relative cursor position.
+
+However, this function actually does not return the expected
+values, since it does not apply the resource scale to the
+transformed position.
+
+Actually apply the cursor scale when calculating the cursor
+position.
+
+(cherry picked from commit 1f705ee10a9362abfddac3594354fe0d5a5d423e)
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2737
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:50c4ab3959fd4afecc4c2782a8759752cd1a4c1b
+---
+ src/compositor/meta-window-actor.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/compositor/meta-window-actor.c b/src/compositor/meta-window-actor.c
+index fcf97ae..12674bd 100644
+--- a/src/compositor/meta-window-actor.c
++++ b/src/compositor/meta-window-actor.c
+@@ -1239,11 +1239,18 @@ meta_window_actor_transform_cursor_position (MetaScreenCastWindow *screen_cast_w
+ 
+   if (out_relative_cursor_position)
+     {
++      float resource_scale;
++
+       clutter_actor_transform_stage_point (CLUTTER_ACTOR (priv->surface),
+                                            cursor_position->x,
+                                            cursor_position->y,
+                                            &out_relative_cursor_position->x,
+                                            &out_relative_cursor_position->y);
++
++      resource_scale =
++        clutter_actor_get_resource_scale (CLUTTER_ACTOR (window_actor));
++      out_relative_cursor_position->x *= resource_scale;
++      out_relative_cursor_position->y *= resource_scale;
+     }
+ 
+   return TRUE;

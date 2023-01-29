@@ -1,0 +1,51 @@
+From: Carlos Garnacho <carlosg@gnome.org>
+Date: Fri, 9 Dec 2022 18:40:47 +0100
+Subject: core: Consider ClutterGrabs checking whether windows are interactive
+
+There's 2 users of this, meta_display_sync_wayland_input_focus() which
+does already perform these checks on its own, and MetaCursorTracker's
+update_displayed_cursor() to determine whether it should go with the
+Wayland client's cursor.
+
+This second check should also consider the existing ClutterGrabs, so
+make meta_display_windows_are_interactable() handle them for both
+callers.
+
+Fixes the cursor shown over windows while e.g. there are menus opened.
+
+(cherry picked from commit 02d4a07822de2fb0002186df62bb0c8127555085)
+
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2553
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2754
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:6975a6684dfb2acd91332540d6e51238342827fa
+---
+ src/core/display.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/display.c b/src/core/display.c
+index 353a4fb..470ff80 100644
+--- a/src/core/display.c
++++ b/src/core/display.c
+@@ -1277,6 +1277,12 @@ meta_grab_op_is_moving (MetaGrabOp op)
+ gboolean
+ meta_display_windows_are_interactable (MetaDisplay *display)
+ {
++  MetaBackend *backend = meta_get_backend ();
++  MetaStage *stage = META_STAGE (meta_backend_get_stage (backend));
++
++  if (clutter_stage_get_grab_actor (CLUTTER_STAGE (stage)))
++    return FALSE;
++
+   switch (display->event_route)
+     {
+     case META_EVENT_ROUTE_NORMAL:
+@@ -1437,8 +1443,6 @@ meta_display_sync_wayland_input_focus (MetaDisplay *display)
+     focus_window = NULL;
+   else if (is_no_focus_xwindow)
+     focus_window = NULL;
+-  else if (clutter_stage_get_grab_actor (CLUTTER_STAGE (stage)))
+-    focus_window = NULL;
+   else if (display->focus_window && display->focus_window->surface)
+     focus_window = display->focus_window;
+   else

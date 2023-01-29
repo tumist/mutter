@@ -1,0 +1,33 @@
+From: Carlos Garnacho <carlosg@gnome.org>
+Date: Fri, 16 Dec 2022 22:51:51 +0100
+Subject: backends: Do not require a physical device to update pointer
+ visibility
+
+We may also want to update pointer visibility from emulated events
+emitted directly on logical devices, as those we generate from XI_RawMotion
+on X11 when the pointer is not over a compositor window.
+
+(cherry picked from commit 60e0fe776d16ec78328675fc805b272a962d05c0)
+
+Closes: https://gitlab.gnome.org/GNOME/mutter/-/issues/2344
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2766
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:d966808873c3384667b3bb11d5f3015482752dd2
+---
+ src/backends/meta-backend.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/src/backends/meta-backend.c b/src/backends/meta-backend.c
+index 606c0ed..3da49cd 100644
+--- a/src/backends/meta-backend.c
++++ b/src/backends/meta-backend.c
+@@ -1048,9 +1048,6 @@ update_pointer_visibility_from_event (MetaBackend  *backend,
+   uint32_t time_ms;
+ 
+   device = clutter_event_get_source_device (event);
+-  if (clutter_input_device_get_device_mode (device) != CLUTTER_INPUT_MODE_PHYSICAL)
+-    return;
+-
+   device_type = clutter_input_device_get_device_type (device);
+   time_ms = clutter_event_get_time (event);
+ 

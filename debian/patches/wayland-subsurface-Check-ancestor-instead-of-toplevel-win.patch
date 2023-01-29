@@ -1,0 +1,37 @@
+From: Robert Mader <robert.mader@collabora.com>
+Date: Thu, 24 Nov 2022 17:15:03 +0100
+Subject: wayland/subsurface: Check ancestor instead of toplevel window for
+ actor sync
+
+The intention here was to check if the subsurface belongs to a window.
+Thus it didn't behave as expected for subsurfaces belonging to non-toplevel
+windows.
+
+After the previous commit we can use `get_window()` to check for what we
+actually want here.
+
+(cherry picked from commit 225f7d46a33f7bb88c44fbefc70e7e44eb82aabf)
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2717
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:f4366049ba2ee1c44ca23fbbc8a1e7737e929b04
+---
+ src/wayland/meta-wayland-subsurface.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/src/wayland/meta-wayland-subsurface.c b/src/wayland/meta-wayland-subsurface.c
+index 5441e75..f044c52 100644
+--- a/src/wayland/meta-wayland-subsurface.c
++++ b/src/wayland/meta-wayland-subsurface.c
+@@ -266,10 +266,8 @@ meta_wayland_subsurface_sync_actor_state (MetaWaylandActorSurface *actor_surface
+     meta_wayland_surface_role_get_surface (surface_role);
+   MetaWaylandActorSurfaceClass *actor_surface_class =
+     META_WAYLAND_ACTOR_SURFACE_CLASS (meta_wayland_subsurface_parent_class);
+-  MetaWaylandSurface *toplevel_surface;
+ 
+-  toplevel_surface = meta_wayland_surface_get_toplevel (surface);
+-  if (toplevel_surface && meta_wayland_surface_get_window (toplevel_surface))
++  if (meta_wayland_surface_get_window (surface))
+     actor_surface_class->sync_actor_state (actor_surface);
+ 
+   sync_actor_subsurface_state (surface);

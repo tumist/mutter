@@ -1,3 +1,39 @@
+mutter (43.2-6) UNRELEASED; urgency=medium
+
+  * d/patches: Update to upstream gnome-43 branch commit 43.2-29-g35763ca0cc
+    - Avoid lag while altering the split point between edge-tiled windows
+      on the left and right halves of the screen (mutter#2246)
+    - Disable direct scanout optimization during drag-and-drop to ensure
+      the dragged content is visible (mutter#2470)
+    - Performance improvements (mutter!2671)
+    - Enable the direct scanout optimization for fullscreen mpv in Wayland
+      (mutter#2550)
+    - Revert an optimization which caused some extensions to regress
+    - Prevent mouse cursor disappearing for windows that appeared while a
+      menu was open (mutter#2553)
+    - Make pointer confinement compatible with subsurfaces (mutter#2223)
+    - Report width and height of rotated screens consistently with the spec
+      and other compositors (mutter#2519)
+    - Avoid unintended focus change on secondary display when switching
+      workspace on primary display (mutter#2548)
+    - Make workspace-switching more resilient against crashes (mutter!2707)
+    - Fix a crash during screen recording at certain resolution/scale
+      combinations (mutter#2542)
+    - Fix cursor position scaling while recording a single window
+      (mutter#1541)
+    - Avoid integer overflow during screencasting (mutter!2762)
+    - Ensure cursor reappears when using touchscreen and then mouse in X11
+      (mutter#2344)
+    - Ensure keyboard accessibility works at beginning of session if
+      previously enabled in configuration (mutter#1858)
+    - Fix mapping between graphics tablets and displays (mutter!2767)
+    - Fix a small memory leak (mutter!2799)
+    - Translation updates: ru
+  * d/patches: Sort closest-to-upstream first
+  * d/patches: Improve metadata
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 29 Jan 2023 13:53:38 +0000
+
 mutter (43.2-5) unstable; urgency=medium
 
   [ Daniel van Vugt ]
