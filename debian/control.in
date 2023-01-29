@@ -233,7 +233,6 @@ Description: Development files for the Mutter window manager
 Package: libmutter-test-11
 Section: libs
 Architecture: linux-any
-Multi-Arch: same
 Depends: libmutter-11-0 (= ${binary:Version}),
          mutter (= ${binary:Version}),
          ${misc:Depends},
