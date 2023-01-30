@@ -1,0 +1,30 @@
+From: Niels De Graef <nielsdegraef@gmail.com>
+Date: Sun, 22 Jan 2023 18:46:01 +0100
+Subject: clutter/stage-view: Properly chain up finalize
+
+Fix a silly copy-paste mistake. Since `GObject` is the parent class,
+chaining up to `dispose()` from within your `finalize()`
+implementation just leads to a little memory leak and nothing worse.
+
+(cherry picked from commit 768ec7b0c1128c43cd3a02b17aaccb552f9626c3)
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2799
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:35763ca0cc961bf0c18f14f9f8779f67f1a6c453
+---
+ clutter/clutter/clutter-stage-view.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/clutter/clutter/clutter-stage-view.c b/clutter/clutter/clutter-stage-view.c
+index aa98e6a..14f2102 100644
+--- a/clutter/clutter/clutter-stage-view.c
++++ b/clutter/clutter/clutter-stage-view.c
+@@ -1476,7 +1476,7 @@ clutter_stage_view_finalize (GObject *object)
+ 
+   g_clear_object (&priv->framebuffer);
+ 
+-  G_OBJECT_CLASS (clutter_stage_view_parent_class)->dispose (object);
++  G_OBJECT_CLASS (clutter_stage_view_parent_class)->finalize (object);
+ }
+ 
+ static void

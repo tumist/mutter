@@ -1,0 +1,35 @@
+From: =?utf-8?q?Jonas_=C3=85dahl?= <jadahl@gmail.com>
+Date: Sun, 20 Nov 2022 20:35:29 +0100
+Subject: workspace: Warn instead of abort on incorrect API usage
+
+(cherry picked from commit 8a64746ce4ccfd66762a2e15ad02106e6f92c643)
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2707
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:cfebddea7e862a8b1c66841011e60bdb12a2390e
+---
+ src/core/workspace.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/workspace.c b/src/core/workspace.c
+index c1360a4..98f6d71 100644
+--- a/src/core/workspace.c
++++ b/src/core/workspace.c
+@@ -504,7 +504,7 @@ workspace_switch_sound(MetaWorkspace *from,
+ 
+   if (i >= nw)
+     {
+-      meta_bug("Failed to find destination workspace in layout");
++      g_warning ("Failed to find destination workspace in layout");
+       goto finish;
+     }
+ 
+@@ -528,7 +528,7 @@ workspace_switch_sound(MetaWorkspace *from,
+     e = "desktop-switch-down";
+   else
+     {
+-      meta_bug("Uh, origin and destination workspace at same logic position!");
++      g_warn_if_reached ();
+       goto finish;
+     }
+ 

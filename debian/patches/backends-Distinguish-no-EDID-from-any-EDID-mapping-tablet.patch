@@ -1,0 +1,73 @@
+From: Carlos Garnacho <carlosg@gnome.org>
+Date: Fri, 16 Dec 2022 23:12:25 +0100
+Subject: backends: Distinguish "no EDID" from "any EDID" mapping tablets
+
+Since the Wacom panel rewrite, the "output" setting is handled as
+a kind of tri-state for display-integrated tablets:
+- If the setting is unset, the device is automatically mapped
+  to an output
+- If the setting is set and not empty, the device is mapped to
+  the output defined by the EDID data
+- If the setting is ['', '', ''], the device is mapped to the
+  span of all displays, like opaque tablets do.
+
+This distinction for the unset setting fell through the cracks,
+so both "Automatic" and "All displays" options were handled as
+the former.
+
+Add this distinction, so that display-integrated tablets can
+be used like opaque tablets of sorts with no limitations.
+
+(cherry picked from commit d15c6953d8590f41e3e8b4a97dc5f78dcedec716)
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2767
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:4b97f45a5ab0883c12d0a20359b36cc8dbf9d5e0
+---
+ src/backends/meta-input-mapper.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/src/backends/meta-input-mapper.c b/src/backends/meta-input-mapper.c
+index c5a9ee3..d99c6e8 100644
+--- a/src/backends/meta-input-mapper.c
++++ b/src/backends/meta-input-mapper.c
+@@ -463,6 +463,8 @@ guess_candidates (MetaInputMapper     *mapper,
+   GList *monitors, *l;
+   gboolean builtin = FALSE;
+   gboolean integrated = TRUE;
++  gboolean automatic;
++  g_autoptr (GVariant) user_value = NULL;
+ 
+ #ifdef HAVE_LIBWACOM
+   if (clutter_input_device_get_device_type (input->device) != CLUTTER_TOUCHSCREEN_DEVICE)
+@@ -484,6 +486,9 @@ guess_candidates (MetaInputMapper     *mapper,
+     }
+ #endif
+ 
++  user_value = g_settings_get_user_value (input->settings, "output");
++  automatic = user_value == NULL;
++
+   monitors = meta_monitor_manager_get_monitors (mapper->monitor_manager);
+ 
+   for (l = monitors; l; l = l->next)
+@@ -493,16 +498,16 @@ guess_candidates (MetaInputMapper     *mapper,
+ 
+       g_assert (META_IS_MONITOR (l->data));
+ 
+-      if (integrated && match_edid (input, l->data, &edid_match))
++      if (automatic && integrated && match_edid (input, l->data, &edid_match))
+         match.score |= 1 << edid_match;
+ 
+-      if (integrated && match_size (input, l->data))
++      if (automatic && integrated && match_size (input, l->data))
+         match.score |= 1 << META_MATCH_SIZE;
+ 
+-      if (builtin && match_builtin (mapper, l->data))
++      if (automatic && builtin && match_builtin (mapper, l->data))
+         match.score |= 1 << META_MATCH_IS_BUILTIN;
+ 
+-      if (match_config (input, l->data))
++      if (!automatic && match_config (input, l->data))
+         match.score |= 1 << META_MATCH_CONFIG;
+ 
+       if (match.score > 0)

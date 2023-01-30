@@ -1,0 +1,52 @@
+From: Robert Mader <robert.mader@posteo.de>
+Date: Tue, 25 Oct 2022 21:16:41 +0200
+Subject: feedback-actor: Disable direct scanout during lifetime
+
+We only support feedback-actors, such as DnD-icons, in the compositing
+path at the moment.
+
+The approach is similar to how we handle certain shell elements.
+Implementations need to ensure no references to the object keep
+around longer that necessary.
+
+Arguably this should be replaced by a more robust and implicit actor
+hierachy detection in the direct scanout code at some point.
+
+(cherry picked from commit 04655c8bffc2e9dd4842f344637022e66d7ebcf1)
+
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2470
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2677
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:be6dd2340913b110174cf4645101501ecb28a872
+---
+ src/compositor/meta-feedback-actor.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/src/compositor/meta-feedback-actor.c b/src/compositor/meta-feedback-actor.c
+index fcab897..7baba3a 100644
+--- a/src/compositor/meta-feedback-actor.c
++++ b/src/compositor/meta-feedback-actor.c
+@@ -59,6 +59,15 @@ meta_feedback_actor_constructed (GObject *object)
+   display = meta_get_display ();
+   feedback_group = meta_get_feedback_group_for_display (display);
+   clutter_actor_add_child (feedback_group, CLUTTER_ACTOR (object));
++  meta_disable_unredirect_for_display (display);
++}
++
++static void
++meta_feedback_actor_finalize (GObject *object)
++{
++  meta_enable_unredirect_for_display (meta_get_display ());
++
++  G_OBJECT_CLASS (meta_feedback_actor_parent_class)->finalize (object);
+ }
+ 
+ static void
+@@ -128,6 +137,7 @@ meta_feedback_actor_class_init (MetaFeedbackActorClass *klass)
+   GParamSpec *pspec;
+ 
+   object_class->constructed = meta_feedback_actor_constructed;
++  object_class->finalize = meta_feedback_actor_finalize;
+   object_class->set_property = meta_feedback_actor_set_property;
+   object_class->get_property = meta_feedback_actor_get_property;
+ 

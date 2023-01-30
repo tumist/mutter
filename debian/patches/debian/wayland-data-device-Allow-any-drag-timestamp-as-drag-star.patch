@@ -14,8 +14,7 @@ value as the start-drag serial.
 To avoid this, let's keep track of all the grab timestamps we got while
 dragging and accept a serial to match any of these.
 
-Fixes #2216
-
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2216
 Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/mutter/+bug/1964541
 ---
  src/wayland/meta-wayland-data-device.c | 15 ++++++++++++++-

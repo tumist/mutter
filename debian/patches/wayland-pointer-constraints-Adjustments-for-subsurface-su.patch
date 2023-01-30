@@ -1,0 +1,50 @@
+From: Robert Mader <robert.mader@collabora.com>
+Date: Wed, 2 Nov 2022 19:36:11 +0100
+Subject: wayland/pointer-constraints: Adjustments for subsurface support
+
+After the commit "wayland/subsurface: Implement
+meta_wayland_surface_get_window()" subsurfaces are supported. Adjust
+some comments and fix a warning that could occur when closing a window.
+
+(cherry picked from commit 08a4caff6f89d1b8f1fd614ef02b6ca49f1e8c98)
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2717
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2763
+Origin: upstream, 43.3, commit:f7b86a00c4793d5c543f0cdfe7b39df1d762f678
+---
+ src/wayland/meta-wayland-pointer-constraints.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/wayland/meta-wayland-pointer-constraints.c b/src/wayland/meta-wayland-pointer-constraints.c
+index 965b95d..598b5fc 100644
+--- a/src/wayland/meta-wayland-pointer-constraints.c
++++ b/src/wayland/meta-wayland-pointer-constraints.c
+@@ -39,6 +39,7 @@
+ #include "wayland/meta-wayland-private.h"
+ #include "wayland/meta-wayland-region.h"
+ #include "wayland/meta-wayland-seat.h"
++#include "wayland/meta-wayland-subsurface.h"
+ #include "wayland/meta-wayland-surface.h"
+ #include "wayland/meta-xwayland.h"
+ 
+@@ -193,8 +194,6 @@ surface_constraint_data_new (MetaWaylandSurface *surface)
+     }
+   else
+     {
+-      /* TODO: Support constraints on non-toplevel windows, such as subsurfaces.
+-       */
+       g_warn_if_reached ();
+     }
+ 
+@@ -463,8 +462,10 @@ should_constraint_be_enabled (MetaWaylandPointerConstraint *constraint)
+       /*
+        * Locks from Xwayland may come before we have had the opportunity to
+        * associate the X11 Window with the wl_surface.
++       * For subsurfaces the window of the ancestor might be gone already.
+        */
+-      g_warn_if_fail (meta_xwayland_is_xwayland_surface (constraint->surface));
++      g_warn_if_fail (meta_xwayland_is_xwayland_surface (constraint->surface) ||
++                      META_IS_WAYLAND_SUBSURFACE (constraint->surface->role));
+       return FALSE;
+     }
+ 

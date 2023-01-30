@@ -82,7 +82,7 @@ Build-Depends: debhelper-compat (= 13),
                xwayland [linux-any],
                zenity
 Rules-Requires-Root: no
-Standards-Version: 4.6.1
+Standards-Version: 4.6.2
 XS-Debian-Vcs-Git: https://salsa.debian.org/gnome-team/mutter.git -b debian/unstable
 XS-Debian-Vcs-Browser: https://salsa.debian.org/gnome-team/mutter
 Vcs-Git: https://salsa.debian.org/gnome-team/mutter.git -b ubuntu/master
@@ -236,7 +236,6 @@ Description: Development files for the Mutter window manager
 Package: libmutter-test-11
 Section: libs
 Architecture: linux-any
-Multi-Arch: same
 Depends: libmutter-11-0 (= ${binary:Version}),
          mutter (= ${binary:Version}),
          ${misc:Depends},

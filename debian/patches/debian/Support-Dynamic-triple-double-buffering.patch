@@ -472,7 +472,7 @@ index d3608e8..06c5f7f 100644
 +
  #endif /* CLUTTER_FRAME_H */
 diff --git a/clutter/clutter/clutter-stage-view.c b/clutter/clutter/clutter-stage-view.c
-index aa98e6a..fada3a6 100644
+index 14f2102..914b91a 100644
 --- a/clutter/clutter/clutter-stage-view.c
 +++ b/clutter/clutter/clutter-stage-view.c
 @@ -1252,8 +1252,9 @@ handle_frame_clock_frame (ClutterFrameClock *frame_clock,

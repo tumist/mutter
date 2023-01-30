@@ -5,8 +5,8 @@ Subject: cursor-renderer-native: Workaround broken arm64 drivers
 By forcing cursors to use dumb buffers. At least until Mesa gets fixed
 for panfrost, vc4, v3d...
 
-Closes: https://gitlab.gnome.org/GNOME/mutter/-/issues/2379
-Closes: https://launchpad.net/bugs/1988859
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2379
+Bug-Ubuntu: https://launchpad.net/bugs/1988859
 ---
  src/backends/native/meta-cursor-renderer-native.c | 4 ++++
  1 file changed, 4 insertions(+)

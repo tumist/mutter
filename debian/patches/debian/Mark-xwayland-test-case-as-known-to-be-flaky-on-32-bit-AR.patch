@@ -2,7 +2,8 @@ From: Simon McVittie <smcv@debian.org>
 Date: Tue, 20 Dec 2022 11:53:37 +0000
 Subject: Mark xwayland test case as known to be flaky on 32-bit ARM
 
-Mitigates: #1026445
+Bug-Debian: https://bugs.debian.org/1026445
+Forwarded: no
 ---
  src/tests/meson.build | 1 +
  1 file changed, 1 insertion(+)
