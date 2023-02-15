@@ -1,5 +1,13 @@
 mutter (43.3-1) UNRELEASED; urgency=medium
 
+  [ Daniel van Vugt ]
+  * d/p/Support-Dynamic-triple-double-buffering.patch:
+    Improve downclocking (triple to double buffering) support so it
+    happens sooner and more reliably. This reduces input latency during
+    light rendering as well as reducing CPU usage of cursor movement.
+    Also correct the origin information.
+
+  [ Simon McVittie ]
   * New upstream release
     - Make sure there is always a non-null list of extensions
       (LP: #1994011)
@@ -15,8 +23,12 @@ mutter (43.3-1) UNRELEASED; urgency=medium
       (gnome-shell#5932, mutter!2832)
     - Many changes that were already in 43.2-6
   * Drop patches that were applied upstream
+  * d/p/wayland-Don-t-overwrite-surface-offsets.patch:
+    Add patch from upstream to fix drag-and-drop cursor position on Wayland
+    (mutter#2622)
+    This updates us to upstream gnome-43 branch commit 43.3-1-ga8a348185b.
 
- -- Simon McVittie <smcv@debian.org>  Wed, 15 Feb 2023 10:39:00 +0000
+ -- Simon McVittie <smcv@debian.org>  Wed, 15 Feb 2023 11:04:12 +0000
 
 mutter (43.2-6) unstable; urgency=medium
 
