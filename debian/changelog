@@ -1,6 +1,20 @@
 mutter (43.3-1) UNRELEASED; urgency=medium
 
   * New upstream release
+    - Make sure there is always a non-null list of extensions
+      (LP: #1994011)
+    - Fix a crash when colour management operations are cancelled
+      (mutter!2794)
+    - Fix lockup when pointer crosses the intersection of 4 displays
+      (mutter#2598)
+    - Fix some small memory leaks (mutter!2811)
+    - Fix a misleading error message (mutter!2811)
+    - Revert a problematic change to the handling of frame event timing
+      (mutter!2835)
+    - On X11, Don't allow focus to be taken by an app during grabs
+      (gnome-shell#5932, mutter!2832)
+    - Many changes that were already in 43.2-6
+  * Drop patches that were applied upstream
 
  -- Simon McVittie <smcv@debian.org>  Wed, 15 Feb 2023 10:39:00 +0000
 
