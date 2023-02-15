@@ -1,3 +1,4 @@
+wayland-Don-t-overwrite-surface-offsets.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 meson-add-back-default_driver-option.patch
 tests-Disable-broken-test.patch
