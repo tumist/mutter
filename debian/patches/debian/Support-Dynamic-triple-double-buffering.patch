@@ -48,7 +48,7 @@ git suggests. Also add Gbp-Pq: Topic debian
  25 files changed, 932 insertions(+), 381 deletions(-)
 
 diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
-index 4d441c3..ee05b36 100644
+index 34d676f..1a16b04 100644
 --- a/clutter/clutter/clutter-frame-clock.c
 +++ b/clutter/clutter/clutter-frame-clock.c
 @@ -45,6 +45,8 @@ typedef struct _EstimateQueue
@@ -202,7 +202,7 @@ index 4d441c3..ee05b36 100644
    return max_render_time_us;
  }
  
-@@ -563,8 +613,12 @@ clutter_frame_clock_inhibit (ClutterFrameClock *frame_clock)
+@@ -562,8 +612,12 @@ clutter_frame_clock_inhibit (ClutterFrameClock *frame_clock)
            frame_clock->pending_reschedule = TRUE;
            frame_clock->state = CLUTTER_FRAME_CLOCK_STATE_IDLE;
            break;
@@ -217,7 +217,7 @@ index 4d441c3..ee05b36 100644
            break;
          }
  
-@@ -600,11 +654,17 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
+@@ -599,11 +653,17 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
      case CLUTTER_FRAME_CLOCK_STATE_INIT:
      case CLUTTER_FRAME_CLOCK_STATE_IDLE:
        next_update_time_us = g_get_monotonic_time ();
@@ -237,7 +237,7 @@ index 4d441c3..ee05b36 100644
        frame_clock->pending_reschedule = TRUE;
        frame_clock->pending_reschedule_now = TRUE;
        return;
-@@ -613,7 +673,6 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
+@@ -612,7 +672,6 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
    g_warn_if_fail (next_update_time_us != -1);
  
    g_source_set_ready_time (frame_clock->source, next_update_time_us);
@@ -245,7 +245,7 @@ index 4d441c3..ee05b36 100644
    frame_clock->is_next_presentation_time_valid = FALSE;
  }
  
-@@ -632,6 +691,7 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -631,6 +690,7 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
      {
      case CLUTTER_FRAME_CLOCK_STATE_INIT:
        next_update_time_us = g_get_monotonic_time ();
@@ -253,7 +253,7 @@ index 4d441c3..ee05b36 100644
        break;
      case CLUTTER_FRAME_CLOCK_STATE_IDLE:
        calculate_next_update_time_us (frame_clock,
-@@ -639,11 +699,28 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -638,11 +698,28 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
                                       &frame_clock->next_presentation_time_us);
        frame_clock->is_next_presentation_time_valid =
          (frame_clock->next_presentation_time_us != 0);
@@ -284,7 +284,7 @@ index 4d441c3..ee05b36 100644
        frame_clock->pending_reschedule = TRUE;
        return;
      }
-@@ -651,7 +728,6 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -650,7 +727,6 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
    g_warn_if_fail (next_update_time_us != -1);
  
    g_source_set_ready_time (frame_clock->source, next_update_time_us);
@@ -292,7 +292,7 @@ index 4d441c3..ee05b36 100644
  }
  
  static void
-@@ -677,7 +753,7 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -676,7 +752,7 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
                             frame_clock->refresh_interval_us;
  
    lateness_us = time_us - ideal_dispatch_time_us;
@@ -301,7 +301,7 @@ index 4d441c3..ee05b36 100644
      frame_clock->last_dispatch_lateness_us = 0;
    else
      frame_clock->last_dispatch_lateness_us = lateness_us;
-@@ -685,7 +761,21 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -684,7 +760,21 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
    frame_clock->last_dispatch_time_us = time_us;
    g_source_set_ready_time (frame_clock->source, -1);
  
@@ -324,7 +324,7 @@ index 4d441c3..ee05b36 100644
  
    frame_count = frame_clock->frame_count++;
  
-@@ -710,25 +800,31 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -709,25 +799,31 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
                                                 frame_clock->listener.user_data);
    COGL_TRACE_END (ClutterFrameClockFrame);
  
@@ -368,7 +368,7 @@ index 4d441c3..ee05b36 100644
          }
        break;
      }
-@@ -761,10 +857,12 @@ frame_clock_source_dispatch (GSource     *source,
+@@ -760,10 +856,12 @@ frame_clock_source_dispatch (GSource     *source,
  }
  
  void
@@ -383,7 +383,7 @@ index 4d441c3..ee05b36 100644
  }
  
  GString *
-@@ -895,6 +993,9 @@ clutter_frame_clock_class_init (ClutterFrameClockClass *klass)
+@@ -894,6 +992,9 @@ clutter_frame_clock_class_init (ClutterFrameClockClass *klass)
  {
    GObjectClass *object_class = G_OBJECT_CLASS (klass);
  
