@@ -1,4 +1,2 @@
-# https://salsa.debian.org/lintian/lintian/-/merge_requests/452
-build-depends-on-obsolete-package Build-Depends: libegl1-mesa-dev (>= 17) => libegl-dev
 # We export this in debian/rules
 dh-exec-subst-unknown-variable MUTTER_API_VERSION [debian/mutter-11-tests.install:*]
