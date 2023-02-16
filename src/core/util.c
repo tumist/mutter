@@ -34,8 +34,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
-#include <X11/Xlib.h>   /* must explicitly be included for Solaris; #326746 */
-#include <X11/Xutil.h>  /* Just for the definition of the various gravities */
 
 #ifdef HAVE_SYS_PRCTL
 #include <sys/prctl.h>
@@ -79,6 +77,7 @@ static const GDebugKey meta_debug_keys[] = {
 static gint verbose_topics = 0;
 static gboolean is_wayland_compositor = FALSE;
 static int debug_paint_flags = 0;
+static GLogLevelFlags mutter_log_level = G_LOG_LEVEL_MESSAGE;
 
 #ifdef WITH_VERBOSE_MODE
 static FILE* logfile = NULL;
@@ -213,6 +212,9 @@ meta_init_debug_utils (void)
                                      G_N_ELEMENTS (meta_debug_keys));
       meta_add_verbose_topic (topics);
     }
+
+  if (g_test_initialized ())
+    mutter_log_level = G_LOG_LEVEL_DEBUG;
 }
 
 gboolean
@@ -508,11 +510,11 @@ meta_external_binding_name_for_action (guint keybinding_action)
 MetaLocaleDirection
 meta_get_locale_direction (void)
 {
-  switch (gtk_get_locale_direction ())
+  switch (clutter_get_text_direction ())
     {
-    case GTK_TEXT_DIR_LTR:
+    case CLUTTER_TEXT_DIRECTION_LTR:
       return META_LOCALE_DIRECTION_LTR;
-    case GTK_TEXT_DIR_RTL:
+    case CLUTTER_TEXT_DIRECTION_RTL:
       return META_LOCALE_DIRECTION_RTL;
     default:
       g_assert_not_reached ();
@@ -583,4 +585,14 @@ MetaDebugPaintFlag
 meta_get_debug_paint_flags (void)
 {
   return debug_paint_flags;
+}
+
+void
+meta_log (const char *format, ...)
+{
+  va_list args;
+
+  va_start (args, format);
+  g_logv (G_LOG_DOMAIN, mutter_log_level, format, args);
+  va_end (args);
 }

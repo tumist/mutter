@@ -20,10 +20,6 @@
 
 #include "config.h"
 
-#ifdef HAVE_LIBGUDEV
-#include <gudev/gudev.h>
-#endif
-
 #include "backends/meta-input-device-private.h"
 #include "meta-input-mapper-private.h"
 #include "meta-monitor-manager-private.h"
@@ -37,6 +33,17 @@
 
 #define MAX_SIZE_MATCH_DIFF 0.05
 
+enum
+{
+  PROP_0,
+
+  PROP_BACKEND,
+
+  N_PROPS
+};
+
+static GParamSpec *obj_props[N_PROPS];
+
 typedef struct _MetaMapperInputInfo MetaMapperInputInfo;
 typedef struct _MetaMapperOutputInfo MetaMapperOutputInfo;
 typedef struct _MappingHelper MappingHelper;
@@ -46,13 +53,12 @@ typedef struct _DeviceMatch DeviceMatch;
 struct _MetaInputMapper
 {
   MetaDBusInputMappingSkeleton parent_instance;
+
+  MetaBackend *backend;
   MetaMonitorManager *monitor_manager;
   ClutterSeat *seat;
   GHashTable *input_devices; /* ClutterInputDevice -> MetaMapperInputInfo */
   GHashTable *output_devices; /* MetaLogicalMonitor -> MetaMapperOutputInfo */
-#ifdef HAVE_LIBGUDEV
-  GUdevClient *udev_client;
-#endif
   guint dbus_name_id;
 };
 
@@ -361,45 +367,14 @@ match_edid (MetaMapperInputInfo  *input,
 }
 
 static gboolean
-input_device_get_physical_size (MetaInputMapper    *mapper,
-                                ClutterInputDevice *device,
-                                double             *width,
-                                double             *height)
-{
-#ifdef HAVE_LIBGUDEV
-  g_autoptr (GUdevDevice) udev_device = NULL;
-  const char *node;
-
-  node = clutter_input_device_get_device_node (device);
-  if (!node)
-    return FALSE;
-
-  udev_device = g_udev_client_query_by_device_file (mapper->udev_client, node);
-
-  if (udev_device &&
-      g_udev_device_has_property (udev_device, "ID_INPUT_WIDTH_MM"))
-    {
-      *width = g_udev_device_get_property_as_double (udev_device,
-                                                     "ID_INPUT_WIDTH_MM");
-      *height = g_udev_device_get_property_as_double (udev_device,
-                                                      "ID_INPUT_HEIGHT_MM");
-      return TRUE;
-    }
-#endif
-
-  return FALSE;
-}
-
-static gboolean
 match_size (MetaMapperInputInfo  *input,
             MetaMonitor          *monitor)
 {
   double w_diff, h_diff;
   int o_width, o_height;
-  double i_width, i_height;
+  unsigned int i_width, i_height;
 
-  if (!input_device_get_physical_size (input->mapper, input->device,
-                                       &i_width, &i_height))
+  if (!clutter_input_device_get_dimensions (input->device, &i_width, &i_height))
     return FALSE;
 
   meta_monitor_get_physical_dimensions (monitor, &o_width, &o_height);
@@ -721,6 +696,44 @@ input_mapper_device_removed_cb (ClutterSeat        *seat,
 }
 
 static void
+meta_input_mapper_set_property (GObject      *object,
+                                guint         prop_id,
+                                const GValue *value,
+                                GParamSpec   *pspec)
+{
+  MetaInputMapper *mapper = META_INPUT_MAPPER (object);
+
+  switch (prop_id)
+    {
+    case PROP_BACKEND:
+      mapper->backend = g_value_get_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
+}
+
+static void
+meta_input_mapper_get_property (GObject    *object,
+                                guint       prop_id,
+                                GValue     *value,
+                                GParamSpec *pspec)
+{
+  MetaInputMapper *mapper = META_INPUT_MAPPER (object);
+
+  switch (prop_id)
+    {
+    case PROP_BACKEND:
+      g_value_set_object (value, mapper->backend);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
+}
+
+static void
 meta_input_mapper_finalize (GObject *object)
 {
   MetaInputMapper *mapper = META_INPUT_MAPPER (object);
@@ -736,9 +749,6 @@ meta_input_mapper_finalize (GObject *object)
 
   g_hash_table_unref (mapper->input_devices);
   g_hash_table_unref (mapper->output_devices);
-#ifdef HAVE_LIBGUDEV
-  g_clear_object (&mapper->udev_client);
-#endif
 
   G_OBJECT_CLASS (meta_input_mapper_parent_class)->finalize (object);
 }
@@ -746,24 +756,15 @@ meta_input_mapper_finalize (GObject *object)
 static void
 meta_input_mapper_constructed (GObject *object)
 {
-#ifdef HAVE_LIBGUDEV
-  const char *udev_subsystems[] = { "input", NULL };
-#endif
   MetaInputMapper *mapper = META_INPUT_MAPPER (object);
-  MetaBackend *backend;
 
   G_OBJECT_CLASS (meta_input_mapper_parent_class)->constructed (object);
-
-#ifdef HAVE_LIBGUDEV
-  mapper->udev_client = g_udev_client_new (udev_subsystems);
-#endif
 
   mapper->seat = clutter_backend_get_default_seat (clutter_get_default_backend ());
   g_signal_connect (mapper->seat, "device-removed",
                     G_CALLBACK (input_mapper_device_removed_cb), mapper);
 
-  backend = meta_get_backend ();
-  mapper->monitor_manager = meta_backend_get_monitor_manager (backend);
+  mapper->monitor_manager = meta_backend_get_monitor_manager (mapper->backend);
   g_signal_connect (mapper->monitor_manager, "monitors-changed-internal",
                     G_CALLBACK (input_mapper_monitors_changed_cb), mapper);
   g_signal_connect (mapper->monitor_manager, "power-save-mode-changed",
@@ -780,6 +781,18 @@ meta_input_mapper_class_init (MetaInputMapperClass *klass)
 
   object_class->constructed = meta_input_mapper_constructed;
   object_class->finalize = meta_input_mapper_finalize;
+  object_class->set_property = meta_input_mapper_set_property;
+  object_class->get_property = meta_input_mapper_get_property;
+
+  obj_props[PROP_BACKEND] =
+    g_param_spec_object ("backend",
+                         "backend",
+                         "MetaBackend",
+                         META_TYPE_BACKEND,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS);
+  g_object_class_install_properties (object_class, N_PROPS, obj_props);
 
   signals[DEVICE_MAPPED] =
     g_signal_new ("device-mapped",
@@ -930,9 +943,11 @@ meta_input_mapping_init_iface (MetaDBusInputMappingIface *iface)
 
 
 MetaInputMapper *
-meta_input_mapper_new (void)
+meta_input_mapper_new (MetaBackend *backend)
 {
-  return g_object_new (META_TYPE_INPUT_MAPPER, NULL);
+  return g_object_new (META_TYPE_INPUT_MAPPER,
+                       "backend", backend,
+                       NULL);
 }
 
 void

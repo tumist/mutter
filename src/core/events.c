@@ -86,36 +86,23 @@ get_window_for_event (MetaDisplay        *display,
                       const ClutterEvent *event,
                       ClutterActor       *event_actor)
 {
-  switch (display->event_route)
+  MetaWindowActor *window_actor;
+
+  if (stage_has_grab (display))
+    return NULL;
+
+  /* Always use the key focused window for key events. */
+  if (IS_KEY_EVENT (event))
     {
-    case META_EVENT_ROUTE_NORMAL:
-      {
-        MetaWindowActor *window_actor;
-
-        if (stage_has_grab (display))
-          return NULL;
-
-        /* Always use the key focused window for key events. */
-        if (IS_KEY_EVENT (event))
-          {
-            return stage_has_key_focus (display) ? display->focus_window
-                                                 : NULL;
-          }
-
-        window_actor = meta_window_actor_from_actor (event_actor);
-        if (window_actor)
-          return meta_window_actor_get_meta_window (window_actor);
-        else
-          return NULL;
-      }
-    case META_EVENT_ROUTE_WINDOW_OP:
-    case META_EVENT_ROUTE_WAYLAND_POPUP:
-    case META_EVENT_ROUTE_FRAME_BUTTON:
-      return display->grab_window;
-    default:
-      g_assert_not_reached ();
-      return NULL;
+      return stage_has_key_focus (display) ? display->focus_window
+        : NULL;
     }
+
+  window_actor = meta_window_actor_from_actor (event_actor);
+  if (window_actor)
+    return meta_window_actor_get_meta_window (window_actor);
+  else
+    return NULL;
 }
 
 static void
@@ -225,6 +212,7 @@ meta_display_handle_event (MetaDisplay        *display,
 {
   MetaContext *context = meta_display_get_context (display);
   MetaBackend *backend = meta_context_get_backend (context);
+  MetaCompositor *compositor = meta_display_get_compositor (display);
   ClutterInputDevice *device;
   MetaWindow *window = NULL;
   gboolean bypass_clutter = FALSE;
@@ -232,28 +220,21 @@ meta_display_handle_event (MetaDisplay        *display,
   MetaGestureTracker *gesture_tracker;
   ClutterEventSequence *sequence;
   gboolean has_grab;
+#ifdef HAVE_WAYLAND
+  MetaWaylandCompositor *wayland_compositor;
+#endif
 
 #ifdef HAVE_WAYLAND
-  MetaWaylandCompositor *wayland_compositor = NULL;
-  if (meta_is_wayland_compositor ())
-    wayland_compositor = meta_wayland_compositor_get_default ();
+  wayland_compositor = meta_context_get_wayland_compositor (context);
 #endif
 
   has_grab = stage_has_grab (display);
 
   if (display->grabbed_in_clutter != has_grab)
     {
-      MetaCompositor *compositor = meta_display_get_compositor (display);
-
-#ifdef HAVE_WAYLAND
-      if (wayland_compositor)
-        meta_display_sync_wayland_input_focus (display);
-#endif
-
       if (!display->grabbed_in_clutter && has_grab)
         {
           display->grabbed_in_clutter = TRUE;
-          meta_display_cancel_touch (display);
           meta_compositor_grab_begin (compositor);
         }
       else if (display->grabbed_in_clutter && !has_grab)
@@ -388,18 +369,9 @@ meta_display_handle_event (MetaDisplay        *display,
 
   if (meta_gesture_tracker_handle_event (gesture_tracker, event))
     {
-      bypass_wayland = bypass_clutter = TRUE;
+      bypass_wayland = TRUE;
+      bypass_clutter = FALSE;
       goto out;
-    }
-
-  if (display->event_route == META_EVENT_ROUTE_WINDOW_OP)
-    {
-      if (meta_window_handle_mouse_grab_op_event (window, event))
-        {
-          bypass_clutter = TRUE;
-          bypass_wayland = TRUE;
-          goto out;
-        }
     }
 
   /* For key events, it's important to enforce single-handling, or
@@ -408,7 +380,8 @@ meta_display_handle_event (MetaDisplay        *display,
    * in a keyboard-grabbed mode like moving a window, we don't
    * want to pass the key event to the compositor or Wayland at all.
    */
-  if (meta_keybindings_process_event (display, window, event))
+  if (!meta_compositor_get_current_window_drag (compositor) &&
+      meta_keybindings_process_event (display, window, event))
     {
       bypass_clutter = TRUE;
       bypass_wayland = TRUE;
@@ -418,7 +391,7 @@ meta_display_handle_event (MetaDisplay        *display,
   /* Do not pass keyboard events to Wayland if key focus is not on the
    * stage in normal mode (e.g. during keynav in the panel)
    */
-  if (display->event_route == META_EVENT_ROUTE_NORMAL)
+  if (!has_grab)
     {
       if (IS_KEY_EVENT (event) && !stage_has_key_focus (display))
         {
@@ -473,34 +446,21 @@ meta_display_handle_event (MetaDisplay        *display,
        *   trigger ::captured-event handlers along the way.
        */
       bypass_clutter = !IS_GESTURE_EVENT (event);
+      bypass_wayland = meta_window_has_modals (window);
 
-      /* When double clicking to un-maximize an X11 window under Wayland,
-       * there is a race between X11 and Wayland protocols and the X11
-       * XConfigureWindow may be processed by Xwayland before the button
-       * press event is forwarded via the Wayland protocol.
-       * As a result, the second click may reach another X11 window placed
-       * immediately underneath in the X11 stack.
-       * The following is to make sure we do not forward the button press
-       * event to Wayland if it was handled by the frame UI.
-       * See: https://gitlab.gnome.org/GNOME/mutter/issues/88
-       */
-      if (meta_window_handle_ui_frame_event (window, event))
-        {
-          bypass_wayland = (event->type == CLUTTER_BUTTON_PRESS ||
-                            event->type == CLUTTER_TOUCH_BEGIN);
-        }
-      else
-        {
-          bypass_wayland = meta_window_has_modals (window);
-          meta_window_handle_ungrabbed_event (window, event);
-        }
+      if (
+#ifdef HAVE_WAYLAND
+          (!wayland_compositor ||
+           !meta_wayland_compositor_is_grabbed (wayland_compositor)) &&
+#endif
+          !meta_display_is_grabbed (display))
+        meta_window_handle_ungrabbed_event (window, event);
 
       /* This might start a grab op. If it does, then filter out the
        * event, and if it doesn't, replay the event to release our
        * own sync grab. */
 
-      if (display->event_route == META_EVENT_ROUTE_WINDOW_OP ||
-          display->event_route == META_EVENT_ROUTE_FRAME_BUTTON)
+      if (meta_compositor_get_current_window_drag (compositor))
         {
           bypass_clutter = TRUE;
           bypass_wayland = TRUE;
@@ -534,11 +494,11 @@ meta_display_handle_event (MetaDisplay        *display,
     }
 
  out:
+#ifdef HAVE_WAYLAND
   /* If a Wayland client has a grab, don't pass that through to Clutter */
-  if (display->event_route == META_EVENT_ROUTE_WAYLAND_POPUP)
+  if (wayland_compositor && meta_wayland_compositor_is_grabbed (wayland_compositor))
     bypass_clutter = !bypass_wayland;
 
-#ifdef HAVE_WAYLAND
   if (wayland_compositor && !bypass_wayland)
     {
       if (window && event->type == CLUTTER_MOTION &&

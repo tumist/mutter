@@ -204,6 +204,23 @@ meta_input_device_native_get_pad_feature_group (ClutterInputDevice           *de
   return -1;
 }
 
+static gboolean
+meta_input_device_native_get_dimensions (ClutterInputDevice *device,
+                                         unsigned int       *width,
+                                         unsigned int       *height)
+{
+  MetaInputDeviceNative *device_native = META_INPUT_DEVICE_NATIVE (device);
+
+  if (device_native->width > 0 && device_native->height > 0)
+    {
+      *width = device_native->width;
+      *height = device_native->height;
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
 static void
 meta_input_device_native_bell_notify (MetaInputDeviceNative *device)
 {
@@ -1250,6 +1267,7 @@ meta_input_device_native_class_init (MetaInputDeviceNativeClass *klass)
   device_class->get_group_n_modes = meta_input_device_native_get_group_n_modes;
   device_class->is_grouped = meta_input_device_native_is_grouped;
   device_class->get_pad_feature_group = meta_input_device_native_get_pad_feature_group;
+  device_class->get_dimensions = meta_input_device_native_get_dimensions;
 
   obj_props[PROP_DEVICE_MATRIX] =
     g_param_spec_boxed ("device-matrix",
@@ -1273,6 +1291,8 @@ meta_input_device_native_init (MetaInputDeviceNative *self)
   cairo_matrix_init_identity (&self->device_matrix);
   self->device_aspect_ratio = 0;
   self->output_ratio = 0;
+  self->width = -1;
+  self->height = -1;
 }
 
 static void
@@ -1350,10 +1370,28 @@ determine_device_type (struct libinput_device *ldev)
     return CLUTTER_EXTENSION_DEVICE;
 }
 
+static gboolean
+has_udev_property (struct udev_device *udev_device,
+                   const char         *property)
+{
+  struct udev_device *parent_udev_device;
+
+  if (NULL != udev_device_get_property_value (udev_device, property))
+    return TRUE;
+
+  parent_udev_device = udev_device_get_parent (udev_device);
+
+  if (!parent_udev_device)
+    return FALSE;
+
+  return udev_device_get_property_value (parent_udev_device, property) != NULL;
+}
+
 static ClutterInputCapabilities
 translate_device_capabilities (struct libinput_device *ldev)
 {
   ClutterInputCapabilities caps = 0;
+  struct udev_device *udev_device;
 
   /* This setting is specific to touchpads and alike, only in these
    * devices there is this additional layer of touch event interpretation.
@@ -1370,6 +1408,18 @@ translate_device_capabilities (struct libinput_device *ldev)
     caps |= CLUTTER_INPUT_CAPABILITY_TOUCH;
   if (libinput_device_has_capability (ldev, LIBINPUT_DEVICE_CAP_KEYBOARD))
     caps |= CLUTTER_INPUT_CAPABILITY_KEYBOARD;
+
+  udev_device = libinput_device_get_udev_device (ldev);
+
+  if (udev_device)
+    {
+      if (has_udev_property (udev_device, "ID_INPUT_TRACKBALL"))
+        caps |= CLUTTER_INPUT_CAPABILITY_TRACKBALL;
+      if (has_udev_property (udev_device, "ID_INPUT_POINTINGSTICK"))
+        caps |= CLUTTER_INPUT_CAPABILITY_TRACKPOINT;
+
+      udev_device_unref (udev_device);
+    }
 
   return caps;
 }
@@ -1411,6 +1461,7 @@ meta_input_device_native_new_in_impl (MetaSeatImpl           *seat_impl,
     }
 
   device = g_object_new (META_TYPE_INPUT_DEVICE_NATIVE,
+                         "backend", meta_seat_impl_get_backend (seat_impl),
                          "name", libinput_device_get_name (libinput_device),
                          "device-type", type,
                          "capabilities", capabilities,
@@ -1439,7 +1490,11 @@ meta_input_device_native_new_in_impl (MetaSeatImpl           *seat_impl,
     update_pad_features (device);
 
   if (libinput_device_get_size (libinput_device, &width, &height) == 0)
-    device->device_aspect_ratio = width / height;
+    {
+      device->device_aspect_ratio = width / height;
+      device->width = width;
+      device->height = height;
+    }
 
   device->group = (intptr_t) libinput_device_get_device_group (libinput_device);
 
@@ -1478,6 +1533,7 @@ meta_input_device_native_new_virtual (MetaSeatImpl           *seat_impl,
     };
 
   device = g_object_new (META_TYPE_INPUT_DEVICE_NATIVE,
+                         "backend", meta_seat_impl_get_backend (seat_impl),
                          "name", name,
                          "device-type", type,
                          "device-mode", mode,
@@ -1512,9 +1568,6 @@ meta_input_device_native_update_leds_in_impl (MetaInputDeviceNative *device,
  * Retrieves the libinput_device struct held in @device.
  *
  * Returns: The libinput_device struct
- *
- * Since: 1.20
- * Stability: unstable
  **/
 struct libinput_device *
 meta_input_device_native_get_libinput_device (ClutterInputDevice *device)

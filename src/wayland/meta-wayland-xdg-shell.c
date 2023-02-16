@@ -26,6 +26,7 @@
 #include "wayland/meta-wayland-xdg-shell.h"
 
 #include "backends/meta-logical-monitor.h"
+#include "compositor/compositor-private.h"
 #include "core/boxes-private.h"
 #include "core/window-private.h"
 #include "wayland/meta-wayland-outputs.h"
@@ -34,6 +35,7 @@
 #include "wayland/meta-wayland-seat.h"
 #include "wayland/meta-wayland-shell-surface.h"
 #include "wayland/meta-wayland-surface.h"
+#include "wayland/meta-wayland-transaction.h"
 #include "wayland/meta-wayland-versions.h"
 #include "wayland/meta-wayland-window-configuration.h"
 #include "wayland/meta-wayland.h"
@@ -51,12 +53,13 @@ enum
 
 typedef struct _MetaWaylandXdgShellClient
 {
+  MetaWaylandCompositor *compositor;
   struct wl_resource *resource;
   GList *surfaces;
   GList *surface_constructors;
 } MetaWaylandXdgShellClient;
 
-typedef struct _MetaWaylandXdgPositioner
+struct _MetaWaylandXdgPositioner
 {
   MetaRectangle anchor_rect;
   int32_t width;
@@ -75,7 +78,7 @@ typedef struct _MetaWaylandXdgPositioner
 
   gboolean acked_parent_configure;
   uint32_t parent_configure_serial;
-} MetaWaylandXdgPositioner;
+};
 
 typedef struct _MetaWaylandXdgSurfaceConstructor
 {
@@ -129,11 +132,7 @@ struct _MetaWaylandXdgPopup
   struct {
     MetaWaylandSurface *parent_surface;
 
-    /*
-     * The coordinates/dimensions in the placement rule are in logical pixel
-     * coordinate space, i.e. not scaled given what monitor the popup is on.
-     */
-    MetaPlacementRule placement_rule;
+    MetaWaylandXdgPositioner xdg_positioner;
 
     MetaWaylandSeat *grab_seat;
     uint32_t grab_serial;
@@ -182,6 +181,15 @@ static MetaWaylandSurface *
 surface_from_xdg_toplevel_resource (struct wl_resource *resource)
 {
   return surface_from_xdg_surface_resource (resource);
+}
+
+static MetaDisplay *
+display_from_surface (MetaWaylandSurface *surface)
+{
+  MetaContext *context =
+    meta_wayland_compositor_get_context (surface->compositor);
+
+  return meta_context_get_display (context);
 }
 
 static MetaWaylandXdgPopup *
@@ -291,7 +299,8 @@ xdg_toplevel_show_window_menu (struct wl_client   *client,
   if (!window)
     return;
 
-  if (!meta_wayland_seat_get_grab_info (seat, surface, serial, FALSE, NULL, NULL))
+  if (!meta_wayland_seat_get_grab_info (seat, surface, serial, FALSE,
+                                        NULL, NULL, NULL, NULL))
     return;
 
   monitor_scale = meta_window_wayland_get_geometry_scale (window);
@@ -309,16 +318,20 @@ xdg_toplevel_move (struct wl_client   *client,
   MetaWaylandSeat *seat = wl_resource_get_user_data (seat_resource);
   MetaWaylandSurface *surface = surface_from_xdg_toplevel_resource (resource);
   MetaWindow *window;
+  ClutterInputDevice *device;
+  ClutterEventSequence *sequence;
   float x, y;
 
   window = meta_wayland_surface_get_window (surface);
   if (!window)
     return;
 
-  if (!meta_wayland_seat_get_grab_info (seat, surface, serial, TRUE, &x, &y))
+  if (!meta_wayland_seat_get_grab_info (seat, surface, serial, TRUE,
+                                        &device, &sequence, &x, &y))
     return;
 
-  meta_wayland_surface_begin_grab_op (surface, seat, META_GRAB_OP_MOVING, x, y);
+  meta_wayland_surface_begin_grab_op (surface, seat, META_GRAB_OP_MOVING,
+                                      device, sequence, x, y);
 }
 
 static MetaGrabOp
@@ -356,6 +369,8 @@ xdg_toplevel_resize (struct wl_client   *client,
   MetaWindow *window;
   gfloat x, y;
   MetaGrabOp grab_op;
+  ClutterInputDevice *device;
+  ClutterEventSequence *sequence;
 
   window = meta_wayland_surface_get_window (surface);
   if (!window)
@@ -364,11 +379,13 @@ xdg_toplevel_resize (struct wl_client   *client,
   if (!window->has_resize_func)
     return;
 
-  if (!meta_wayland_seat_get_grab_info (seat, surface, serial, TRUE, &x, &y))
+  if (!meta_wayland_seat_get_grab_info (seat, surface, serial, TRUE,
+                                        &device, &sequence, &x, &y))
     return;
 
   grab_op = grab_op_for_xdg_toplevel_resize_edge (edges);
-  meta_wayland_surface_begin_grab_op (surface, seat, grab_op, x, y);
+  meta_wayland_surface_begin_grab_op (surface, seat, grab_op,
+                                      device, sequence, x, y);
 }
 
 static void
@@ -391,6 +408,14 @@ xdg_toplevel_set_max_size (struct wl_client   *client,
 
 
   pending = meta_wayland_surface_get_pending_state (surface);
+  if (!pending)
+    {
+      wl_resource_post_error (resource,
+                              XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
+                              "underlying wl_surface already destroyed");
+      return;
+    }
+
   pending->has_new_max_size = TRUE;
   pending->new_max_width = width;
   pending->new_max_height = height;
@@ -416,6 +441,14 @@ xdg_toplevel_set_min_size (struct wl_client   *client,
 
 
   pending = meta_wayland_surface_get_pending_state (surface);
+  if (!pending)
+    {
+      wl_resource_post_error (resource,
+                              XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
+                              "underlying wl_surface already destroyed");
+      return;
+    }
+
   pending->has_new_min_size = TRUE;
   pending->new_min_width = width;
   pending->new_min_height = height;
@@ -606,27 +639,17 @@ xdg_popup_reposition (struct wl_client   *client,
     META_WAYLAND_SURFACE_ROLE (xdg_popup);
   MetaWaylandSurface *surface =
     meta_wayland_surface_role_get_surface (surface_role);
-  MetaWindow *window;
-  MetaWindow *parent_window;
   MetaWaylandXdgPositioner *xdg_positioner;
-  MetaPlacementRule placement_rule;
+  MetaWaylandTransaction *transaction;
 
-  window = meta_wayland_surface_get_window (surface);
-  if (!window)
-    return;
+  xdg_positioner = g_memdup2 (wl_resource_get_user_data (positioner_resource),
+                              sizeof (MetaWaylandXdgPositioner));
 
-  parent_window = meta_wayland_surface_get_window (xdg_popup->parent_surface);
-
-  xdg_positioner = wl_resource_get_user_data (positioner_resource);
-  placement_rule = meta_wayland_xdg_positioner_to_placement (xdg_positioner,
-                                                             parent_window);
-
-  xdg_popup->pending_reposition_token = token;
-  xdg_popup->pending_repositioned = TRUE;
-
-  scale_placement_rule (&placement_rule, surface);
-
-  meta_window_update_placement_rule (window, &placement_rule);
+  transaction = meta_wayland_transaction_new (surface->compositor);
+  meta_wayland_transaction_add_xdg_popup_reposition (transaction, surface,
+                                                     xdg_positioner, token);
+  meta_wayland_transaction_ensure_entry (transaction, xdg_popup->parent_surface);
+  meta_wayland_transaction_commit (transaction);
 }
 
 static const struct xdg_popup_interface meta_wayland_xdg_popup_interface = {
@@ -672,12 +695,17 @@ fill_states (MetaWaylandXdgToplevel *xdg_toplevel,
   MetaWaylandSurface *surface =
     meta_wayland_surface_role_get_surface (surface_role);
   MetaWindow *window = meta_wayland_surface_get_window (surface);
+  MetaWindowDrag *window_drag;
+
+  window_drag =
+    meta_compositor_get_current_window_drag (window->display->compositor);
 
   if (META_WINDOW_MAXIMIZED (window))
     add_state_value (states, XDG_TOPLEVEL_STATE_MAXIMIZED);
   if (meta_window_is_fullscreen (window))
     add_state_value (states, XDG_TOPLEVEL_STATE_FULLSCREEN);
-  if (meta_grab_op_is_resizing (window->display->grab_op))
+  if (window_drag &&
+      meta_grab_op_is_resizing (meta_window_drag_get_grab_op (window_drag)))
     add_state_value (states, XDG_TOPLEVEL_STATE_RESIZING);
   if (meta_window_appears_focused (window))
     add_state_value (states, XDG_TOPLEVEL_STATE_ACTIVATED);
@@ -780,7 +808,7 @@ meta_wayland_xdg_toplevel_apply_state (MetaWaylandSurfaceRole  *surface_role,
       return;
     }
 
-  if (!surface->buffer_ref->buffer && xdg_surface_priv->first_buffer_attached)
+  if (!surface->buffer && xdg_surface_priv->first_buffer_attached)
     {
       meta_wayland_xdg_surface_reset (xdg_surface);
       meta_wayland_actor_surface_queue_frame_callbacks (actor_surface,
@@ -873,9 +901,12 @@ meta_wayland_xdg_toplevel_post_apply_state (MetaWaylandSurfaceRole  *surface_rol
         }
       else
         {
-          wl_resource_post_error (surface->resource,
-                                  XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
-                                  "Invalid min/max size");
+          if (surface->resource)
+            {
+              wl_resource_post_error (surface->resource,
+                                      XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
+                                      "Invalid min/max size");
+            }
         }
     }
 }
@@ -903,7 +934,7 @@ meta_wayland_xdg_toplevel_reset (MetaWaylandXdgSurface *xdg_surface)
   meta_wayland_shell_surface_destroy_window (shell_surface);
 
   meta_wayland_actor_surface_reset_actor (META_WAYLAND_ACTOR_SURFACE (surface_role));
-  window = meta_window_wayland_new (meta_get_display (), surface);
+  window = meta_window_wayland_new (display_from_surface (surface), surface);
   meta_wayland_shell_surface_set_window (shell_surface, window);
 
   xdg_surface_class->reset (xdg_surface);
@@ -1058,8 +1089,10 @@ finish_popup_setup (MetaWaylandXdgPopup *xdg_popup)
   MetaWaylandSurface *parent_surface;
   MetaWaylandSeat *seat;
   uint32_t serial;
-  MetaDisplay *display = meta_get_display ();
+  MetaDisplay *display = display_from_surface (surface);
   MetaWindow *window;
+  MetaWindow *parent_window;
+  MetaPlacementRule placement_rule;
 
   parent_surface = xdg_popup->setup.parent_surface;
   seat = xdg_popup->setup.grab_seat;
@@ -1104,7 +1137,11 @@ finish_popup_setup (MetaWaylandXdgPopup *xdg_popup)
   window = meta_window_wayland_new (display, surface);
   meta_wayland_shell_surface_set_window (shell_surface, window);
 
-  meta_wayland_xdg_popup_place (xdg_popup, &xdg_popup->setup.placement_rule);
+  parent_window = meta_wayland_surface_get_window (parent_surface);
+  placement_rule =
+    meta_wayland_xdg_positioner_to_placement (&xdg_popup->setup.xdg_positioner,
+                                              parent_window);
+  meta_wayland_xdg_popup_place (xdg_popup, &placement_rule);
 
   if (seat)
     {
@@ -1169,6 +1206,20 @@ dismiss_invalid_popup (MetaWaylandXdgPopup *xdg_popup)
 }
 
 static void
+meta_wayland_xdg_popup_commit_state (MetaWaylandSurfaceRole  *surface_role,
+                                     MetaWaylandTransaction  *transaction,
+                                     MetaWaylandSurfaceState *pending)
+{
+  MetaWaylandXdgPopup *xdg_popup = META_WAYLAND_XDG_POPUP (surface_role);
+
+  if (xdg_popup->setup.parent_surface)
+    {
+      meta_wayland_transaction_ensure_entry (transaction,
+                                             xdg_popup->setup.parent_surface);
+    }
+}
+
+static void
 meta_wayland_xdg_popup_apply_state (MetaWaylandSurfaceRole  *surface_role,
                                     MetaWaylandSurfaceState *pending)
 {
@@ -1185,7 +1236,26 @@ meta_wayland_xdg_popup_apply_state (MetaWaylandSurfaceRole  *surface_role,
   if (xdg_popup->setup.parent_surface)
     finish_popup_setup (xdg_popup);
 
-  if (!surface->buffer_ref->buffer && xdg_surface_priv->first_buffer_attached)
+  if (pending->xdg_positioner)
+    {
+      MetaWindow *window, *parent_window;
+      MetaPlacementRule placement_rule;
+
+      parent_window = meta_wayland_surface_get_window (xdg_popup->parent_surface);
+      placement_rule =
+        meta_wayland_xdg_positioner_to_placement (pending->xdg_positioner,
+                                                  parent_window);
+
+      xdg_popup->pending_reposition_token = pending->xdg_popup_reposition_token;
+      xdg_popup->pending_repositioned = TRUE;
+
+      scale_placement_rule (&placement_rule, surface);
+
+      window = meta_wayland_surface_get_window (surface);
+      meta_window_update_placement_rule (window, &placement_rule);
+    }
+
+  if (!surface->buffer && xdg_surface_priv->first_buffer_attached)
     {
       meta_wayland_xdg_surface_reset (xdg_surface);
       meta_wayland_actor_surface_queue_frame_callbacks (actor_surface, pending);
@@ -1196,7 +1266,7 @@ meta_wayland_xdg_popup_apply_state (MetaWaylandSurfaceRole  *surface_role,
     META_WAYLAND_SURFACE_ROLE_CLASS (meta_wayland_xdg_popup_parent_class);
   surface_role_class->apply_state (surface_role, pending);
 
-  if (xdg_popup->dismissed_by_client && surface->buffer_ref->buffer)
+  if (xdg_popup->dismissed_by_client && surface->buffer)
     {
       wl_resource_post_error (xdg_popup->resource,
                               XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
@@ -1228,7 +1298,7 @@ meta_wayland_xdg_popup_post_apply_state (MetaWaylandSurfaceRole  *surface_role,
   if (!window)
     return;
 
-  if (!surface->buffer_ref->buffer)
+  if (!surface->buffer)
     return;
 
   surface_role_class->post_apply_state (surface_role, pending);
@@ -1428,6 +1498,7 @@ meta_wayland_xdg_popup_class_init (MetaWaylandXdgPopupClass *klass)
   object_class->finalize = meta_wayland_xdg_popup_finalize;
 
   surface_role_class = META_WAYLAND_SURFACE_ROLE_CLASS (klass);
+  surface_role_class->commit_state = meta_wayland_xdg_popup_commit_state;
   surface_role_class->apply_state = meta_wayland_xdg_popup_apply_state;
   surface_role_class->post_apply_state = meta_wayland_xdg_popup_post_apply_state;
   surface_role_class->get_toplevel = meta_wayland_xdg_popup_get_toplevel;
@@ -1556,6 +1627,14 @@ xdg_surface_set_window_geometry (struct wl_client   *client,
     }
 
   pending = meta_wayland_surface_get_pending_state (surface);
+  if (!pending)
+    {
+      wl_resource_post_error (resource,
+                              XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
+                              "underlying wl_surface already destroyed");
+      return;
+    }
+
   pending->has_new_geometry = TRUE;
   pending->new_geometry.x = x;
   pending->new_geometry.y = y;
@@ -1572,6 +1651,14 @@ xdg_surface_ack_configure (struct wl_client   *client,
   MetaWaylandSurfaceState *pending;
 
   pending = meta_wayland_surface_get_pending_state (surface);
+  if (!pending)
+    {
+      wl_resource_post_error (resource,
+                              XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
+                              "underlying wl_surface already destroyed");
+      return;
+    }
+
   pending->has_acked_configure_serial = TRUE;
   pending->acked_configure_serial = serial;
 }
@@ -1631,7 +1718,7 @@ meta_wayland_xdg_surface_apply_state (MetaWaylandSurfaceRole  *surface_role,
   if (!window)
     return;
 
-  if (surface->buffer_ref->buffer)
+  if (surface->buffer)
     priv->first_buffer_attached = TRUE;
 }
 
@@ -1693,7 +1780,7 @@ meta_wayland_xdg_surface_assigned (MetaWaylandSurfaceRole *surface_role)
   priv->configure_sent = FALSE;
   priv->first_buffer_attached = FALSE;
 
-  if (surface->buffer_ref->buffer)
+  if (surface->buffer)
     {
       wl_resource_post_error (xdg_wm_base_resource,
                               XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
@@ -1910,7 +1997,7 @@ xdg_surface_constructor_get_toplevel (struct wl_client   *client,
   xdg_surface = META_WAYLAND_XDG_SURFACE (xdg_toplevel);
   meta_wayland_xdg_surface_constructor_finalize (constructor, xdg_surface);
 
-  window = meta_window_wayland_new (meta_get_display (), surface);
+  window = meta_window_wayland_new (display_from_surface (surface), surface);
   shell_surface = META_WAYLAND_SHELL_SURFACE (xdg_surface);
   meta_wayland_shell_surface_set_window (shell_surface, window);
 }
@@ -1989,8 +2076,7 @@ xdg_surface_constructor_get_popup (struct wl_client   *client,
   meta_wayland_xdg_surface_constructor_finalize (constructor, xdg_surface);
 
   xdg_positioner = wl_resource_get_user_data (positioner_resource);
-  xdg_popup->setup.placement_rule =
-    meta_wayland_xdg_positioner_to_placement (xdg_positioner, parent_window);
+  xdg_popup->setup.xdg_positioner = *xdg_positioner;
   xdg_popup->setup.parent_surface = parent_surface;
 }
 
@@ -2399,7 +2485,7 @@ xdg_wm_base_get_xdg_surface (struct wl_client   *client,
       return;
     }
 
-  if (surface->buffer_ref->buffer)
+  if (surface->buffer)
     {
       wl_resource_post_error (resource,
                               XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
@@ -2429,7 +2515,11 @@ xdg_wm_base_pong (struct wl_client   *client,
                   struct wl_resource *resource,
                   uint32_t            serial)
 {
-  MetaDisplay *display = meta_get_display ();
+  MetaWaylandXdgShellClient *shell_client =
+    wl_resource_get_user_data (resource);
+  MetaContext *context =
+    meta_wayland_compositor_get_context (shell_client->compositor);
+  MetaDisplay *display = meta_context_get_display (context);
 
   meta_display_pong_for_serial (display, serial);
 }
@@ -2480,10 +2570,12 @@ bind_xdg_wm_base (struct wl_client *client,
                   uint32_t          version,
                   uint32_t          id)
 {
+  MetaWaylandCompositor *compositor = data;
   MetaWaylandXdgShellClient *shell_client;
 
   shell_client = g_new0 (MetaWaylandXdgShellClient, 1);
 
+  shell_client->compositor = compositor;
   shell_client->resource = wl_resource_create (client,
                                                &xdg_wm_base_interface,
                                                version, id);

@@ -36,7 +36,6 @@
 #include "backends/x11/meta-backend-x11.h"
 #include "backends/x11/meta-input-device-x11.h"
 #include "compositor/compositor-private.h"
-#include "core/edge-resistance.h"
 #include "core/frame.h"
 #include "core/keybindings-private.h"
 #include "core/meta-accel-parse.h"
@@ -152,7 +151,7 @@ meta_key_binding_get_name (MetaKeyBinding *binding)
   return binding->name;
 }
 
-MetaVirtualModifier
+ClutterModifierType
 meta_key_binding_get_modifiers (MetaKeyBinding *binding)
 {
   return binding->combo.modifiers;
@@ -180,18 +179,6 @@ meta_key_binding_is_builtin (MetaKeyBinding *binding)
  * various other events.  TODO: Possibly we should include them as event
  * handler functions and have some kind of flag to say they're unbindable.
  */
-
-static gboolean process_mouse_move_resize_grab (MetaDisplay     *display,
-                                                MetaWindow      *window,
-                                                ClutterKeyEvent *event);
-
-static gboolean process_keyboard_move_grab (MetaDisplay     *display,
-                                            MetaWindow      *window,
-                                            ClutterKeyEvent *event);
-
-static gboolean process_keyboard_resize_grab (MetaDisplay     *display,
-                                              MetaWindow      *window,
-                                              ClutterKeyEvent *event);
 
 static void maybe_update_locate_pointer_keygrab (MetaDisplay *display,
                                                  gboolean     grab);
@@ -540,30 +527,30 @@ reload_iso_next_group_combos (MetaKeyBindingManager *keys)
 
 static void
 devirtualize_modifiers (MetaKeyBindingManager *keys,
-                        MetaVirtualModifier    modifiers,
+                        ClutterModifierType    modifiers,
                         unsigned int          *mask)
 {
   *mask = 0;
 
-  if (modifiers & META_VIRTUAL_SHIFT_MASK)
+  if (modifiers & CLUTTER_SHIFT_MASK)
     *mask |= ShiftMask;
-  if (modifiers & META_VIRTUAL_CONTROL_MASK)
+  if (modifiers & CLUTTER_CONTROL_MASK)
     *mask |= ControlMask;
-  if (modifiers & META_VIRTUAL_ALT_MASK)
+  if (modifiers & CLUTTER_MOD1_MASK)
     *mask |= Mod1Mask;
-  if (modifiers & META_VIRTUAL_META_MASK)
+  if (modifiers & CLUTTER_META_MASK)
     *mask |= keys->meta_mask;
-  if (modifiers & META_VIRTUAL_HYPER_MASK)
+  if (modifiers & CLUTTER_HYPER_MASK)
     *mask |= keys->hyper_mask;
-  if (modifiers & META_VIRTUAL_SUPER_MASK)
+  if (modifiers & CLUTTER_SUPER_MASK)
     *mask |= keys->super_mask;
-  if (modifiers & META_VIRTUAL_MOD2_MASK)
+  if (modifiers & CLUTTER_MOD2_MASK)
     *mask |= Mod2Mask;
-  if (modifiers & META_VIRTUAL_MOD3_MASK)
+  if (modifiers & CLUTTER_MOD3_MASK)
     *mask |= Mod3Mask;
-  if (modifiers & META_VIRTUAL_MOD4_MASK)
+  if (modifiers & CLUTTER_MOD4_MASK)
     *mask |= Mod4Mask;
-  if (modifiers & META_VIRTUAL_MOD5_MASK)
+  if (modifiers & CLUTTER_MOD5_MASK)
     *mask |= Mod5Mask;
 }
 
@@ -1300,7 +1287,7 @@ static void
 update_window_grab_modifiers (MetaDisplay *display)
 {
   MetaKeyBindingManager *keys = &display->key_binding_manager;
-  MetaVirtualModifier virtual_mods;
+  ClutterModifierType virtual_mods;
   unsigned int mods;
 
   virtual_mods = meta_prefs_get_mouse_button_mods ();
@@ -1420,6 +1407,10 @@ meta_change_keygrab (MetaKeyBindingManager *keys,
                      gboolean               grab,
                      MetaResolvedKeyCombo  *resolved_combo)
 {
+  MetaBackendX11 *backend_x11;
+  Display *xdisplay;
+  GArray *mods;
+  int i;
   unsigned char mask_bits[XIMaskLen (XI_LASTEVENT)] = { 0 };
   XIEventMask mask = { XIAllMasterDevices, sizeof (mask_bits), mask_bits };
 
@@ -1429,10 +1420,8 @@ meta_change_keygrab (MetaKeyBindingManager *keys,
   if (meta_is_wayland_compositor ())
     return;
 
-  MetaBackendX11 *backend = META_BACKEND_X11 (meta_get_backend ());
-  Display *xdisplay = meta_backend_x11_get_xdisplay (backend);
-  GArray *mods;
-  int i;
+  backend_x11 = META_BACKEND_X11 (keys->backend);
+  xdisplay = meta_backend_x11_get_xdisplay (backend_x11);
 
   /* Grab keycode/modmask, together with
    * all combinations of ignored modifiers.
@@ -1587,8 +1576,6 @@ meta_window_grab_keys (MetaWindow  *window)
   MetaKeyBindingManager *keys = &display->key_binding_manager;
 
   if (meta_is_wayland_compositor ())
-    return;
-  if (window->all_keys_grabbed)
     return;
 
   if (window->type == META_WINDOW_DOCK
@@ -1753,10 +1740,13 @@ meta_display_ungrab_accelerator (MetaDisplay *display,
 }
 
 static gboolean
-grab_keyboard (Window  xwindow,
-               guint32 timestamp,
-               int     grab_mode)
+grab_keyboard (MetaBackend *backend,
+               Window       xwindow,
+               uint32_t     timestamp,
+               int          grab_mode)
 {
+  MetaBackendX11 *backend_x11;
+  Display *xdisplay;
   int grab_status;
 
   unsigned char mask_bits[XIMaskLen (XI_LASTEVENT)] = { 0 };
@@ -1772,8 +1762,8 @@ grab_keyboard (Window  xwindow,
    * presses
    */
 
-  MetaBackendX11 *backend = META_BACKEND_X11 (meta_get_backend ());
-  Display *xdisplay = meta_backend_x11_get_xdisplay (backend);
+  backend_x11 = META_BACKEND_X11 (backend);
+  xdisplay = meta_backend_x11_get_xdisplay (backend_x11);
 
   /* Strictly, we only need to set grab_mode on the keyboard device
    * while the pointer should always be XIGrabModeAsync. Unfortunately
@@ -1797,96 +1787,48 @@ grab_keyboard (Window  xwindow,
 }
 
 static void
-ungrab_keyboard (guint32 timestamp)
+ungrab_keyboard (MetaBackend *backend,
+                 uint32_t     timestamp)
 {
+  MetaBackendX11 *backend_x11;
+  Display *xdisplay;
+
   if (meta_is_wayland_compositor ())
     return;
 
-  MetaBackendX11 *backend = META_BACKEND_X11 (meta_get_backend ());
-  Display *xdisplay = meta_backend_x11_get_xdisplay (backend);
+  backend_x11 = META_BACKEND_X11 (backend);
+  xdisplay = meta_backend_x11_get_xdisplay (backend_x11);
 
   XIUngrabDevice (xdisplay, META_VIRTUAL_CORE_KEYBOARD_ID, timestamp);
-}
-
-gboolean
-meta_window_grab_all_keys (MetaWindow  *window,
-                           guint32      timestamp)
-{
-  Window grabwindow;
-  gboolean retval = TRUE;
-
-  if (window->all_keys_grabbed)
-    return FALSE;
-
-  if (window->keys_grabbed)
-    meta_window_ungrab_keys (window);
-
-  /* Make sure the window is focused, otherwise the grab
-   * won't do a lot of good.
-   */
-  meta_topic (META_DEBUG_FOCUS,
-              "Focusing %s because we're grabbing all its keys",
-              window->desc);
-  meta_window_focus (window, timestamp);
-
-  if (!meta_is_wayland_compositor ())
-    {
-      grabwindow = meta_window_x11_get_toplevel_xwindow (window);
-
-      meta_topic (META_DEBUG_KEYBINDINGS,
-                  "Grabbing all keys on window %s", window->desc);
-      retval = grab_keyboard (grabwindow, timestamp, XIGrabModeAsync);
-    }
-  if (retval)
-    {
-      window->keys_grabbed = FALSE;
-      window->all_keys_grabbed = TRUE;
-      window->grab_on_frame = window->frame != NULL;
-    }
-
-  return retval;
-}
-
-void
-meta_window_ungrab_all_keys (MetaWindow *window,
-                             guint32     timestamp)
-{
-  if (window->all_keys_grabbed)
-    {
-      if (!meta_is_wayland_compositor())
-        ungrab_keyboard (timestamp);
-
-      window->grab_on_frame = FALSE;
-      window->all_keys_grabbed = FALSE;
-      window->keys_grabbed = FALSE;
-
-      /* Re-establish our standard bindings */
-      meta_window_grab_keys (window);
-    }
 }
 
 void
 meta_display_freeze_keyboard (MetaDisplay *display, guint32 timestamp)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
 
   if (!META_IS_BACKEND_X11 (backend))
     return;
 
   Window window = meta_backend_x11_get_xwindow (META_BACKEND_X11 (backend));
-  grab_keyboard (window, timestamp, XIGrabModeSync);
+  grab_keyboard (backend, window, timestamp, XIGrabModeSync);
 }
 
 void
 meta_display_ungrab_keyboard (MetaDisplay *display, guint32 timestamp)
 {
-  ungrab_keyboard (timestamp);
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
+
+  ungrab_keyboard (backend, timestamp);
 }
 
 void
 meta_display_unfreeze_keyboard (MetaDisplay *display, guint32 timestamp)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
 
   if (!META_IS_BACKEND_X11 (backend))
     return;
@@ -1900,31 +1842,6 @@ meta_display_unfreeze_keyboard (MetaDisplay *display, guint32 timestamp)
    */
   XIAllowEvents (xdisplay, META_VIRTUAL_CORE_POINTER_ID,
                  XIAsyncDevice, timestamp);
-}
-
-static gboolean
-is_modifier (xkb_keysym_t keysym)
-{
-  switch (keysym)
-    {
-    case XKB_KEY_Shift_L:
-    case XKB_KEY_Shift_R:
-    case XKB_KEY_Control_L:
-    case XKB_KEY_Control_R:
-    case XKB_KEY_Caps_Lock:
-    case XKB_KEY_Shift_Lock:
-    case XKB_KEY_Meta_L:
-    case XKB_KEY_Meta_R:
-    case XKB_KEY_Alt_L:
-    case XKB_KEY_Alt_R:
-    case XKB_KEY_Super_L:
-    case XKB_KEY_Super_R:
-    case XKB_KEY_Hyper_L:
-    case XKB_KEY_Hyper_R:
-      return TRUE;
-    default:
-      return FALSE;
-    }
 }
 
 static void
@@ -2242,24 +2159,19 @@ process_key_event (MetaDisplay     *display,
                    MetaWindow      *window,
                    ClutterKeyEvent *event)
 {
-  gboolean keep_grab;
-  gboolean all_keys_grabbed;
+  if (process_overlay_key (display, event, window))
+    return TRUE;
 
-  all_keys_grabbed = window ? window->all_keys_grabbed : FALSE;
-  if (!all_keys_grabbed)
-    {
-      if (process_overlay_key (display, event, window))
-        return TRUE;
+  if (process_locate_pointer_key (display, event, window))
+    return FALSE;  /* Continue with the event even if handled */
 
-      if (process_locate_pointer_key (display, event, window))
-        return FALSE;  /* Continue with the event even if handled */
-
-      if (process_iso_next_group (display, event))
-        return TRUE;
-    }
+  if (process_iso_next_group (display, event))
+    return TRUE;
 
   {
-    MetaBackend *backend = meta_get_backend ();
+    MetaContext *context = meta_display_get_context (display);
+    MetaBackend *backend = meta_context_get_backend (context);
+
     if (META_IS_BACKEND_X11 (backend))
       {
         Display *xdisplay = meta_backend_x11_get_xdisplay (META_BACKEND_X11 (backend));
@@ -2268,46 +2180,6 @@ process_key_event (MetaDisplay     *display,
                        XIAsyncDevice, event->time);
       }
   }
-
-  keep_grab = TRUE;
-  if (all_keys_grabbed)
-    {
-      if (display->grab_op == META_GRAB_OP_NONE)
-        return TRUE;
-
-      /* If we get here we have a global grab, because
-       * we're in some special keyboard mode such as window move
-       * mode.
-       */
-      if (window == display->grab_window)
-        {
-          if (display->grab_op & META_GRAB_OP_WINDOW_FLAG_KEYBOARD)
-            {
-              if (display->grab_op == META_GRAB_OP_KEYBOARD_MOVING)
-                {
-                  meta_topic (META_DEBUG_KEYBINDINGS,
-                              "Processing event for keyboard move");
-                  keep_grab = process_keyboard_move_grab (display, window, event);
-                }
-              else
-                {
-                  meta_topic (META_DEBUG_KEYBINDINGS,
-                              "Processing event for keyboard resize");
-                  keep_grab = process_keyboard_resize_grab (display, window, event);
-                }
-            }
-          else
-            {
-              meta_topic (META_DEBUG_KEYBINDINGS,
-                          "Processing event for mouse-only move/resize");
-              keep_grab = process_mouse_move_resize_grab (display, window, event);
-            }
-        }
-      if (!keep_grab)
-        meta_display_end_grab_op (display, event->time);
-
-      return TRUE;
-    }
 
   /* Do the normal keybindings */
   return process_event (display, window, event);
@@ -2352,529 +2224,6 @@ meta_keybindings_process_event (MetaDisplay        *display,
     default:
       return FALSE;
     }
-}
-
-static gboolean
-process_mouse_move_resize_grab (MetaDisplay     *display,
-                                MetaWindow      *window,
-                                ClutterKeyEvent *event)
-{
-  /* don't care about releases, but eat them, don't end grab */
-  if (event->type == CLUTTER_KEY_RELEASE)
-    return TRUE;
-
-  if (event->keyval == CLUTTER_KEY_Escape)
-    {
-      MetaTileMode tile_mode;
-
-      /* Hide the tiling preview if necessary */
-      if (display->preview_tile_mode != META_TILE_NONE)
-        meta_display_hide_tile_preview (display);
-
-      /* Restore the original tile mode */
-      tile_mode = display->grab_tile_mode;
-      window->tile_monitor_number = display->grab_tile_monitor_number;
-
-      /* End move or resize and restore to original state.  If the
-       * window was a maximized window that had been "shaken loose" we
-       * need to remaximize it.  In normal cases, we need to do a
-       * moveresize now to get the position back to the original.
-       */
-      if (window->shaken_loose || tile_mode == META_TILE_MAXIMIZED)
-        meta_window_maximize (window, META_MAXIMIZE_BOTH);
-      else if (tile_mode != META_TILE_NONE)
-        meta_window_restore_tile (window,
-                                  tile_mode,
-                                  display->grab_initial_window_pos.width,
-                                  display->grab_initial_window_pos.height);
-      else
-        meta_window_move_resize_frame (display->grab_window,
-                                       TRUE,
-                                       display->grab_initial_window_pos.x,
-                                       display->grab_initial_window_pos.y,
-                                       display->grab_initial_window_pos.width,
-                                       display->grab_initial_window_pos.height);
-
-      /* End grab */
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-static gboolean
-process_keyboard_move_grab (MetaDisplay     *display,
-                            MetaWindow      *window,
-                            ClutterKeyEvent *event)
-{
-  MetaEdgeResistanceFlags flags;
-  gboolean handled;
-  MetaRectangle frame_rect;
-  int x, y;
-  int incr;
-
-  handled = FALSE;
-
-  /* don't care about releases, but eat them, don't end grab */
-  if (event->type == CLUTTER_KEY_RELEASE)
-    return TRUE;
-
-  /* don't end grab on modifier key presses */
-  if (is_modifier (event->keyval))
-    return TRUE;
-
-  meta_window_get_frame_rect (window, &frame_rect);
-  x = frame_rect.x;
-  y = frame_rect.y;
-
-  flags = META_EDGE_RESISTANCE_KEYBOARD_OP | META_EDGE_RESISTANCE_WINDOWS;
-
-  if ((event->modifier_state & CLUTTER_SHIFT_MASK) != 0)
-    flags |= META_EDGE_RESISTANCE_SNAP;
-
-#define SMALL_INCREMENT 1
-#define NORMAL_INCREMENT 10
-
-  if (flags & META_EDGE_RESISTANCE_SNAP)
-    incr = 1;
-  else if (event->modifier_state & CLUTTER_CONTROL_MASK)
-    incr = SMALL_INCREMENT;
-  else
-    incr = NORMAL_INCREMENT;
-
-  if (event->keyval == CLUTTER_KEY_Escape)
-    {
-      /* End move and restore to original state.  If the window was a
-       * maximized window that had been "shaken loose" we need to
-       * remaximize it.  In normal cases, we need to do a moveresize
-       * now to get the position back to the original.
-       */
-      if (window->shaken_loose)
-        meta_window_maximize (window, META_MAXIMIZE_BOTH);
-      else
-        meta_window_move_resize_frame (display->grab_window,
-                                       TRUE,
-                                       display->grab_initial_window_pos.x,
-                                       display->grab_initial_window_pos.y,
-                                       display->grab_initial_window_pos.width,
-                                       display->grab_initial_window_pos.height);
-    }
-
-  /* When moving by increments, we still snap to edges if the move
-   * to the edge is smaller than the increment. This is because
-   * Shift + arrow to snap is sort of a hidden feature. This way
-   * people using just arrows shouldn't get too frustrated.
-   */
-  switch (event->keyval)
-    {
-    case CLUTTER_KEY_KP_Home:
-    case CLUTTER_KEY_KP_Prior:
-    case CLUTTER_KEY_Up:
-    case CLUTTER_KEY_KP_Up:
-      y -= incr;
-      handled = TRUE;
-      break;
-    case CLUTTER_KEY_KP_End:
-    case CLUTTER_KEY_KP_Next:
-    case CLUTTER_KEY_Down:
-    case CLUTTER_KEY_KP_Down:
-      y += incr;
-      handled = TRUE;
-      break;
-    }
-
-  switch (event->keyval)
-    {
-    case CLUTTER_KEY_KP_Home:
-    case CLUTTER_KEY_KP_End:
-    case CLUTTER_KEY_Left:
-    case CLUTTER_KEY_KP_Left:
-      x -= incr;
-      handled = TRUE;
-      break;
-    case CLUTTER_KEY_KP_Prior:
-    case CLUTTER_KEY_KP_Next:
-    case CLUTTER_KEY_Right:
-    case CLUTTER_KEY_KP_Right:
-      x += incr;
-      handled = TRUE;
-      break;
-    }
-
-  if (handled)
-    {
-      meta_topic (META_DEBUG_KEYBINDINGS,
-                  "Computed new window location %d,%d due to keypress",
-                  x, y);
-
-      meta_window_edge_resistance_for_move (window,
-                                            &x,
-                                            &y,
-                                            flags);
-
-      meta_window_move_frame (window, TRUE, x, y);
-      meta_window_update_keyboard_move (window);
-    }
-
-  return handled;
-}
-
-static gboolean
-process_keyboard_resize_grab_op_change (MetaDisplay     *display,
-                                        MetaWindow      *window,
-                                        ClutterKeyEvent *event)
-{
-  gboolean handled;
-
-  handled = FALSE;
-  switch (display->grab_op)
-    {
-    case META_GRAB_OP_KEYBOARD_RESIZING_UNKNOWN:
-      switch (event->keyval)
-        {
-        case CLUTTER_KEY_Up:
-        case CLUTTER_KEY_KP_Up:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_N;
-          handled = TRUE;
-          break;
-        case CLUTTER_KEY_Down:
-        case CLUTTER_KEY_KP_Down:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_S;
-          handled = TRUE;
-          break;
-        case CLUTTER_KEY_Left:
-        case CLUTTER_KEY_KP_Left:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_W;
-          handled = TRUE;
-          break;
-        case CLUTTER_KEY_Right:
-        case CLUTTER_KEY_KP_Right:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_E;
-          handled = TRUE;
-          break;
-        }
-      break;
-
-    case META_GRAB_OP_KEYBOARD_RESIZING_S:
-      switch (event->keyval)
-        {
-        case CLUTTER_KEY_Left:
-        case CLUTTER_KEY_KP_Left:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_W;
-          handled = TRUE;
-          break;
-        case CLUTTER_KEY_Right:
-        case CLUTTER_KEY_KP_Right:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_E;
-          handled = TRUE;
-          break;
-        }
-      break;
-
-    case META_GRAB_OP_KEYBOARD_RESIZING_N:
-      switch (event->keyval)
-        {
-        case CLUTTER_KEY_Left:
-        case CLUTTER_KEY_KP_Left:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_W;
-          handled = TRUE;
-          break;
-        case CLUTTER_KEY_Right:
-        case CLUTTER_KEY_KP_Right:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_E;
-          handled = TRUE;
-          break;
-        }
-      break;
-
-    case META_GRAB_OP_KEYBOARD_RESIZING_W:
-      switch (event->keyval)
-        {
-        case CLUTTER_KEY_Up:
-        case CLUTTER_KEY_KP_Up:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_N;
-          handled = TRUE;
-          break;
-        case CLUTTER_KEY_Down:
-        case CLUTTER_KEY_KP_Down:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_S;
-          handled = TRUE;
-          break;
-        }
-      break;
-
-    case META_GRAB_OP_KEYBOARD_RESIZING_E:
-      switch (event->keyval)
-        {
-        case CLUTTER_KEY_Up:
-        case CLUTTER_KEY_KP_Up:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_N;
-          handled = TRUE;
-          break;
-        case CLUTTER_KEY_Down:
-        case CLUTTER_KEY_KP_Down:
-          display->grab_op = META_GRAB_OP_KEYBOARD_RESIZING_S;
-          handled = TRUE;
-          break;
-        }
-      break;
-
-    case META_GRAB_OP_KEYBOARD_RESIZING_SE:
-    case META_GRAB_OP_KEYBOARD_RESIZING_NE:
-    case META_GRAB_OP_KEYBOARD_RESIZING_SW:
-    case META_GRAB_OP_KEYBOARD_RESIZING_NW:
-      break;
-
-    default:
-      g_assert_not_reached ();
-      break;
-    }
-
-  if (handled)
-    {
-      meta_window_update_keyboard_resize (window, TRUE);
-      return TRUE;
-    }
-
-  return FALSE;
-}
-
-static gboolean
-process_keyboard_resize_grab (MetaDisplay     *display,
-                              MetaWindow      *window,
-                              ClutterKeyEvent *event)
-{
-  MetaRectangle frame_rect;
-  gboolean handled;
-  int height_inc;
-  int width_inc;
-  int width, height;
-  MetaEdgeResistanceFlags flags;
-  MetaGravity gravity;
-
-  handled = FALSE;
-
-  /* don't care about releases, but eat them, don't end grab */
-  if (event->type == CLUTTER_KEY_RELEASE)
-    return TRUE;
-
-  /* don't end grab on modifier key presses */
-  if (is_modifier (event->keyval))
-    return TRUE;
-
-  if (event->keyval == CLUTTER_KEY_Escape)
-    {
-      /* End resize and restore to original state. */
-      meta_window_move_resize_frame (display->grab_window,
-                                     TRUE,
-                                     display->grab_initial_window_pos.x,
-                                     display->grab_initial_window_pos.y,
-                                     display->grab_initial_window_pos.width,
-                                     display->grab_initial_window_pos.height);
-
-      return FALSE;
-    }
-
-  if (process_keyboard_resize_grab_op_change (display, window, event))
-    return TRUE;
-
-  width = window->rect.width;
-  height = window->rect.height;
-
-  meta_window_get_frame_rect (window, &frame_rect);
-  width = frame_rect.width;
-  height = frame_rect.height;
-
-  gravity = meta_resize_gravity_from_grab_op (display->grab_op);
-
-  flags = META_EDGE_RESISTANCE_KEYBOARD_OP;
-
-  if ((event->modifier_state & CLUTTER_SHIFT_MASK) != 0)
-    flags |= META_EDGE_RESISTANCE_SNAP;
-
-#define SMALL_INCREMENT 1
-#define NORMAL_INCREMENT 10
-
-  if (flags & META_EDGE_RESISTANCE_SNAP)
-    {
-      height_inc = 1;
-      width_inc = 1;
-    }
-  else if (event->modifier_state & CLUTTER_CONTROL_MASK)
-    {
-      width_inc = SMALL_INCREMENT;
-      height_inc = SMALL_INCREMENT;
-    }
-  else
-    {
-      width_inc = NORMAL_INCREMENT;
-      height_inc = NORMAL_INCREMENT;
-    }
-
-  /* If this is a resize increment window, make the amount we resize
-   * the window by match that amount (well, unless snap resizing...)
-   */
-  if (window->size_hints.width_inc > 1)
-    width_inc = window->size_hints.width_inc;
-  if (window->size_hints.height_inc > 1)
-    height_inc = window->size_hints.height_inc;
-
-  switch (event->keyval)
-    {
-    case CLUTTER_KEY_Up:
-    case CLUTTER_KEY_KP_Up:
-      switch (gravity)
-        {
-        case META_GRAVITY_NORTH:
-        case META_GRAVITY_NORTH_WEST:
-        case META_GRAVITY_NORTH_EAST:
-          /* Move bottom edge up */
-          height -= height_inc;
-          break;
-
-        case META_GRAVITY_SOUTH:
-        case META_GRAVITY_SOUTH_WEST:
-        case META_GRAVITY_SOUTH_EAST:
-          /* Move top edge up */
-          height += height_inc;
-          break;
-
-        case META_GRAVITY_EAST:
-        case META_GRAVITY_WEST:
-        case META_GRAVITY_CENTER:
-        case META_GRAVITY_NONE:
-        case META_GRAVITY_STATIC:
-          g_assert_not_reached ();
-          break;
-        }
-
-      handled = TRUE;
-      break;
-
-    case CLUTTER_KEY_Down:
-    case CLUTTER_KEY_KP_Down:
-      switch (gravity)
-        {
-        case META_GRAVITY_NORTH:
-        case META_GRAVITY_NORTH_WEST:
-        case META_GRAVITY_NORTH_EAST:
-          /* Move bottom edge down */
-          height += height_inc;
-          break;
-
-        case META_GRAVITY_SOUTH:
-        case META_GRAVITY_SOUTH_WEST:
-        case META_GRAVITY_SOUTH_EAST:
-          /* Move top edge down */
-          height -= height_inc;
-          break;
-
-        case META_GRAVITY_EAST:
-        case META_GRAVITY_WEST:
-        case META_GRAVITY_CENTER:
-        case META_GRAVITY_NONE:
-        case META_GRAVITY_STATIC:
-          g_assert_not_reached ();
-          break;
-        }
-
-      handled = TRUE;
-      break;
-
-    case CLUTTER_KEY_Left:
-    case CLUTTER_KEY_KP_Left:
-      switch (gravity)
-        {
-        case META_GRAVITY_EAST:
-        case META_GRAVITY_SOUTH_EAST:
-        case META_GRAVITY_NORTH_EAST:
-          /* Move left edge left */
-          width += width_inc;
-          break;
-
-        case META_GRAVITY_WEST:
-        case META_GRAVITY_SOUTH_WEST:
-        case META_GRAVITY_NORTH_WEST:
-          /* Move right edge left */
-          width -= width_inc;
-          break;
-
-        case META_GRAVITY_NORTH:
-        case META_GRAVITY_SOUTH:
-        case META_GRAVITY_CENTER:
-        case META_GRAVITY_NONE:
-        case META_GRAVITY_STATIC:
-          g_assert_not_reached ();
-          break;
-        }
-
-      handled = TRUE;
-      break;
-
-    case CLUTTER_KEY_Right:
-    case CLUTTER_KEY_KP_Right:
-      switch (gravity)
-        {
-        case META_GRAVITY_EAST:
-        case META_GRAVITY_SOUTH_EAST:
-        case META_GRAVITY_NORTH_EAST:
-          /* Move left edge right */
-          width -= width_inc;
-          break;
-
-        case META_GRAVITY_WEST:
-        case META_GRAVITY_SOUTH_WEST:
-        case META_GRAVITY_NORTH_WEST:
-          /* Move right edge right */
-          width += width_inc;
-          break;
-
-        case META_GRAVITY_NORTH:
-        case META_GRAVITY_SOUTH:
-        case META_GRAVITY_CENTER:
-        case META_GRAVITY_NONE:
-        case META_GRAVITY_STATIC:
-          g_assert_not_reached ();
-          break;
-        }
-
-      handled = TRUE;
-      break;
-
-    default:
-      break;
-    }
-
-  /* fixup hack (just paranoia, not sure it's required) */
-  if (height < 1)
-    height = 1;
-  if (width < 1)
-    width = 1;
-
-  if (handled)
-    {
-      meta_topic (META_DEBUG_KEYBINDINGS,
-                  "Computed new window size due to keypress: "
-                  "%dx%d, gravity %s",
-                  width, height, meta_gravity_to_string (gravity));
-
-      /* Do any edge resistance/snapping */
-      meta_window_edge_resistance_for_resize (window,
-                                              &width,
-                                              &height,
-                                              gravity,
-                                              flags);
-
-      meta_window_resize_frame_with_gravity (window,
-                                             TRUE,
-                                             width,
-                                             height,
-                                             gravity);
-
-      meta_window_update_keyboard_resize (window, FALSE);
-    }
-
-  return handled;
 }
 
 static void
@@ -3355,9 +2704,17 @@ handle_begin_move         (MetaDisplay     *display,
 {
   if (window->has_move_func)
     {
+      MetaContext *context = meta_display_get_context (display);
+      MetaBackend *backend = meta_context_get_backend (context);
+      ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
+      ClutterSeat *seat = clutter_backend_get_default_seat (clutter_backend);
+      ClutterInputDevice *device;
+
+      device = clutter_seat_get_pointer (seat);
       meta_window_begin_grab_op (window,
-                                 META_GRAB_OP_KEYBOARD_MOVING,
-                                 FALSE,
+                                 META_GRAB_OP_KEYBOARD_MOVING |
+                                 META_GRAB_OP_WINDOW_FLAG_UNCONSTRAINED,
+                                 device, NULL,
                                  event->time);
     }
 }
@@ -3371,9 +2728,17 @@ handle_begin_resize       (MetaDisplay     *display,
 {
   if (window->has_resize_func)
     {
+      MetaContext *context = meta_display_get_context (display);
+      MetaBackend *backend = meta_context_get_backend (context);
+      ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
+      ClutterSeat *seat = clutter_backend_get_default_seat (clutter_backend);
+      ClutterInputDevice *device;
+
+      device = clutter_seat_get_pointer (seat);
       meta_window_begin_grab_op (window,
-                                 META_GRAB_OP_KEYBOARD_RESIZING_UNKNOWN,
-                                 FALSE,
+                                 META_GRAB_OP_KEYBOARD_RESIZING_UNKNOWN |
+                                 META_GRAB_OP_WINDOW_FLAG_UNCONSTRAINED,
+                                 device, NULL,
                                  event->time);
     }
 }
@@ -3473,7 +2838,8 @@ handle_move_to_monitor (MetaDisplay    *display,
                         MetaKeyBinding *binding,
                         gpointer        dummy)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   gint which = binding->handler->data;
@@ -3573,10 +2939,13 @@ handle_switch_vt (MetaDisplay     *display,
                   MetaKeyBinding  *binding,
                   gpointer         dummy)
 {
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   gint vt = binding->handler->data;
   GError *error = NULL;
 
-  if (!meta_activate_vt (vt, &error))
+  if (!meta_backend_native_activate_vt (META_BACKEND_NATIVE (backend),
+                                        vt, &error))
     {
       g_warning ("Failed to switch VT: %s", error->message);
       g_error_free (error);
@@ -3591,7 +2960,8 @@ handle_switch_monitor (MetaDisplay    *display,
                        MetaKeyBinding *binding,
                        gpointer        dummy)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaMonitorSwitchConfigType config_type =
@@ -3611,7 +2981,8 @@ handle_rotate_monitor (MetaDisplay    *display,
                        MetaKeyBinding *binding,
                        gpointer        dummy)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
 
@@ -3946,7 +3317,8 @@ init_builtin_key_bindings (MetaDisplay *display)
                           handle_rotate_monitor, 0);
 
 #ifdef HAVE_NATIVE_BACKEND
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   if (META_IS_BACKEND_NATIVE (backend))
     {
       add_builtin_keybinding (display,
@@ -4449,7 +3821,8 @@ void
 meta_display_init_keys (MetaDisplay *display)
 {
   MetaKeyBindingManager *keys = &display->key_binding_manager;
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaKeyHandler *handler;
 
   keys->backend = backend;

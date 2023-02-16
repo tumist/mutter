@@ -48,9 +48,10 @@
 #include "x11/meta-x11-selection-input-stream-private.h"
 #include "x11/meta-x11-selection-output-stream-private.h"
 #include "x11/window-x11.h"
+#include "x11/window-x11-private.h"
 #include "x11/xprops.h"
 
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
 #include "wayland/meta-wayland-private.h"
 #include "wayland/meta-xwayland-private.h"
 #include "wayland/meta-xwayland.h"
@@ -926,11 +927,24 @@ crossing_serial_is_ignored (MetaX11Display *x11_display,
   i = 0;
   while (i < N_IGNORED_CROSSING_SERIALS)
     {
-      if (x11_display->display->ignored_crossing_serials[i] == serial)
+      if (x11_display->ignored_crossing_serials[i] == serial)
         return TRUE;
       ++i;
     }
   return FALSE;
+}
+
+static void
+reset_ignored_crossing_serials (MetaX11Display *x11_display)
+{
+  int i;
+
+  i = 0;
+  while (i < N_IGNORED_CROSSING_SERIALS)
+    {
+      x11_display->ignored_crossing_serials[i] = 0;
+      ++i;
+    }
 }
 
 static gboolean
@@ -943,7 +957,8 @@ handle_input_xevent (MetaX11Display *x11_display,
   MetaWindow *window;
   MetaDisplay *display = x11_display->display;
   MetaWorkspaceManager *workspace_manager = display->workspace_manager;
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   ClutterStage *stage = CLUTTER_STAGE (meta_backend_get_stage (backend));
 
   if (input_event == NULL)
@@ -965,16 +980,9 @@ handle_input_xevent (MetaX11Display *x11_display,
            meta_x11_display_lookup_x_window (x11_display, modified) :
            NULL;
 
-  /* If this is an event for a GTK+ widget, let GTK+ handle it. */
-  if (meta_ui_window_is_widget (x11_display->ui, modified))
-    return FALSE;
-
   switch (input_event->evtype)
     {
     case XI_Enter:
-      if (display->event_route != META_EVENT_ROUTE_NORMAL)
-        break;
-
       if (clutter_stage_get_grab_actor (stage) != NULL)
         break;
 
@@ -985,18 +993,22 @@ handle_input_xevent (MetaX11Display *x11_display,
           enter_event->mode != XINotifyGrab &&
           enter_event->mode != XINotifyUngrab &&
           enter_event->detail != XINotifyInferior &&
+          !meta_is_wayland_compositor () &&
           meta_x11_display_focus_sentinel_clear (x11_display))
         {
           meta_window_handle_enter (window,
                                     enter_event->time,
                                     enter_event->root_x,
                                     enter_event->root_y);
+
+          if (window->type != META_WINDOW_DOCK)
+            {
+              /* stop ignoring stuff */
+              reset_ignored_crossing_serials (x11_display);
+            }
         }
       break;
     case XI_Leave:
-      if (display->event_route != META_EVENT_ROUTE_NORMAL)
-        break;
-
       if (clutter_stage_get_grab_actor (stage) != NULL)
         break;
 
@@ -1042,10 +1054,6 @@ handle_input_xevent (MetaX11Display *x11_display,
       break;
     }
 
-  /* Don't eat events for GTK frames (we need to update the :hover state on buttons) */
-  if (window && window->frame && modified == window->frame->xwindow)
-    return FALSE;
-
   /* Don't pass these events through to Clutter / GTK+ */
   return TRUE;
 }
@@ -1058,35 +1066,9 @@ process_request_frame_extents (MetaX11Display *x11_display,
   Window xwindow = event->xclient.window;
   unsigned long data[4] = { 0, 0, 0, 0 };
 
-  MotifWmHints *hints = NULL;
-  gboolean hints_set = FALSE;
-
-  meta_verbose ("Setting frame extents for 0x%lx", xwindow);
-
-  /* See if the window is decorated. */
-  hints_set = meta_prop_get_motif_hints (x11_display,
-                                         xwindow,
-                                         x11_display->atom__MOTIF_WM_HINTS,
-                                         &hints);
-  if ((hints_set && hints->decorations) || !hints_set)
-    {
-      MetaFrameBorders borders;
-
-      /* Return estimated frame extents for a normal window. */
-      meta_ui_theme_get_frame_borders (x11_display->ui,
-                                       META_FRAME_TYPE_NORMAL,
-                                       0,
-                                       &borders);
-      data[0] = borders.visible.left;
-      data[1] = borders.visible.right;
-      data[2] = borders.visible.top;
-      data[3] = borders.visible.bottom;
-    }
-
   meta_topic (META_DEBUG_GEOMETRY,
-              "Setting _NET_FRAME_EXTENTS on unmanaged window 0x%lx "
-              "to top = %lu, left = %lu, bottom = %lu, right = %lu",
-              xwindow, data[0], data[1], data[2], data[3]);
+              "Setting _NET_FRAME_EXTENTS on unmanaged window 0x%lx",
+              xwindow);
 
   meta_x11_error_trap_push (x11_display);
   XChangeProperty (x11_display->xdisplay, xwindow,
@@ -1094,8 +1076,6 @@ process_request_frame_extents (MetaX11Display *x11_display,
                    XA_CARDINAL,
                    32, PropModeReplace, (guchar*) data, 4);
   meta_x11_error_trap_pop (x11_display);
-
-  g_free (hints);
 }
 
 /* from fvwm2, Copyright Matthias Clasen, Dominik Vogt */
@@ -1352,15 +1332,17 @@ handle_other_xevent (MetaX11Display *x11_display,
   if (META_X11_DISPLAY_HAS_XSYNC (x11_display) &&
       event->type == (x11_display->xsync_event_base + XSyncAlarmNotify))
     {
-      MetaWindow *alarm_window = meta_x11_display_lookup_sync_alarm (x11_display,
-                                                                     ((XSyncAlarmNotifyEvent*)event)->alarm);
+      MetaSyncCounter *sync_counter;
 
-      if (alarm_window != NULL)
+      sync_counter = meta_x11_display_lookup_sync_alarm (x11_display,
+                                                         ((XSyncAlarmNotifyEvent*)event)->alarm);
+
+      if (sync_counter != NULL)
         {
           XSyncValue value = ((XSyncAlarmNotifyEvent*)event)->counter_value;
           gint64 new_counter_value;
           new_counter_value = XSyncValueLow32 (value) + ((gint64)XSyncValueHigh32 (value) << 32);
-          meta_window_x11_update_sync_request_counter (alarm_window, new_counter_value);
+          meta_sync_counter_update (sync_counter, new_counter_value);
           bypass_gtk = TRUE; /* GTK doesn't want to see this really */
         }
       else if (x11_display->alarm_filters)
@@ -1390,7 +1372,7 @@ handle_other_xevent (MetaX11Display *x11_display,
     {
       bypass_gtk = TRUE; /* GTK doesn't want to see this really */
 
-      if (window && !frame_was_receiver)
+      if (window)
         {
           XShapeEvent *sev = (XShapeEvent*) event;
 
@@ -1402,9 +1384,8 @@ handle_other_xevent (MetaX11Display *x11_display,
       else
         {
           meta_topic (META_DEBUG_SHAPES,
-                      "ShapeNotify not on a client window (window %s frame_was_receiver = %d)",
-                      window ? window->desc : "(none)",
-                      frame_was_receiver);
+                      "ShapeNotify not on a client window (window 0x%lx)",
+                      modified);
         }
 
       goto out;
@@ -1445,14 +1426,8 @@ handle_other_xevent (MetaX11Display *x11_display,
           guint32 timestamp;
           timestamp = meta_display_get_current_time_roundtrip (display);
 
-          if (display->grab_op != META_GRAB_OP_NONE &&
-              display->grab_window == window)
-            meta_display_end_grab_op (display, timestamp);
-
           if (frame_was_receiver)
             {
-              meta_warning ("Unexpected destruction of frame 0x%lx, not sure if this should silently fail or be considered a bug",
-                            window->frame->xwindow);
               meta_x11_error_trap_push (x11_display);
               meta_window_destroy_frame (window->frame->window);
               meta_x11_error_trap_pop (x11_display);
@@ -1474,11 +1449,6 @@ handle_other_xevent (MetaX11Display *x11_display,
            */
           guint32 timestamp;
           timestamp = meta_display_get_current_time_roundtrip (display);
-
-          if (display->grab_op != META_GRAB_OP_NONE &&
-              display->grab_window == window &&
-              window->frame == NULL)
-            meta_display_end_grab_op (display, timestamp);
 
           if (!frame_was_receiver)
             {
@@ -1523,6 +1493,48 @@ handle_other_xevent (MetaX11Display *x11_display,
     case MapRequest:
       if (window == NULL)
         {
+          Atom type;
+          int format;
+          unsigned long nitems, bytes_after, *data;
+
+          /* Check whether the new window is a frame for another window */
+          meta_x11_error_trap_push (x11_display);
+
+          if (XGetWindowProperty (x11_display->xdisplay,
+                                  event->xmaprequest.window,
+                                  x11_display->atom__MUTTER_FRAME_FOR,
+                                  0, 32, False, XA_WINDOW,
+                                  &type, &format, &nitems, &bytes_after,
+                                  (guchar **) &data) != Success)
+            {
+              meta_x11_error_trap_pop (x11_display);
+              break;
+            }
+
+          if (meta_x11_error_trap_pop_with_return (x11_display) != Success)
+            break;
+
+          if (nitems == 1)
+            {
+              Window client_window;
+
+              client_window = data[0];
+              XFree (data);
+
+              window = meta_x11_display_lookup_x_window (x11_display,
+                                                         client_window);
+
+              if (window != NULL && window->decorated && !window->frame)
+                {
+                  meta_window_set_frame_xwindow (window,
+                                                 event->xmaprequest.window);
+                  meta_window_x11_initialize_state (window);
+                  meta_window_update_visibility (window);
+                }
+
+              break;
+            }
+
           window = meta_window_x11_new (display, event->xmaprequest.window,
                                         FALSE, META_COMP_EFFECT_CREATE);
           /* The window might have initial iconic state, but this is a
@@ -1532,7 +1544,6 @@ handle_other_xevent (MetaX11Display *x11_display,
         }
       else if (frame_was_receiver)
         {
-          meta_warning ("Map requests on the frame window are unexpected");
           break;
         }
 
@@ -1606,10 +1617,9 @@ handle_other_xevent (MetaX11Display *x11_display,
                             xwcm, &xwc);
           meta_x11_error_trap_pop (x11_display);
         }
-      else
+      else if (!frame_was_receiver)
         {
-          if (!frame_was_receiver)
-            meta_window_x11_configure_request (window, event);
+          meta_window_x11_configure_request (window, event);
         }
       break;
     case GravityNotify:
@@ -1628,6 +1638,8 @@ handle_other_xevent (MetaX11Display *x11_display,
           meta_window_x11_property_notify (window, event);
         else if (property_for_window && !frame_was_receiver)
           meta_window_x11_property_notify (property_for_window, event);
+        else if (frame_was_receiver)
+          meta_frame_handle_xevent (window->frame, event);
 
         group = meta_x11_display_lookup_group (x11_display,
                                                event->xproperty.window);
@@ -1665,7 +1677,7 @@ handle_other_xevent (MetaX11Display *x11_display,
     case ClientMessage:
       if (window)
         {
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
           if (event->xclient.message_type == x11_display->atom_WL_SURFACE_ID)
             {
               guint32 surface_id = event->xclient.data.l[0];
@@ -1681,7 +1693,6 @@ handle_other_xevent (MetaX11Display *x11_display,
             }
           else
 #endif
-          if (!frame_was_receiver)
             meta_window_x11_client_message (window, event);
         }
       else
@@ -1824,6 +1835,11 @@ handle_other_xevent (MetaX11Display *x11_display,
               break;
             }
         }
+      else if (event->type == (x11_display->xfixes_event_base + XFixesSelectionNotify))
+        {
+          bypass_gtk = TRUE; /* GTK doesn't want to see this really */
+        }
+
       break;
     }
 
@@ -1890,11 +1906,15 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
                                 XEvent         *event)
 {
   MetaDisplay *display = x11_display->display;
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   Window modified;
   gboolean bypass_compositor = FALSE, bypass_gtk = FALSE;
   XIEvent *input_event;
   MetaCursorTracker *cursor_tracker;
+#ifdef HAVE_XWAYLAND
+  MetaWaylandCompositor *wayland_compositor;
+#endif
 
   COGL_TRACE_BEGIN (MetaX11DisplayHandleXevent,
                     "X11Display (handle X11 event)");
@@ -1909,9 +1929,12 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
       goto out;
     }
 
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
+  wayland_compositor = meta_context_get_wayland_compositor (context);
+
   if (meta_is_wayland_compositor () &&
-      meta_xwayland_handle_xevent (event))
+      meta_xwayland_manager_handle_xevent (&wayland_compositor->xwayland_manager,
+                                           event))
     {
       bypass_gtk = bypass_compositor = TRUE;
       goto out;
@@ -1965,18 +1988,6 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
   modified = event_get_modified_window (x11_display, event);
 
   input_event = get_input_event (x11_display, event);
-
-  if (event->type == UnmapNotify)
-    {
-      if (meta_ui_window_should_not_cause_focus (x11_display->xdisplay,
-                                                 modified))
-        {
-          meta_display_add_ignored_crossing_serial (display, event->xany.serial);
-          meta_topic (META_DEBUG_FOCUS,
-                      "Adding EnterNotify serial %lu to ignored focus serials",
-                      event->xany.serial);
-        }
-    }
 
   if (handle_input_xevent (x11_display, input_event, event->xany.serial))
     {

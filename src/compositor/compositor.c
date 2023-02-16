@@ -136,6 +136,8 @@ typedef struct _MetaCompositorPrivate
 
   MetaPluginManager *plugin_mgr;
 
+  MetaWindowDrag *current_drag;
+
   MetaLaters *laters;
 } MetaCompositorPrivate;
 
@@ -267,6 +269,23 @@ meta_get_top_window_group_for_display (MetaDisplay *display)
 }
 
 /**
+ * meta_compositor_get_feedback_group:
+ * @compositor: a #MetaCompositor
+ *
+ * Returns: (transfer none): The feedback group corresponding to @display
+ */
+ClutterActor *
+meta_compositor_get_feedback_group (MetaCompositor *compositor)
+{
+  MetaCompositorPrivate *priv;
+
+  g_return_val_if_fail (compositor, NULL);
+  priv = meta_compositor_get_instance_private (compositor);
+
+  return priv->feedback_group;
+}
+
+/**
  * meta_get_feedback_group_for_display:
  * @display: a #MetaDisplay
  *
@@ -276,15 +295,11 @@ ClutterActor *
 meta_get_feedback_group_for_display (MetaDisplay *display)
 {
   MetaCompositor *compositor;
-  MetaCompositorPrivate *priv;
 
   g_return_val_if_fail (display, NULL);
 
   compositor = get_compositor_for_display (display);
-  g_return_val_if_fail (compositor, NULL);
-  priv = meta_compositor_get_instance_private (compositor);
-
-  return priv->feedback_group;
+  return meta_compositor_get_feedback_group (compositor);
 }
 
 /**
@@ -363,10 +378,11 @@ meta_compositor_grab_end (MetaCompositor *compositor)
 }
 
 static void
-redirect_windows (MetaX11Display *x11_display)
+redirect_windows (MetaCompositor *compositor,
+                  MetaX11Display *x11_display)
 {
-  MetaBackend *backend = meta_get_backend ();
-  MetaContext *context = meta_backend_get_context (backend);
+  MetaDisplay *display = meta_compositor_get_display (compositor);
+  MetaContext *context = meta_display_get_context (display);
   Display *xdisplay = meta_x11_display_get_xdisplay (x11_display);
   Window xroot = meta_x11_display_get_xroot (x11_display);
   int screen_number = meta_x11_display_get_screen_number (x11_display);
@@ -414,7 +430,7 @@ meta_compositor_redirect_x11_windows (MetaCompositor *compositor)
   MetaDisplay *display = priv->display;
 
   if (display->x11_display)
-    redirect_windows (display->x11_display);
+    redirect_windows (compositor, display->x11_display);
 }
 
 static MetaCompositorView *
@@ -1145,6 +1161,7 @@ meta_compositor_after_paint (MetaCompositor     *compositor,
 static void
 on_before_paint (ClutterStage     *stage,
                  ClutterStageView *stage_view,
+                 ClutterFrame     *frame,
                  MetaCompositor   *compositor)
 {
   MetaCompositorView *compositor_view;
@@ -1160,6 +1177,7 @@ on_before_paint (ClutterStage     *stage,
 static void
 on_after_paint (ClutterStage     *stage,
                 ClutterStageView *stage_view,
+                ClutterFrame     *frame,
                 MetaCompositor   *compositor)
 {
   MetaCompositorView *compositor_view;
@@ -1294,7 +1312,7 @@ meta_compositor_dispose (GObject *object)
     meta_compositor_get_instance_private (compositor);
   ClutterActor *stage = meta_backend_get_stage (priv->backend);
 
-  g_clear_pointer (&priv->laters, meta_laters_free);
+  g_clear_object (&priv->laters);
 
   g_clear_signal_handler (&priv->stage_presented_id, stage);
   g_clear_signal_handler (&priv->before_paint_handler_id, stage);
@@ -1641,11 +1659,65 @@ meta_compositor_is_switching_workspace (MetaCompositor *compositor)
   return priv->switch_workspace_in_progress > 0;
 }
 
+/**
+ * meta_compositor_get_laters:
+ * @compositor: a #MetaCompositor
+ *
+ * Returns: (transfer none): a #MetaLaters
+ */
 MetaLaters *
 meta_compositor_get_laters (MetaCompositor *compositor)
+{
+  MetaCompositorPrivate *priv;
+
+  g_return_val_if_fail (META_IS_COMPOSITOR (compositor), NULL);
+
+  priv = meta_compositor_get_instance_private (compositor);
+  return priv->laters;
+}
+
+static void
+on_window_drag_ended (MetaWindowDrag *window_drag,
+                      MetaCompositor *compositor)
 {
   MetaCompositorPrivate *priv =
     meta_compositor_get_instance_private (compositor);
 
-  return priv->laters;
+  g_assert (priv->current_drag == window_drag);
+  g_clear_object (&priv->current_drag);
+}
+
+gboolean
+meta_compositor_drag_window (MetaCompositor       *compositor,
+                             MetaWindow           *window,
+                             MetaGrabOp            grab_op,
+                             ClutterInputDevice   *device,
+                             ClutterEventSequence *sequence,
+                             uint32_t              timestamp)
+{
+  MetaCompositorPrivate *priv =
+    meta_compositor_get_instance_private (compositor);
+  g_autoptr (MetaWindowDrag) window_drag = NULL;
+
+  if (priv->current_drag)
+    return FALSE;
+
+  window_drag = meta_window_drag_new (window, grab_op);
+
+  if (!meta_window_drag_begin (window_drag, device, sequence, timestamp))
+    return FALSE;
+
+  g_signal_connect (window_drag, "ended",
+                    G_CALLBACK (on_window_drag_ended), compositor);
+  priv->current_drag = g_steal_pointer (&window_drag);
+  return TRUE;
+}
+
+MetaWindowDrag *
+meta_compositor_get_current_window_drag (MetaCompositor *compositor)
+{
+  MetaCompositorPrivate *priv =
+    meta_compositor_get_instance_private (compositor);
+
+  return priv->current_drag;
 }

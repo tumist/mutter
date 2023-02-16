@@ -132,23 +132,7 @@ MetaWindow* meta_display_get_tab_current (MetaDisplay   *display,
                                           MetaWorkspace *workspace);
 
 META_EXPORT
-gboolean meta_display_begin_grab_op (MetaDisplay *display,
-                                     MetaWindow  *window,
-                                     MetaGrabOp   op,
-                                     gboolean     pointer_already_grabbed,
-                                     gboolean     frame_action,
-                                     int          button,
-                                     gulong       modmask,
-                                     guint32      timestamp,
-                                     int          root_x,
-                                     int          root_y);
-
-META_EXPORT
-void     meta_display_end_grab_op   (MetaDisplay *display,
-                                     guint32      timestamp);
-
-META_EXPORT
-MetaGrabOp meta_display_get_grab_op (MetaDisplay *display);
+gboolean meta_display_is_grabbed (MetaDisplay *display);
 
 META_EXPORT
 guint meta_display_add_keybinding    (MetaDisplay         *display,
@@ -183,10 +167,6 @@ ClutterModifierType meta_display_get_compositor_modifiers (MetaDisplay *display)
 META_EXPORT
 GSList *meta_display_sort_windows_by_stacking (MetaDisplay *display,
                                                GSList      *windows);
-
-META_EXPORT
-void meta_display_add_ignored_crossing_serial (MetaDisplay  *display,
-                                               unsigned long serial);
 
 META_EXPORT
 void meta_display_clear_mouse_mode (MetaDisplay *display);

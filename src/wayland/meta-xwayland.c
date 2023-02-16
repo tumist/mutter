@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <glib-unix.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -51,6 +52,7 @@
 #include "meta/main.h"
 #include "meta/meta-backend.h"
 #include "meta/meta-x11-errors.h"
+#include "wayland/meta-xwayland-grab-keyboard.h"
 #include "wayland/meta-xwayland-surface.h"
 #include "x11/meta-x11-display-private.h"
 
@@ -70,6 +72,16 @@ static void meta_xwayland_stop_xserver (MetaXWaylandManager *manager);
 
 static void
 meta_xwayland_set_primary_output (MetaX11Display *x11_display);
+
+static MetaMonitorManager *
+monitor_manager_from_x11_display (MetaX11Display *x11_display)
+{
+  MetaDisplay *display = meta_x11_display_get_display (x11_display);
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
+
+  return meta_backend_get_monitor_manager (backend);
+}
 
 void
 meta_xwayland_associate_window_with_surface (MetaWindow          *window,
@@ -118,7 +130,10 @@ void
 meta_xwayland_handle_wl_surface_id (MetaWindow *window,
                                     guint32     surface_id)
 {
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaContext *context = meta_display_get_context (display);
+  MetaWaylandCompositor *compositor =
+    meta_context_get_wayland_compositor (context);
   MetaXWaylandManager *manager = &compositor->xwayland_manager;
 
   if (!associate_window_with_surface_id (manager, window, surface_id))
@@ -134,10 +149,11 @@ meta_xwayland_handle_wl_surface_id (MetaWindow *window,
 gboolean
 meta_xwayland_is_xwayland_surface (MetaWaylandSurface *surface)
 {
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  MetaWaylandCompositor *compositor = surface->compositor;
   MetaXWaylandManager *manager = &compositor->xwayland_manager;
 
-  return wl_resource_get_client (surface->resource) == manager->client;
+  return surface->resource != NULL &&
+         wl_resource_get_client (surface->resource) == manager->client;
 }
 
 static gboolean
@@ -234,11 +250,7 @@ try_display (int      display,
       g_free (filename);
       filename = NULL;
 
-      if (fd >= 0)
-        {
-          close (fd);
-          fd = -1;
-        }
+      g_clear_fd (&fd, NULL);
     }
 
   *filename_out = filename;
@@ -398,9 +410,11 @@ xserver_died (GObject      *source,
               GAsyncResult *result,
               gpointer      user_data)
 {
-  MetaWaylandCompositor *compositor;
+  MetaXWaylandManager *manager = user_data;
+  MetaWaylandCompositor *compositor = manager->compositor;
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+  MetaDisplay *display = meta_context_get_display (context);
   GSubprocess *proc = G_SUBPROCESS (source);
-  MetaDisplay *display = meta_get_display ();
   g_autoptr (GError) error = NULL;
   MetaX11DisplayPolicy x11_display_policy;
 
@@ -412,7 +426,6 @@ xserver_died (GObject      *source,
       g_warning ("Failed to finish waiting for Xwayland: %s", error->message);
     }
 
-  compositor = meta_wayland_compositor_get_default ();
   x11_display_policy =
     meta_context_get_x11_display_policy (compositor->context);
   if (!g_subprocess_get_successful (proc))
@@ -445,24 +458,19 @@ xserver_died (GObject      *source,
 static void
 meta_xwayland_terminate (MetaXWaylandManager *manager)
 {
-  MetaDisplay *display = meta_get_display ();
+  MetaContext *context =
+    meta_wayland_compositor_get_context (manager->compositor);
+  MetaDisplay *display = meta_context_get_display (context);
 
   meta_display_shutdown_x11 (display);
   meta_xwayland_stop_xserver (manager);
+  g_clear_signal_handler (&manager->prepare_shutdown_id, manager->compositor);
 }
 
 static int
 x_io_error (Display *display)
 {
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
-  MetaX11DisplayPolicy x11_display_policy;
-
   g_warning ("Connection to xwayland lost");
-
-  x11_display_policy =
-    meta_context_get_x11_display_policy (compositor->context);
-  if (x11_display_policy == META_X11_DISPLAY_POLICY_MANDATORY)
-    meta_exit (META_EXIT_ERROR);
 
   return 0;
 }
@@ -473,21 +481,30 @@ x_io_error_noop (Display *display)
   return 0;
 }
 
-#ifdef HAVE_XSETIOERROREXITHANDLER
 static void
 x_io_error_exit (Display *display,
                  void    *data)
 {
   MetaXWaylandManager *manager = data;
+  MetaContext *context = manager->compositor->context;
   MetaX11DisplayPolicy x11_display_policy;
 
   x11_display_policy =
-    meta_context_get_x11_display_policy (manager->compositor->context);
+    meta_context_get_x11_display_policy (context);
 
   if (x11_display_policy == META_X11_DISPLAY_POLICY_MANDATORY)
-    g_warning ("X Wayland crashed (X IO error)");
+    {
+      GError *error;
+
+      g_warning ("Xwayland terminated, exiting since it was mandatory");
+      error = g_error_new (G_IO_ERROR, G_IO_ERROR_FAILED,
+                           "Xwayland exited unexpectedly");
+      meta_context_terminate_with_error (context, error);
+    }
   else
-    meta_topic (META_DEBUG_WAYLAND, "Xwayland disappeared");
+    {
+      meta_topic (META_DEBUG_WAYLAND, "Xwayland disappeared");
+    }
 }
 
 static void
@@ -495,7 +512,6 @@ x_io_error_exit_noop (Display *display,
                       void    *data)
 {
 }
-#endif
 
 void
 meta_xwayland_override_display_number (int number)
@@ -776,20 +792,20 @@ meta_xwayland_start_xserver (MetaXWaylandManager *manager,
                              GAsyncReadyCallback  callback,
                              gpointer             user_data)
 {
+  MetaWaylandCompositor *compositor = manager->compositor;
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+  MetaBackend *backend = meta_context_get_backend (context);
   int xwayland_client_fd[2];
   int displayfd[2];
   g_autoptr(GSubprocessLauncher) launcher = NULL;
   GSubprocessFlags flags;
   GError *error = NULL;
   g_autoptr (GTask) task = NULL;
-  MetaBackend *backend;
   MetaSettings *settings;
   const char *args[32];
   int xwayland_disable_extensions;
   int i, j;
 #ifdef HAVE_XWAYLAND_TERMINATE_DELAY
-  MetaWaylandCompositor *compositor =
-    meta_wayland_compositor_get_default ();
   MetaX11DisplayPolicy x11_display_policy =
     meta_context_get_x11_display_policy (compositor->context);
 #endif
@@ -837,7 +853,6 @@ meta_xwayland_start_xserver (MetaXWaylandManager *manager,
       flags |= G_SUBPROCESS_FLAGS_STDERR_SILENCE;
     }
 
-  backend = meta_get_backend ();
   settings = meta_backend_get_settings (backend);
   xwayland_disable_extensions =
     meta_settings_get_xwayland_disable_extensions (settings);
@@ -878,6 +893,13 @@ meta_xwayland_start_xserver (MetaXWaylandManager *manager,
 #else
   args[i++] = XWAYLAND_LISTENFD;
   args[i++] = "7";
+#endif
+
+#ifdef HAVE_XWAYLAND_BYTE_SWAPPED_CLIENTS
+  if (meta_settings_are_xwayland_byte_swapped_clients_allowed (settings))
+    args[i++] = "+byteswappedclients";
+  else
+    args[i++] = "-byteswappedclients";
 #endif
 
   if (meta_settings_is_experimental_feature_enabled (settings,
@@ -930,7 +952,7 @@ meta_xwayland_start_xserver (MetaXWaylandManager *manager,
 
   manager->xserver_died_cancellable = g_cancellable_new ();
   g_subprocess_wait_async (manager->proc, manager->xserver_died_cancellable,
-                           xserver_died, NULL);
+                           xserver_died, manager);
   g_unix_fd_add (displayfd[0], G_IO_IN, on_displayfd_ready,
                  g_steal_pointer (&task));
   manager->client = wl_client_create (manager->wayland_display,
@@ -954,7 +976,9 @@ xdisplay_connection_activity_cb (gint         fd,
                                  gpointer     user_data)
 {
   MetaXWaylandManager *manager = user_data;
-  MetaDisplay *display = meta_get_display ();
+  MetaContext *context =
+    meta_wayland_compositor_get_context (manager->compositor);
+  MetaDisplay *display = meta_context_get_display (context);
 
   meta_display_init_x11 (display, NULL,
                          (GAsyncReadyCallback) on_init_x11_cb, NULL);
@@ -973,6 +997,60 @@ meta_xwayland_stop_xserver (MetaXWaylandManager *manager)
     g_subprocess_send_signal (manager->proc, SIGTERM);
   g_clear_object (&manager->xserver_died_cancellable);
   g_clear_object (&manager->proc);
+}
+
+static void
+meta_xwayland_connection_release (MetaXWaylandConnection *connection)
+{
+  unlink (connection->lock_file);
+  g_clear_pointer (&connection->lock_file, g_free);
+}
+
+static void
+meta_xwayland_shutdown (MetaWaylandCompositor *compositor)
+{
+  MetaXWaylandManager *manager = &compositor->xwayland_manager;
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+  MetaDisplay *display = meta_context_get_display (context);
+  MetaX11Display *x11_display;
+  char path[256];
+
+  g_cancellable_cancel (manager->xserver_died_cancellable);
+
+  XSetIOErrorHandler (x_io_error_noop);
+  x11_display = display->x11_display;
+  if (x11_display)
+    {
+      XSetIOErrorExitHandler (meta_x11_display_get_xdisplay (x11_display),
+                              x_io_error_exit_noop, NULL);
+    }
+
+  meta_xwayland_terminate (manager);
+
+  if (manager->public_connection.name)
+    {
+      snprintf (path, sizeof path, "%s%d", X11_TMP_UNIX_PATH,
+                manager->public_connection.display_index);
+      unlink (path);
+      g_clear_pointer (&manager->public_connection.name, g_free);
+    }
+
+  if (manager->private_connection.name)
+    {
+      snprintf (path, sizeof path, "%s%d", X11_TMP_UNIX_PATH,
+                manager->private_connection.display_index);
+      unlink (path);
+      g_clear_pointer (&manager->private_connection.name, g_free);
+    }
+
+  meta_xwayland_connection_release (&manager->public_connection);
+  meta_xwayland_connection_release (&manager->private_connection);
+
+  if (manager->auth_file)
+    {
+      unlink (manager->auth_file);
+      g_clear_pointer (&manager->auth_file, g_free);
+    }
 }
 
 gboolean
@@ -1037,13 +1115,25 @@ meta_xwayland_init (MetaXWaylandManager    *manager,
                        xdisplay_connection_activity_cb, manager);
     }
 
+  if (policy != META_X11_DISPLAY_POLICY_DISABLED)
+    manager->prepare_shutdown_id = g_signal_connect (compositor, "prepare-shutdown",
+                                                     G_CALLBACK (meta_xwayland_shutdown), 
+                                                     NULL);
+
+  /* Xwayland specific protocol, needs to be filtered out for all other clients */
+  meta_xwayland_grab_keyboard_init (compositor);
+
   return TRUE;
 }
 
 static void
-monitors_changed_cb (MetaMonitorManager *monitor_manager)
+monitors_changed_cb (MetaMonitorManager  *monitor_manager,
+                     MetaXWaylandManager *manager)
 {
-  MetaX11Display *x11_display = meta_get_display ()->x11_display;
+  MetaContext *context =
+    meta_wayland_compositor_get_context (manager->compositor);
+  MetaDisplay *display = meta_context_get_display (context);
+  MetaX11Display *x11_display = display->x11_display;
 
   meta_xwayland_set_primary_output (x11_display);
 }
@@ -1053,18 +1143,21 @@ on_x11_display_closing (MetaDisplay         *display,
                         MetaXWaylandManager *manager)
 {
   MetaX11Display *x11_display = meta_display_get_x11_display (display);
+  MetaMonitorManager *monitor_manager =
+    monitor_manager_from_x11_display (x11_display);
 
   meta_xwayland_shutdown_dnd (manager, x11_display);
-  g_signal_handlers_disconnect_by_func (meta_monitor_manager_get (),
+  g_signal_handlers_disconnect_by_func (monitor_manager,
                                         monitors_changed_cb,
-                                        NULL);
+                                        manager);
 }
 
 static void
 meta_xwayland_init_xrandr (MetaXWaylandManager *manager,
                            MetaX11Display      *x11_display)
 {
-  MetaMonitorManager *monitor_manager = meta_monitor_manager_get ();
+  MetaMonitorManager *monitor_manager =
+    monitor_manager_from_x11_display (x11_display);
   Display *xdisplay = meta_x11_display_get_xdisplay (x11_display);
 
   manager->has_xrandr = XRRQueryExtension (xdisplay,
@@ -1078,7 +1171,7 @@ meta_xwayland_init_xrandr (MetaXWaylandManager *manager,
                   RRCrtcChangeNotifyMask | RROutputChangeNotifyMask);
 
   g_signal_connect (monitor_manager, "monitors-changed",
-                    G_CALLBACK (monitors_changed_cb), NULL);
+                    G_CALLBACK (monitors_changed_cb), manager);
 
   meta_xwayland_set_primary_output (x11_display);
 }
@@ -1113,79 +1206,21 @@ meta_xwayland_setup_xdisplay (MetaXWaylandManager *manager,
      we won't reset the tty).
   */
   XSetIOErrorHandler (x_io_error);
-#ifdef HAVE_XSETIOERROREXITHANDLER
   XSetIOErrorExitHandler (xdisplay, x_io_error_exit, manager);
-#endif
 
   XFixesSetClientDisconnectMode (xdisplay, XFixesClientDisconnectFlagTerminate);
-}
-
-static void
-meta_xwayland_connection_release (MetaXWaylandConnection *connection)
-{
-  unlink (connection->lock_file);
-  g_clear_pointer (&connection->lock_file, g_free);
-}
-
-void
-meta_xwayland_shutdown (MetaXWaylandManager *manager)
-{
-#ifdef HAVE_XSETIOERROREXITHANDLER
-  MetaDisplay *display = meta_get_display ();
-  MetaX11Display *x11_display;
-#endif
-  char path[256];
-
-  g_cancellable_cancel (manager->xserver_died_cancellable);
-
-  XSetIOErrorHandler (x_io_error_noop);
-#ifdef HAVE_XSETIOERROREXITHANDLER
-  x11_display = display->x11_display;
-  if (x11_display)
-    {
-      XSetIOErrorExitHandler (meta_x11_display_get_xdisplay (x11_display),
-                              x_io_error_exit_noop, NULL);
-    }
-#endif
-
-  meta_xwayland_terminate (manager);
-
-  if (manager->public_connection.name)
-    {
-      snprintf (path, sizeof path, "%s%d", X11_TMP_UNIX_PATH,
-                manager->public_connection.display_index);
-      unlink (path);
-      g_clear_pointer (&manager->public_connection.name, g_free);
-    }
-
-  if (manager->private_connection.name)
-    {
-      snprintf (path, sizeof path, "%s%d", X11_TMP_UNIX_PATH,
-                manager->private_connection.display_index);
-      unlink (path);
-      g_clear_pointer (&manager->private_connection.name, g_free);
-    }
-
-  meta_xwayland_connection_release (&manager->public_connection);
-  meta_xwayland_connection_release (&manager->private_connection);
-
-  if (manager->auth_file)
-    {
-      unlink (manager->auth_file);
-      g_clear_pointer (&manager->auth_file, g_free);
-    }
 }
 
 static void
 meta_xwayland_set_primary_output (MetaX11Display *x11_display)
 {
   Display *xdisplay = meta_x11_display_get_xdisplay (x11_display);
+  MetaMonitorManager *monitor_manager =
+    monitor_manager_from_x11_display (x11_display);
   XRRScreenResources *resources;
-  MetaMonitorManager *monitor_manager;
   MetaLogicalMonitor *primary_monitor;
   int i;
 
-  monitor_manager = meta_monitor_manager_get ();
   primary_monitor =
     meta_monitor_manager_get_primary_logical_monitor (monitor_manager);
 
@@ -1237,17 +1272,18 @@ meta_xwayland_set_primary_output (MetaX11Display *x11_display)
 }
 
 gboolean
-meta_xwayland_handle_xevent (XEvent *event)
+meta_xwayland_manager_handle_xevent (MetaXWaylandManager *manager,
+                                     XEvent              *event)
 {
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
-  MetaXWaylandManager *manager = &compositor->xwayland_manager;
-
-  if (meta_xwayland_dnd_handle_event (event))
+  if (meta_xwayland_dnd_handle_xevent (manager, event))
     return TRUE;
 
   if (manager->has_xrandr && event->type == manager->rr_event_base + RRNotify)
     {
-      MetaX11Display *x11_display = meta_get_display ()->x11_display;
+      MetaContext *context =
+        meta_wayland_compositor_get_context (manager->compositor);
+      MetaDisplay *display = meta_context_get_display (context);
+      MetaX11Display *x11_display = meta_display_get_x11_display (display);
 
       meta_xwayland_set_primary_output (x11_display);
       return TRUE;

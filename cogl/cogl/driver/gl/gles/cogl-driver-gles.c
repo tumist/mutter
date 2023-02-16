@@ -143,24 +143,24 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       required_format = COGL_PIXEL_FORMAT_RGB_888;
       break;
 
-    case COGL_PIXEL_FORMAT_RGBA_1010102:
-    case COGL_PIXEL_FORMAT_RGBA_1010102_PRE:
+    case COGL_PIXEL_FORMAT_ABGR_2101010:
+    case COGL_PIXEL_FORMAT_ABGR_2101010_PRE:
 #if G_BYTE_ORDER == G_LITTLE_ENDIAN
       if (_cogl_has_private_feature
           (context,  COGL_PRIVATE_FEATURE_TEXTURE_FORMAT_RGBA1010102))
         {
-          glintformat = GL_RGBA;
+          glintformat = GL_RGB10_A2_EXT;
           glformat = GL_RGBA;
           gltype = GL_UNSIGNED_INT_2_10_10_10_REV_EXT;
           break;
         }
       G_GNUC_FALLTHROUGH;
 #endif
+    case COGL_PIXEL_FORMAT_RGBA_1010102:
+    case COGL_PIXEL_FORMAT_RGBA_1010102_PRE:
     case COGL_PIXEL_FORMAT_BGRA_1010102:
     case COGL_PIXEL_FORMAT_BGRA_1010102_PRE:
     case COGL_PIXEL_FORMAT_XBGR_2101010:
-    case COGL_PIXEL_FORMAT_ABGR_2101010:
-    case COGL_PIXEL_FORMAT_ABGR_2101010_PRE:
     case COGL_PIXEL_FORMAT_XRGB_2101010:
     case COGL_PIXEL_FORMAT_ARGB_2101010:
     case COGL_PIXEL_FORMAT_ARGB_2101010_PRE:
@@ -168,10 +168,10 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       if (_cogl_has_private_feature
           (context,  COGL_PRIVATE_FEATURE_TEXTURE_FORMAT_RGBA1010102))
         {
-          glintformat = GL_RGBA;
+          glintformat = GL_RGB10_A2_EXT;
           glformat = GL_RGBA;
           gltype = GL_UNSIGNED_INT_2_10_10_10_REV_EXT;
-          required_format = COGL_PIXEL_FORMAT_RGBA_1010102;
+          required_format = COGL_PIXEL_FORMAT_ABGR_2101010;
           required_format |= (format & COGL_PREMULT_BIT);
           break;
         }
@@ -269,6 +269,25 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
     *out_gltype = gltype;
 
   return required_format;
+}
+
+static gboolean
+_cogl_driver_read_pixels_format_supported (CoglContext *context,
+                                           GLenum       glintformat,
+                                           GLenum       glformat,
+                                           GLenum       gltype)
+{
+  if (glformat == GL_RGBA && gltype == GL_UNSIGNED_BYTE)
+    return TRUE;
+
+  if (glintformat == GL_RGB10_A2_EXT &&
+      glformat == GL_RGBA &&
+      gltype == GL_UNSIGNED_INT_2_10_10_10_REV_EXT &&
+      _cogl_has_private_feature (context,
+                                 COGL_PRIVATE_FEATURE_TEXTURE_FORMAT_RGBA1010102))
+    return TRUE;
+
+  return FALSE;
 }
 
 static gboolean
@@ -477,6 +496,7 @@ _cogl_driver_gles =
     _cogl_gl_get_graphics_reset_status,
     _cogl_driver_pixel_format_from_gl_internal,
     _cogl_driver_pixel_format_to_gl,
+    _cogl_driver_read_pixels_format_supported,
     _cogl_driver_update_features,
     _cogl_driver_gl_create_framebuffer_driver,
     _cogl_driver_gl_flush_framebuffer_state,

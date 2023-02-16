@@ -24,6 +24,8 @@
 
 #include <glib.h>
 #include <gio/gio.h>
+#define G_SETTINGS_ENABLE_BACKEND
+#include <gio/gsettingsbackend.h>
 
 #include "core/meta-context-private.h"
 #include "tests/meta-backend-test.h"
@@ -59,6 +61,18 @@ struct _MetaContextTestClass
 G_DEFINE_TYPE_WITH_PRIVATE (MetaContextTest, meta_context_test,
                             META_TYPE_CONTEXT)
 
+static void
+ensure_gsettings_memory_backend (void)
+{
+  g_autoptr (GSettingsBackend) memory_backend = NULL;
+  GSettingsBackend *default_backend;
+
+  memory_backend = g_memory_settings_backend_new ();
+  default_backend = g_settings_backend_get_default ();
+  g_assert_true (G_TYPE_FROM_INSTANCE (memory_backend) ==
+                 G_TYPE_FROM_INSTANCE (default_backend));
+}
+
 static gboolean
 meta_context_test_configure (MetaContext   *context,
                              int           *argc,
@@ -83,12 +97,16 @@ meta_context_test_configure (MetaContext   *context,
     meta_ensure_test_client_path (*argc, *argv);
 
   meta_wayland_override_display_name ("mutter-test-display");
+#ifdef HAVE_XWAYLAND
   meta_xwayland_override_display_number (512);
+#endif
 
   plugin_name = g_getenv ("MUTTER_TEST_PLUGIN_PATH");
   if (!plugin_name)
     plugin_name = "libdefault";
   meta_context_set_plugin_name (context, plugin_name);
+
+  ensure_gsettings_memory_backend ();
 
   return TRUE;
 }
@@ -129,7 +147,7 @@ meta_context_test_setup (MetaContext  *context,
                                                                    error))
     return FALSE;
 
-  backend = meta_get_backend ();
+  backend = meta_context_get_backend (context);
   settings = meta_backend_get_settings (backend);
   meta_settings_override_experimental_features (settings);
   meta_settings_enable_experimental_feature (
@@ -388,10 +406,11 @@ meta_context_test_init (MetaContextTest *context_test)
       return;
     }
 
-  if (!g_dbus_proxy_call_sync (proxy,
-                               "Reset",
-                               NULL,
-                               G_DBUS_CALL_FLAGS_NO_AUTO_START, -1, NULL,
-                               &error))
+  ret = g_dbus_proxy_call_sync (proxy,
+                                "Reset",
+                                NULL,
+                                G_DBUS_CALL_FLAGS_NO_AUTO_START, -1, NULL,
+                                &error);
+  if (ret == NULL)
     g_warning ("Failed to clear mocked color devices: %s", error->message);
 }

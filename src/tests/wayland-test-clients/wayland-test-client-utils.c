@@ -219,17 +219,19 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 WaylandDisplay *
-wayland_display_new (WaylandDisplayCapabilities capabilities)
+wayland_display_new_full (WaylandDisplayCapabilities  capabilities,
+                          struct wl_display          *wayland_display)
 {
   WaylandDisplay *display;
+
+  g_assert_nonnull (wayland_display);
 
   display = g_object_new (wayland_display_get_type (), NULL);
 
   display->capabilities = capabilities;
   display->properties = g_hash_table_new_full (g_str_hash, g_str_equal,
                                                g_free, g_free);
-  display->display = wl_display_connect (NULL);
-  g_assert_nonnull (display->display);
+  display->display = wayland_display;
 
   display->registry = wl_display_get_registry (display->display);
   wl_registry_add_listener (display->registry, &registry_listener, display);
@@ -248,6 +250,13 @@ wayland_display_new (WaylandDisplayCapabilities capabilities)
   wl_display_roundtrip (display->display);
 
   return display;
+}
+
+WaylandDisplay *
+wayland_display_new (WaylandDisplayCapabilities capabilities)
+{
+  return wayland_display_new_full (capabilities,
+                                   wl_display_connect (NULL));
 }
 
 static void
@@ -381,6 +390,94 @@ draw_surface (WaylandDisplay    *display,
   wl_surface_attach (surface, buffer, 0, 0);
 }
 
+static void
+handle_xdg_toplevel_configure (void                *data,
+                               struct xdg_toplevel *xdg_toplevel,
+                               int32_t              width,
+                               int32_t              height,
+                               struct wl_array     *state)
+{
+  WaylandSurface *surface = data;
+
+  if (width == 0)
+    surface->width = surface->default_width;
+  else
+    surface->width = width;
+
+  if (height == 0)
+    surface->height = surface->default_height;
+  else
+    surface->height = height;
+}
+
+static void
+handle_xdg_toplevel_close (void                *data,
+                           struct xdg_toplevel *xdg_toplevel)
+{
+  g_assert_not_reached ();
+}
+
+static const struct xdg_toplevel_listener xdg_toplevel_listener = {
+  handle_xdg_toplevel_configure,
+  handle_xdg_toplevel_close,
+};
+
+static void
+handle_xdg_surface_configure (void               *data,
+                              struct xdg_surface *xdg_surface,
+                              uint32_t            serial)
+{
+  WaylandSurface *surface = data;
+
+  draw_surface (surface->display,
+                surface->wl_surface,
+                surface->width, surface->height,
+                surface->color);
+
+  xdg_surface_ack_configure (xdg_surface, serial);
+  wl_surface_commit (surface->wl_surface);
+}
+
+static const struct xdg_surface_listener xdg_surface_listener = {
+  handle_xdg_surface_configure,
+};
+
+WaylandSurface *
+wayland_surface_new (WaylandDisplay *display,
+                     const char     *title,
+                     int             default_width,
+                     int             default_height,
+                     uint32_t        color)
+{
+  WaylandSurface *surface;
+
+  surface = g_new0 (WaylandSurface, 1);
+  surface->display = display;
+  surface->default_width = default_width;
+  surface->default_height = default_height;
+  surface->color = color;
+  surface->wl_surface = wl_compositor_create_surface (display->compositor);
+  surface->xdg_surface = xdg_wm_base_get_xdg_surface (display->xdg_wm_base,
+                                                      surface->wl_surface);
+  xdg_surface_add_listener (surface->xdg_surface, &xdg_surface_listener,
+                            surface);
+  surface->xdg_toplevel = xdg_surface_get_toplevel (surface->xdg_surface);
+  xdg_toplevel_add_listener (surface->xdg_toplevel, &xdg_toplevel_listener,
+                             surface);
+  xdg_toplevel_set_title (surface->xdg_toplevel, title);
+
+  return surface;
+}
+
+void
+wayland_surface_free (WaylandSurface *surface)
+{
+  g_clear_pointer (&surface->xdg_toplevel, xdg_toplevel_destroy);
+  g_clear_pointer (&surface->xdg_surface, xdg_surface_destroy);
+  g_clear_pointer (&surface->wl_surface, wl_surface_destroy);
+  g_free (surface);
+}
+
 const char *
 lookup_property_value (WaylandDisplay *display,
                        const char     *name)
@@ -441,6 +538,30 @@ wait_for_view_verified (WaylandDisplay *display,
                             &view_verification_listener, NULL);
 
   while (view_verification_callback)
+    {
+      if (wl_display_dispatch (display->display) == -1)
+        g_error ("%s: Failed to dispatch Wayland display", __func__);
+    }
+}
+
+static void
+on_sync_event (WaylandDisplay *display,
+               uint32_t        serial,
+               uint32_t       *expected_serial)
+{
+  g_assert_cmpuint (serial, ==, *expected_serial);
+  *expected_serial = serial + 1;
+}
+
+void
+wait_for_sync_event (WaylandDisplay *display,
+                     uint32_t        serial)
+{
+  uint32_t expected_serial = serial;
+
+  g_signal_connect (display, "sync-event", G_CALLBACK (on_sync_event),
+                    &expected_serial);
+  while (expected_serial != serial + 1)
     {
       if (wl_display_dispatch (display->display) == -1)
         g_error ("%s: Failed to dispatch Wayland display", __func__);

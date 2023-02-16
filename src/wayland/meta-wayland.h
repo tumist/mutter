@@ -39,9 +39,6 @@ void                    meta_wayland_compositor_prepare_shutdown (MetaWaylandCom
 void                    meta_wayland_compositor_init_display    (MetaWaylandCompositor *compositor,
                                                                  MetaDisplay           *display);
 
-META_EXPORT_TEST
-MetaWaylandCompositor  *meta_wayland_compositor_get_default     (void);
-
 void                    meta_wayland_compositor_update          (MetaWaylandCompositor *compositor,
                                                                  const ClutterEvent    *event);
 
@@ -70,6 +67,8 @@ void                    meta_wayland_compositor_add_presentation_feedback_surfac
 void                    meta_wayland_compositor_remove_presentation_feedback_surface (MetaWaylandCompositor *compositor,
                                                                                       MetaWaylandSurface    *surface);
 
+GQueue                 *meta_wayland_compositor_get_committed_transactions (MetaWaylandCompositor *compositor);
+
 META_EXPORT_TEST
 const char             *meta_wayland_get_wayland_display_name   (MetaWaylandCompositor *compositor);
 
@@ -90,6 +89,7 @@ void                    meta_wayland_compositor_schedule_surface_association (Me
                                                                               int                    id,
                                                                               MetaWindow            *window);
 
+#ifdef HAVE_XWAYLAND
 void                    meta_wayland_compositor_notify_surface_id (MetaWaylandCompositor *compositor,
                                                                    int                    id,
                                                                    MetaWaylandSurface    *surface);
@@ -97,7 +97,17 @@ void                    meta_wayland_compositor_notify_surface_id (MetaWaylandCo
 META_EXPORT_TEST
 MetaXWaylandManager *   meta_wayland_compositor_get_xwayland_manager (MetaWaylandCompositor *compositor);
 
-MetaContext * meta_wayland_compositor_get_context (MetaWaylandCompositor *compositor);
-
 #endif
 
+META_EXPORT_TEST
+MetaContext * meta_wayland_compositor_get_context (MetaWaylandCompositor *compositor);
+
+META_EXPORT_TEST
+struct wl_display * meta_wayland_compositor_get_wayland_display (MetaWaylandCompositor *compositor);
+
+gboolean meta_wayland_compositor_is_grabbed (MetaWaylandCompositor *compositor);
+
+META_EXPORT_TEST
+MetaWaylandFilterManager * meta_wayland_compositor_get_filter_manager (MetaWaylandCompositor *compositor);
+
+#endif

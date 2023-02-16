@@ -31,7 +31,6 @@
 #include "meta/window.h"
 #include "core/meta-workspace-manager-private.h"
 #include "tests/meta-test-utils.h"
-#include "ui/ui.h"
 #include "wayland/meta-wayland.h"
 #include "x11/meta-x11-display-private.h"
 
@@ -43,7 +42,8 @@ typedef struct {
   GString *warning_messages;
   GMainLoop *loop;
   gulong x11_display_opened_handler_id;
-  MetaVirtualMonitor *virtual_monitor;
+  GHashTable *virtual_monitors;
+  ClutterVirtualInputDevice *pointer;
 } TestCase;
 
 static gboolean
@@ -77,6 +77,9 @@ test_case_new (MetaContext *context)
 {
   TestCase *test = g_new0 (TestCase, 1);
   MetaDisplay *display = meta_context_get_display (context);
+  MetaBackend *backend = meta_context_get_backend (context);
+  ClutterSeat *seat = meta_backend_get_default_seat (backend);
+  MetaVirtualMonitor *monitor;
 
   if (display->x11_display)
     {
@@ -85,7 +88,7 @@ test_case_new (MetaContext *context)
   else
     {
       test->x11_display_opened_handler_id =
-        g_signal_connect (meta_get_display (), "x11-display-opened",
+        g_signal_connect (display, "x11-display-opened",
                           G_CALLBACK (on_x11_display_opened),
                           test);
     }
@@ -93,7 +96,15 @@ test_case_new (MetaContext *context)
   test->context = context;
   test->clients = g_hash_table_new (g_str_hash, g_str_equal);
   test->loop = g_main_loop_new (NULL, FALSE);
-  test->virtual_monitor = meta_create_test_monitor (context, 800, 600, 60.0);
+  test->pointer = clutter_seat_create_virtual_device (seat,
+                                                      CLUTTER_POINTER_DEVICE);
+
+  test->virtual_monitors = g_hash_table_new_full (g_str_hash,
+                                                  g_str_equal,
+                                                  g_free,
+                                                  g_object_unref);
+  monitor = meta_create_test_monitor (context, 800, 600, 60.0);
+  g_hash_table_insert (test->virtual_monitors, g_strdup ("default"), monitor);
 
   return test;
 }
@@ -114,16 +125,19 @@ test_case_dispatch (TestCase *test,
 {
   MetaBackend *backend = meta_context_get_backend (test->context);
   ClutterActor *stage = meta_backend_get_stage (backend);
+  MetaDisplay *display = meta_context_get_display (test->context);
+  MetaCompositor *compositor = meta_display_get_compositor (display);
+  MetaLaters *laters = meta_compositor_get_laters (compositor);
 
   /* Wait until we've done any outstanding queued up work.
    * Though we add this as BEFORE_REDRAW, the iteration that runs the
    * BEFORE_REDRAW idles will proceed on and do the redraw, so we're
    * waiting until after *all* frame processing.
    */
-  meta_later_add (META_LATER_BEFORE_REDRAW,
-                  test_case_loop_quit,
-                  test,
-                  NULL);
+  meta_laters_add (laters, META_LATER_BEFORE_REDRAW,
+                   test_case_loop_quit,
+                   test,
+                   NULL);
 
   clutter_stage_schedule_update (CLUTTER_STAGE (stage));
   g_main_loop_run (test->loop);
@@ -224,7 +238,7 @@ test_case_assert_stacking (TestCase       *test,
                            MetaWorkspace  *workspace,
                            GError        **error)
 {
-  MetaDisplay *display = meta_get_display ();
+  MetaDisplay *display = meta_context_get_display (test->context);
   guint64 *windows;
   int n_windows;
   GString *stack_string = g_string_new (NULL);
@@ -241,13 +255,6 @@ test_case_assert_stacking (TestCase       *test,
 
       if (window != NULL && window->title)
         {
-          /* See comment in meta_ui_new() about why the dummy window for GTK+ theming
-           * is managed as a MetaWindow.
-           */
-          if (META_STACK_ID_IS_X11 (windows[i]) &&
-              meta_ui_window_is_dummy (display->x11_display->ui, windows[i]))
-            continue;
-
           if (stack_string->len > 0)
             g_string_append_c (stack_string, ' ');
 
@@ -303,7 +310,7 @@ test_case_assert_focused (TestCase    *test,
                           const char  *expected_window,
                           GError     **error)
 {
-  MetaDisplay *display = meta_get_display ();
+  MetaDisplay *display = meta_context_get_display (test->context);
 
   if (!display->focus_window)
     {
@@ -363,7 +370,7 @@ static gboolean
 test_case_check_xserver_stacking (TestCase *test,
                                   GError  **error)
 {
-  MetaDisplay *display = meta_get_display ();
+  MetaDisplay *display = meta_context_get_display (test->context);
   GString *local_string = g_string_new (NULL);
   GString *x11_string = g_string_new (NULL);
   int i;
@@ -468,6 +475,25 @@ parse_window_size (MetaWindow *window,
 }
 
 static gboolean
+str_to_bool (const char *str,
+             gboolean   *val)
+{
+  if (g_ascii_strcasecmp (str, "true") == 0) {
+    if (val != NULL)
+      *val = true;
+    return TRUE;
+  }
+
+  if (g_ascii_strcasecmp (str, "false") == 0) {
+    if (val != NULL)
+      *val = false;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static gboolean
 test_case_do (TestCase *test,
               int       argc,
               char    **argv,
@@ -553,9 +579,7 @@ test_case_do (TestCase *test,
     }
   else if (strcmp (argv[0], "accept_focus") == 0)
     {
-      if (argc != 3 ||
-          (g_ascii_strcasecmp (argv[2], "true") != 0 &&
-           g_ascii_strcasecmp (argv[2], "false") != 0))
+      if (argc != 3 || !str_to_bool (argv[2], NULL))
         BAD_COMMAND("usage: %s <client-id>/<window-id> [true|false]",
                     argv[0]);
 
@@ -572,9 +596,7 @@ test_case_do (TestCase *test,
     }
   else if (strcmp (argv[0], "can_take_focus") == 0)
     {
-      if (argc != 3 ||
-          (g_ascii_strcasecmp (argv[2], "true") != 0 &&
-           g_ascii_strcasecmp (argv[2], "false") != 0))
+      if (argc != 3 || !str_to_bool (argv[2], NULL))
         BAD_COMMAND("usage: %s <client-id>/<window-id> [true|false]",
                     argv[0]);
 
@@ -591,9 +613,7 @@ test_case_do (TestCase *test,
     }
   else if (strcmp (argv[0], "accept_take_focus") == 0)
     {
-      if (argc != 3 ||
-          (g_ascii_strcasecmp (argv[2], "true") != 0 &&
-           g_ascii_strcasecmp (argv[2], "false") != 0))
+      if (argc != 3 || !str_to_bool (argv[2], NULL))
         BAD_COMMAND("usage: %s <client-id>/<window-id> [true|false]",
                     argv[0]);
 
@@ -854,7 +874,7 @@ test_case_do (TestCase *test,
       else
         return FALSE;
 
-      MetaDisplay *display = meta_get_display ();
+      MetaDisplay *display = meta_context_get_display (test->context);
       MetaWorkspaceManager *workspace_manager =
         meta_display_get_workspace_manager (display);
       MetaRectangle rect = { x, y, width, height };
@@ -877,7 +897,7 @@ test_case_do (TestCase *test,
       if (argc != 1)
         BAD_COMMAND("usage: %s", argv[0]);
 
-      MetaDisplay *display = meta_get_display ();
+      MetaDisplay *display = meta_context_get_display (test->context);
       MetaWorkspaceManager *workspace_manager =
         meta_display_get_workspace_manager (display);
       GList *workspaces =
@@ -1013,28 +1033,73 @@ test_case_do (TestCase *test,
         meta_backend_get_monitor_manager (backend);
       MetaCrtcMode *crtc_mode;
       const MetaCrtcModeInfo *crtc_mode_info;
+      MetaVirtualMonitor *monitor;
 
       if (argc != 4)
         BAD_COMMAND ("usage: %s <monitor-id> <width> <height>", argv[0]);
 
-      if (strcmp (argv[1], "0") != 0 &&
-          strcmp (argv[1], "primary") != 0)
+      monitor = g_hash_table_lookup (test->virtual_monitors, argv[1]);
+      if (!monitor)
         BAD_COMMAND ("Unknown monitor %s", argv[1]);
 
-      crtc_mode = meta_virtual_monitor_get_crtc_mode (test->virtual_monitor);
+      crtc_mode = meta_virtual_monitor_get_crtc_mode (monitor);
       crtc_mode_info = meta_crtc_mode_get_info (crtc_mode);
-      meta_virtual_monitor_set_mode (test->virtual_monitor,
+      meta_virtual_monitor_set_mode (monitor,
                                      atoi (argv[2]),
                                      atoi (argv[3]),
                                      crtc_mode_info->refresh_rate);
       meta_monitor_manager_reload (monitor_manager);
+    }
+  else if (strcmp (argv[0], "add_monitor") == 0)
+    {
+      MetaBackend *backend = meta_context_get_backend (test->context);
+      MetaMonitorManager *monitor_manager =
+        meta_backend_get_monitor_manager (backend);
+      MetaVirtualMonitor *monitor;
+      int width, height;
+
+      if (argc != 4)
+        BAD_COMMAND ("usage: %s <monitor-id> <width> <height>", argv[0]);
+
+      width = atoi (argv[2]);
+      height = atoi (argv[3]);
+
+      monitor = meta_create_test_monitor (test->context, width, height, 60.0);
+      meta_monitor_manager_reload (monitor_manager);
+
+      g_hash_table_insert (test->virtual_monitors, g_strdup (argv[1]), monitor);
+    }
+  else if (strcmp (argv[0], "assert_primary_monitor") == 0)
+    {
+      MetaVirtualMonitor *virtual_monitor;
+      MetaOutput *output;
+      MetaMonitor *monitor;
+
+      if (argc != 2)
+        BAD_COMMAND ("usage: %s <monitor-id>", argv[0]);
+
+      virtual_monitor = g_hash_table_lookup (test->virtual_monitors, argv[1]);
+      if (!virtual_monitor)
+        BAD_COMMAND ("Unknown monitor %s", argv[1]);
+
+      output = meta_virtual_monitor_get_output (virtual_monitor);
+      monitor = meta_output_get_monitor (output);
+
+      if (!meta_monitor_is_primary (monitor))
+        {
+          g_set_error (error,
+                       META_TEST_CLIENT_ERROR,
+                       META_TEST_CLIENT_ERROR_ASSERTION_FAILED,
+                       "Monitor %s is not the primary monitor", argv[1]);
+          return FALSE;
+        }
     }
   else if (strcmp (argv[0], "num_workspaces") == 0)
     {
       if (argc != 2)
         BAD_COMMAND("usage: %s <num>", argv[0]);
 
-      MetaDisplay *display = meta_get_display ();
+      MetaDisplay *display = meta_context_get_display (test->context);
       MetaWorkspaceManager *workspace_manager =
         meta_display_get_workspace_manager (display);
       uint32_t timestamp = meta_display_get_current_time_roundtrip (display);
@@ -1047,7 +1112,7 @@ test_case_do (TestCase *test,
       if (argc != 2)
         BAD_COMMAND("usage: %s <workspace-index>", argv[0]);
 
-      MetaDisplay *display = meta_get_display ();
+      MetaDisplay *display = meta_context_get_display (test->context);
       MetaWorkspaceManager *workspace_manager =
         meta_display_get_workspace_manager (display);
 
@@ -1076,7 +1141,7 @@ test_case_do (TestCase *test,
       if (!window)
         return FALSE;
 
-      MetaDisplay *display = meta_get_display ();
+      MetaDisplay *display = meta_context_get_display (test->context);
       MetaWorkspaceManager *workspace_manager =
         meta_display_get_workspace_manager (display);
 
@@ -1095,7 +1160,7 @@ test_case_do (TestCase *test,
       if (argc < 2)
         BAD_COMMAND("usage: %s <workspace-index> [<window-id1> ...]", argv[0]);
 
-      MetaDisplay *display = meta_get_display ();
+      MetaDisplay *display = meta_context_get_display (test->context);
       MetaWorkspaceManager *workspace_manager =
         meta_display_get_workspace_manager (display);
 
@@ -1128,7 +1193,7 @@ test_case_do (TestCase *test,
       if (!window)
         return FALSE;
 
-      MetaDisplay *display = meta_get_display ();
+      MetaDisplay *display = meta_context_get_display (test->context);
       MetaWorkspaceManager *workspace_manager =
         meta_display_get_workspace_manager (display);
 
@@ -1144,23 +1209,23 @@ test_case_do (TestCase *test,
     }
   else if (strcmp (argv[0], "make_above") == 0)
     {
-      if (argc != 3 ||
-          (g_ascii_strcasecmp (argv[2], "true") != 0 &&
-           g_ascii_strcasecmp (argv[2], "false") != 0))
+      MetaTestClient *client;
+      const char *window_id;
+      MetaWindow *window;
+      gboolean make_above;
+
+      if (argc != 3 || !str_to_bool (argv[2], &make_above))
         BAD_COMMAND("usage: %s <client-id>/<window-id> [true|false]",
                     argv[0]);
 
-      MetaTestClient *client;
-      const char *window_id;
       if (!test_case_parse_window_id (test, argv[1], &client, &window_id, error))
         return FALSE;
 
-      MetaWindow *window;
       window = meta_test_client_find_window (client, window_id, error);
       if (!window)
         return FALSE;
 
-      if (g_ascii_strcasecmp (argv[2], "true") == 0)
+      if (make_above)
         meta_window_make_above (window);
       else
         meta_window_unmake_above (window);
@@ -1170,10 +1235,71 @@ test_case_do (TestCase *test,
       if (argc != 1)
         BAD_COMMAND("usage: %s", argv[0]);
 
-      MetaDisplay *display = meta_get_display ();
+      MetaDisplay *display = meta_context_get_display (test->context);
       uint32_t timestamp = meta_display_get_current_time_roundtrip (display);
 
       meta_display_focus_default_window (display, timestamp);
+    }
+  else if (strcmp (argv[0], "move_cursor_to") == 0)
+    {
+      if (argc != 3)
+        BAD_COMMAND("usage: %s <x> <y>", argv[0]);
+
+      float x = atof (argv[1]);
+      float y = atof (argv[2]);
+
+      clutter_virtual_input_device_notify_absolute_motion (test->pointer,
+                                                           CLUTTER_CURRENT_TIME,
+                                                           x, y);
+      meta_flush_input (test->context);
+    }
+  else if (strcmp (argv[0], "click") == 0)
+    {
+      if (argc != 1)
+        BAD_COMMAND("usage: %s", argv[0]);
+
+      clutter_virtual_input_device_notify_button (test->pointer,
+                                                  CLUTTER_CURRENT_TIME,
+                                                  CLUTTER_BUTTON_PRIMARY,
+                                                  CLUTTER_BUTTON_STATE_PRESSED);
+      clutter_virtual_input_device_notify_button (test->pointer,
+                                                  CLUTTER_CURRENT_TIME,
+                                                  CLUTTER_BUTTON_PRIMARY,
+                                                  CLUTTER_BUTTON_STATE_RELEASED);
+      meta_flush_input (test->context);
+    }
+  else if (strcmp (argv[0], "set_pref") == 0)
+    {
+      GSettings *wm;
+      GSettings *mutter;
+
+      if (argc != 3)
+        BAD_COMMAND("usage: %s <KEY> <VALUE>", argv[0]);
+
+      wm = g_settings_new ("org.gnome.desktop.wm.preferences");
+      g_assert_nonnull (wm);
+      mutter = g_settings_new ("org.gnome.mutter");
+      g_assert_nonnull (mutter);
+
+      if (strcmp (argv[1], "raise-on-click") == 0)
+        {
+          gboolean value;
+          if (!str_to_bool (argv[2], &value))
+            BAD_COMMAND("usage: %s %s [true|false]", argv[0], argv[1]);
+
+          g_assert_true (g_settings_set_boolean (wm, "raise-on-click", value));
+        }
+      else if (strcmp (argv[1], "workspaces-only-on-primary") == 0)
+        {
+          gboolean value;
+          if (!str_to_bool (argv[2], &value))
+            BAD_COMMAND("usage: %s %s [true|false]", argv[0], argv[1]);
+
+          g_assert_true (g_settings_set_boolean (mutter, "workspaces-only-on-primary", value));
+        }
+      else {
+        BAD_COMMAND("Unknown preference %s", argv[1]);
+      }
     }
   else
     {
@@ -1215,7 +1341,7 @@ test_case_destroy (TestCase *test,
 
   g_clear_pointer (&test->waiter, meta_async_waiter_destroy);
 
-  display = meta_get_display ();
+  display = meta_context_get_display (test->context);
   g_clear_signal_handler (&test->x11_display_opened_handler_id, display);
   if (display->x11_display && test->alarm_filter)
     {
@@ -1224,7 +1350,8 @@ test_case_destroy (TestCase *test,
     }
 
   g_hash_table_destroy (test->clients);
-  g_object_unref (test->virtual_monitor);
+  g_hash_table_unref (test->virtual_monitors);
+  g_object_unref (test->pointer);
   g_free (test);
 
   return TRUE;
@@ -1435,7 +1562,7 @@ int
 main (int argc, char **argv)
 {
   g_autoptr (MetaContext) context = NULL;
-  GPtrArray *tests;
+  g_autoptr (GPtrArray) tests = NULL;
   RunTestsInfo info;
 
   context = meta_create_test_context (META_CONTEXT_TEST_TYPE_HEADLESS,
@@ -1445,7 +1572,7 @@ main (int argc, char **argv)
 
   g_assert (meta_context_configure (context, &argc, &argv, NULL));
 
-  tests = g_ptr_array_new ();
+  tests = g_ptr_array_new_with_free_func (g_free);
   if (all_tests)
     {
       GFile *test_dir = g_file_new_for_path (MUTTER_PKGDATADIR "/tests");

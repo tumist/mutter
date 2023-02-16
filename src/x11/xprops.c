@@ -90,7 +90,6 @@ from The Open Group.
 #include "core/util-private.h"
 #include "core/window-private.h"
 #include "meta/meta-x11-errors.h"
-#include "ui/ui.h"
 #include "x11/meta-x11-display-private.h"
 #include "x11/mutter-Xatomtype.h"
 
@@ -317,23 +316,6 @@ motif_hints_from_results (GetPropertyResults *results,
   results->prop = NULL;
 
   return TRUE;
-}
-
-gboolean
-meta_prop_get_motif_hints (MetaX11Display *x11_display,
-                           Window          xwindow,
-                           Atom            xatom,
-                           MotifWmHints  **hints_p)
-{
-  GetPropertyResults results;
-
-  *hints_p = NULL;
-
-  if (!get_property (x11_display, xwindow, xatom, AnyPropertyType,
-                     &results))
-    return FALSE;
-
-  return motif_hints_from_results (&results, hints_p);
 }
 
 static gboolean
@@ -957,6 +939,8 @@ meta_prop_get_values (MetaX11Display *x11_display,
           values[i].type = META_PROP_VALUE_INVALID;
           goto next;
         }
+
+      values[i].source_xwindow = xwindow;
 
       switch (values[i].type)
         {

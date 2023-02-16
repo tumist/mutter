@@ -18,10 +18,19 @@
 #ifndef META_WAYLAND_TEST_UTILS_H
 #define META_WAYLAND_TEST_UTILS_H
 
+#include "meta/meta-context.h"
+
 typedef struct _MetaWaylandTestClient MetaWaylandTestClient;
 
-MetaWaylandTestClient * meta_wayland_test_client_new (const char *test_client_name);
+MetaWaylandTestClient * meta_wayland_test_client_new (MetaContext *context,
+                                                      const char  *test_client_name);
 
 void meta_wayland_test_client_finish (MetaWaylandTestClient *wayland_test_client);
+
+MetaWindow * meta_find_client_window (MetaContext *context,
+                                      const char  *title);
+
+MetaWindow * meta_wait_for_client_window (MetaContext *context,
+                                          const char  *title);
 
 #endif /* META_WAYLAND_TEST_UTILS_H */

@@ -373,17 +373,18 @@ assign_cursor_plane (MetaCursorRendererNative *native,
 }
 
 static float
-calculate_cursor_crtc_sprite_scale (MetaCursorSprite   *cursor_sprite,
+calculate_cursor_crtc_sprite_scale (MetaBackend        *backend,
+                                    MetaCursorSprite   *cursor_sprite,
                                     MetaLogicalMonitor *logical_monitor)
 {
-  if (meta_is_stage_views_scaled ())
+  if (meta_backend_is_stage_views_scaled (backend))
     {
       return (meta_logical_monitor_get_scale (logical_monitor) *
               meta_cursor_sprite_get_texture_scale (cursor_sprite));
     }
   else
     {
-      return 1.0;
+      return meta_cursor_sprite_get_texture_scale (cursor_sprite);
     }
 }
 
@@ -393,6 +394,8 @@ set_crtc_cursor (MetaCursorRendererNative *cursor_renderer_native,
                  MetaCrtc                 *crtc,
                  MetaCursorSprite         *cursor_sprite)
 {
+  MetaCursorRendererNativePrivate *priv =
+    meta_cursor_renderer_native_get_instance_private (cursor_renderer_native);
   MetaCursorRenderer *cursor_renderer =
     META_CURSOR_RENDERER (cursor_renderer_native);
   MetaOutput *output = meta_crtc_get_outputs (crtc)->data;
@@ -438,7 +441,8 @@ set_crtc_cursor (MetaCursorRendererNative *cursor_renderer_native,
   tex_height = cogl_texture_get_height (texture);
 
   cursor_crtc_scale =
-    calculate_cursor_crtc_sprite_scale (cursor_sprite,
+    calculate_cursor_crtc_sprite_scale (priv->backend,
+                                        cursor_sprite,
                                         logical_monitor);
 
   cursor_rect = (MetaRectangle) {
@@ -763,7 +767,9 @@ get_common_crtc_sprite_scale_for_logical_monitors (MetaCursorRenderer *renderer,
         continue;
 
       tmp_scale =
-        calculate_cursor_crtc_sprite_scale (cursor_sprite, logical_monitor);
+        calculate_cursor_crtc_sprite_scale (backend,
+                                            cursor_sprite,
+                                            logical_monitor);
 
       if (has_visible_crtc_sprite && scale != tmp_scale)
         return FALSE;
@@ -1464,6 +1470,7 @@ is_cursor_scale_and_transform_valid (MetaCursorRenderer *renderer,
 
 static cairo_surface_t *
 scale_and_transform_cursor_sprite_cpu (uint8_t              *pixels,
+                                       cairo_format_t        pixel_format,
                                        int                   width,
                                        int                   height,
                                        int                   rowstride,
@@ -1521,7 +1528,7 @@ scale_and_transform_cursor_sprite_cpu (uint8_t              *pixels,
   cairo_scale (cr, scale, scale);
 
   source_surface = cairo_image_surface_create_for_data (pixels,
-                                                        CAIRO_FORMAT_ARGB32,
+                                                        pixel_format,
                                                         width,
                                                         height,
                                                         rowstride);
@@ -1532,6 +1539,21 @@ scale_and_transform_cursor_sprite_cpu (uint8_t              *pixels,
   cairo_surface_destroy (source_surface);
 
   return target_surface;
+}
+
+static cairo_format_t
+gbm_format_to_cairo_format (uint32_t gbm_format)
+{
+  switch (gbm_format)
+    {
+    case GBM_FORMAT_XRGB8888:
+      return CAIRO_FORMAT_RGB24;
+    default:
+      g_warn_if_reached ();
+      G_GNUC_FALLTHROUGH;
+    case GBM_FORMAT_ARGB8888:
+      return CAIRO_FORMAT_ARGB32;
+    }
 }
 
 static void
@@ -1547,11 +1569,15 @@ load_scaled_and_transformed_cursor_sprite (MetaCursorRendererNative *native,
                                            uint32_t                  gbm_format)
 {
   if (!G_APPROX_VALUE (relative_scale, 1.f, FLT_EPSILON) ||
-      relative_transform != META_MONITOR_TRANSFORM_NORMAL)
+      relative_transform != META_MONITOR_TRANSFORM_NORMAL ||
+      gbm_format != GBM_FORMAT_ARGB8888)
     {
       cairo_surface_t *surface;
+      cairo_format_t cairo_format;
 
+      cairo_format = gbm_format_to_cairo_format (gbm_format),
       surface = scale_and_transform_cursor_sprite_cpu (data,
+                                                       cairo_format,
                                                        width,
                                                        height,
                                                        rowstride,
@@ -1565,7 +1591,7 @@ load_scaled_and_transformed_cursor_sprite (MetaCursorRendererNative *native,
                                              cairo_image_surface_get_width (surface),
                                              cairo_image_surface_get_width (surface),
                                              cairo_image_surface_get_stride (surface),
-                                             gbm_format);
+                                             GBM_FORMAT_ARGB8888);
 
       cairo_surface_destroy (surface);
     }

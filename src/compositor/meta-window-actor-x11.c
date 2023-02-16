@@ -41,6 +41,7 @@
 #include "meta/meta-x11-errors.h"
 #include "meta/window.h"
 #include "x11/window-x11.h"
+#include "x11/meta-sync-counter.h"
 #include "x11/meta-x11-display-private.h"
 #include "x11/window-x11.h"
 
@@ -54,19 +55,12 @@ struct _MetaWindowActorX11
 {
   MetaWindowActor parent;
 
-  /* List of FrameData for recent frames */
-  GList *frames;
-
   guint send_frame_messages_timer;
-  int64_t frame_drawn_time;
   gboolean pending_schedule_update_now;
 
   gulong repaint_scheduled_id;
   gulong size_changed_id;
 
-  /* If set, the client needs to be sent a _NET_WM_FRAME_DRAWN
-   * client message for one or more messages in ->frames */
-  gboolean needs_frame_drawn;
   gboolean repaint_scheduled;
 
   /*
@@ -111,30 +105,6 @@ static void cullable_iface_init (MetaCullableInterface *iface);
 G_DEFINE_TYPE_WITH_CODE (MetaWindowActorX11, meta_window_actor_x11, META_TYPE_WINDOW_ACTOR,
                          G_IMPLEMENT_INTERFACE (META_TYPE_CULLABLE, cullable_iface_init))
 
-/* Each time the application updates the sync request counter to a new even value
- * value, we queue a frame into the windows list of frames. Once we're painting
- * an update "in response" to the window, we fill in frame_counter with the
- * Cogl counter for that frame, and send _NET_WM_FRAME_DRAWN at the end of the
- * frame. _NET_WM_FRAME_TIMINGS is sent when we get a frame_complete callback.
- *
- * As an exception, if a window is completely obscured, we try to throttle drawning
- * to a slower frame rate. In this case, frame_counter stays -1 until
- * send_frame_message_timeout() runs, at which point we send both the
- * _NET_WM_FRAME_DRAWN and _NET_WM_FRAME_TIMINGS messages.
- */
-typedef struct
-{
-  uint64_t sync_request_serial;
-  int64_t frame_counter;
-  int64_t frame_drawn_time;
-} FrameData;
-
-static void
-frame_data_free (FrameData *frame)
-{
-  g_free (frame);
-}
-
 static void
 surface_repaint_scheduled (MetaSurfaceActor *actor,
                            gpointer          user_data)
@@ -152,165 +122,23 @@ remove_frame_messages_timer (MetaWindowActorX11 *actor_x11)
   g_clear_handle_id (&actor_x11->send_frame_messages_timer, g_source_remove);
 }
 
-static void
-do_send_frame_drawn (MetaWindowActorX11 *actor_x11,
-                     FrameData          *frame)
-{
-  MetaWindow *window =
-    meta_window_actor_get_meta_window (META_WINDOW_ACTOR (actor_x11));
-  MetaDisplay *display = meta_window_get_display (window);
-  Display *xdisplay = meta_x11_display_get_xdisplay (display->x11_display);
-  int64_t now_us;
-
-  XClientMessageEvent ev = { 0, };
-
-  COGL_TRACE_BEGIN (MetaWindowActorX11FrameDrawn,
-                    "X11: Send _NET_WM_FRAME_DRAWN");
-
-  now_us = g_get_monotonic_time ();
-  frame->frame_drawn_time =
-    meta_compositor_monotonic_to_high_res_xserver_time (display->compositor,
-                                                        now_us);
-  actor_x11->frame_drawn_time = frame->frame_drawn_time;
-
-  ev.type = ClientMessage;
-  ev.window = meta_window_get_xwindow (window);
-  ev.message_type = display->x11_display->atom__NET_WM_FRAME_DRAWN;
-  ev.format = 32;
-  ev.data.l[0] = frame->sync_request_serial & G_GUINT64_CONSTANT (0xffffffff);
-  ev.data.l[1] = frame->sync_request_serial >> 32;
-  ev.data.l[2] = frame->frame_drawn_time & G_GUINT64_CONSTANT (0xffffffff);
-  ev.data.l[3] = frame->frame_drawn_time >> 32;
-
-  meta_x11_error_trap_push (display->x11_display);
-  XSendEvent (xdisplay, ev.window, False, 0, (XEvent *) &ev);
-  XFlush (xdisplay);
-  meta_x11_error_trap_pop (display->x11_display);
-
-#ifdef COGL_HAS_TRACING
-  if (G_UNLIKELY (cogl_is_tracing_enabled ()))
-    {
-      g_autofree char *description = NULL;
-
-      description = g_strdup_printf ("frame drawn time: %" G_GINT64_FORMAT ", "
-                                     "sync request serial: %" G_GINT64_FORMAT,
-                                     frame->frame_drawn_time,
-                                     frame->sync_request_serial);
-      COGL_TRACE_DESCRIBE (MetaWindowActorX11FrameDrawn,
-                           description);
-      COGL_TRACE_END (MetaWindowActorX11FrameDrawn);
-    }
-#endif
-}
-
-static void
-do_send_frame_timings (MetaWindowActorX11 *actor_x11,
-                       FrameData          *frame,
-                       int                 refresh_interval,
-                       int64_t             presentation_time)
-{
-  MetaWindow *window =
-    meta_window_actor_get_meta_window (META_WINDOW_ACTOR (actor_x11));
-  MetaDisplay *display = meta_window_get_display (window);
-  Display *xdisplay = meta_x11_display_get_xdisplay (display->x11_display);
-
-  XClientMessageEvent ev = { 0, };
-
-  COGL_TRACE_BEGIN (MetaWindowActorX11FrameTimings,
-                    "X11: Send _NET_WM_FRAME_TIMINGS");
-
-  ev.type = ClientMessage;
-  ev.window = meta_window_get_xwindow (window);
-  ev.message_type = display->x11_display->atom__NET_WM_FRAME_TIMINGS;
-  ev.format = 32;
-  ev.data.l[0] = frame->sync_request_serial & G_GUINT64_CONSTANT (0xffffffff);
-  ev.data.l[1] = frame->sync_request_serial >> 32;
-
-  if (presentation_time != 0)
-    {
-      MetaCompositor *compositor = display->compositor;
-      int64_t presentation_time_server;
-
-      presentation_time_server =
-        meta_compositor_monotonic_to_high_res_xserver_time (compositor,
-                                                            presentation_time);
-      int64_t presentation_time_offset = presentation_time_server - frame->frame_drawn_time;
-      if (presentation_time_offset == 0)
-        presentation_time_offset = 1;
-
-      if ((int32_t)presentation_time_offset == presentation_time_offset)
-        ev.data.l[2] = presentation_time_offset;
-    }
-
-  ev.data.l[3] = refresh_interval;
-  ev.data.l[4] = 1000 * META_SYNC_DELAY;
-
-  meta_x11_error_trap_push (display->x11_display);
-  XSendEvent (xdisplay, ev.window, False, 0, (XEvent *) &ev);
-  XFlush (xdisplay);
-  meta_x11_error_trap_pop (display->x11_display);
-
-#ifdef COGL_HAS_TRACING
-  if (G_UNLIKELY (cogl_is_tracing_enabled ()))
-    {
-      g_autofree char *description = NULL;
-
-      description =
-        g_strdup_printf ("refresh interval: %d, "
-                         "presentation time: %" G_GINT64_FORMAT ", "
-                         "sync request serial: %" G_GINT64_FORMAT,
-                         refresh_interval,
-                         frame->sync_request_serial,
-                         presentation_time);
-      COGL_TRACE_DESCRIBE (MetaWindowActorX11FrameTimings, description);
-      COGL_TRACE_END (MetaWindowActorX11FrameTimings);
-    }
-#endif
-}
-
-static void
-send_frame_timings (MetaWindowActorX11 *actor_x11,
-                    FrameData          *frame,
-                    ClutterFrameInfo   *frame_info,
-                    int64_t             presentation_time)
-{
-  float refresh_rate;
-  int refresh_interval;
-
-  refresh_rate = frame_info->refresh_rate;
-  /* 0.0 is a flag for not known, but sanity-check against other odd numbers */
-  if (refresh_rate >= 1.0)
-    refresh_interval = (int) (0.5 + 1000000 / refresh_rate);
-  else
-    refresh_interval = 0;
-
-  do_send_frame_timings (actor_x11, frame, refresh_interval, presentation_time);
-}
-
 static gboolean
 send_frame_messages_timeout (gpointer data)
 {
   MetaWindowActorX11 *actor_x11 = META_WINDOW_ACTOR_X11 (data);
-  GList *l;
+  MetaWindow *window =
+    meta_window_actor_get_meta_window (META_WINDOW_ACTOR (actor_x11));
+  MetaSyncCounter *sync_counter;
 
-  for (l = actor_x11->frames; l;)
+  sync_counter = meta_window_x11_get_sync_counter (window);
+  meta_sync_counter_finish_incomplete (sync_counter);
+
+  if (window->frame)
     {
-      GList *l_next = l->next;
-      FrameData *frame = l->data;
-
-      if (frame->frame_counter == -1)
-        {
-          do_send_frame_drawn (actor_x11, frame);
-          do_send_frame_timings (actor_x11, frame, 0, 0);
-
-          actor_x11->frames = g_list_delete_link (actor_x11->frames, l);
-          frame_data_free (frame);
-        }
-
-      l = l_next;
+      sync_counter = meta_frame_get_sync_counter (window->frame);
+      meta_sync_counter_finish_incomplete (sync_counter);
     }
 
-  actor_x11->needs_frame_drawn = FALSE;
   actor_x11->send_frame_messages_timer = 0;
 
   return G_SOURCE_REMOVE;
@@ -323,6 +151,7 @@ queue_send_frame_messages_timeout (MetaWindowActorX11 *actor_x11)
     meta_window_actor_get_meta_window (META_WINDOW_ACTOR (actor_x11));
   MetaDisplay *display = meta_window_get_display (window);
   MetaLogicalMonitor *logical_monitor;
+  MetaSyncCounter *sync_counter;
   int64_t now_us;
   int64_t current_time;
   float refresh_rate;
@@ -353,7 +182,8 @@ queue_send_frame_messages_timeout (MetaWindowActorX11 *actor_x11)
     meta_compositor_monotonic_to_high_res_xserver_time (display->compositor,
                                                         now_us);
   interval = (int) (1000000 / refresh_rate) * 6;
-  offset = MAX (0, actor_x11->frame_drawn_time + interval - current_time) / 1000;
+  sync_counter = meta_window_x11_get_sync_counter (window);
+  offset = MAX (0, sync_counter->frame_drawn_time + interval - current_time) / 1000;
 
  /* The clutter master clock source has already been added with META_PRIORITY_REDRAW,
   * so the timer will run *after* the clutter frame handling, if a frame is ready
@@ -374,7 +204,7 @@ assign_frame_counter_to_frames (MetaWindowActorX11 *actor_x11)
     meta_window_actor_get_meta_window (META_WINDOW_ACTOR (actor_x11));
   MetaCompositor *compositor = window->display->compositor;
   ClutterStage *stage = meta_compositor_get_stage (compositor);
-  GList *l;
+  MetaSyncCounter *sync_counter;
 
   /* If the window is obscured, then we're expecting to deal with sending
    * frame messages in a timeout, rather than in this paint cycle.
@@ -382,12 +212,15 @@ assign_frame_counter_to_frames (MetaWindowActorX11 *actor_x11)
   if (actor_x11->send_frame_messages_timer != 0)
     return;
 
-  for (l = actor_x11->frames; l; l = l->next)
-    {
-      FrameData *frame = l->data;
+  sync_counter = meta_window_x11_get_sync_counter (window);
+  meta_sync_counter_assign_counter_to_frames (sync_counter,
+                                              clutter_stage_get_frame_counter (stage));
 
-      if (frame->frame_counter == -1)
-        frame->frame_counter = clutter_stage_get_frame_counter (stage);
+  if (window->frame)
+    {
+      sync_counter = meta_frame_get_sync_counter (window->frame);
+      meta_sync_counter_assign_counter_to_frames (sync_counter,
+                                                  clutter_stage_get_frame_counter (stage));
     }
 }
 
@@ -396,36 +229,23 @@ meta_window_actor_x11_frame_complete (MetaWindowActor  *actor,
                                       ClutterFrameInfo *frame_info,
                                       int64_t           presentation_time)
 {
-  MetaWindowActorX11 *actor_x11 = META_WINDOW_ACTOR_X11 (actor);
-  GList *l;
+  MetaWindow *window = meta_window_actor_get_meta_window (actor);
+  MetaSyncCounter *sync_counter;
 
   if (meta_window_actor_is_destroyed (actor))
     return;
 
-  for (l = actor_x11->frames; l;)
+  sync_counter = meta_window_x11_get_sync_counter (window);
+  meta_sync_counter_complete_frame (sync_counter,
+                                    frame_info,
+                                    presentation_time);
+
+  if (window->frame)
     {
-      GList *l_next = l->next;
-      FrameData *frame = l->data;
-      int64_t frame_counter = frame_info->frame_counter;
-
-      if (frame->frame_counter != -1 && frame->frame_counter <= frame_counter)
-        {
-          MetaWindow *window =
-            meta_window_actor_get_meta_window (actor);
-
-          if (G_UNLIKELY (frame->frame_drawn_time == 0))
-            g_warning ("%s: Frame has assigned frame counter but no frame drawn time",
-                       window->desc);
-          if (G_UNLIKELY (frame->frame_counter < frame_counter))
-            g_debug ("%s: frame_complete callback never occurred for frame %" G_GINT64_FORMAT,
-                     window->desc, frame->frame_counter);
-
-          actor_x11->frames = g_list_delete_link (actor_x11->frames, l);
-          send_frame_timings (actor_x11, frame, frame_info, presentation_time);
-          frame_data_free (frame);
-        }
-
-      l = l_next;
+      sync_counter = meta_frame_get_sync_counter (window->frame);
+      meta_sync_counter_complete_frame (sync_counter,
+                                        frame_info,
+                                        presentation_time);
     }
 }
 
@@ -437,14 +257,26 @@ meta_window_actor_x11_get_scanout_candidate (MetaWindowActor *actor)
   surface_actor = meta_window_actor_get_surface (actor);
 
   if (!surface_actor)
-    return NULL;
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "No surface-actor for window-actor");
+      return NULL;
+    }
 
   if (CLUTTER_ACTOR (surface_actor) !=
       clutter_actor_get_last_child (CLUTTER_ACTOR (actor)))
-    return NULL;
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "Top child of window-actor not a surface");
+      return NULL;
+    }
 
   if (!meta_window_actor_is_opaque (actor))
-    return NULL;
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "Window-actor is not opaque");
+      return NULL;
+    }
 
   return surface_actor;
 }
@@ -499,20 +331,9 @@ meta_window_actor_x11_queue_frame_drawn (MetaWindowActor *actor,
                                          gboolean         skip_sync_delay)
 {
   MetaWindowActorX11 *actor_x11 = META_WINDOW_ACTOR_X11 (actor);
-  MetaWindow *window =
-    meta_window_actor_get_meta_window (actor);
-  FrameData *frame;
 
   if (meta_window_actor_is_destroyed (actor))
     return;
-
-  frame = g_new0 (FrameData, 1);
-  frame->frame_counter = -1;
-  frame->sync_request_serial = window->sync_request_serial;
-
-  actor_x11->frames = g_list_prepend (actor_x11->frames, frame);
-
-  actor_x11->needs_frame_drawn = TRUE;
 
   if (skip_sync_delay)
     {
@@ -588,11 +409,11 @@ has_shadow (MetaWindowActorX11 *actor_x11)
     return FALSE;
 
   /*
-   * Always put a shadow around windows with a frame - This should override
+   * Let the frames client put a shadow around frames - This should override
    * the restriction about not putting a shadow around ARGB windows.
    */
   if (meta_window_get_frame (window))
-    return TRUE;
+    return FALSE;
 
   /*
    * Do not add shadows to non-opaque (ARGB32) windows, as we can't easily
@@ -1169,35 +990,53 @@ update_opaque_region (MetaWindowActorX11 *actor_x11)
   MetaWindow *window =
     meta_window_actor_get_meta_window (META_WINDOW_ACTOR (actor_x11));
   gboolean is_maybe_transparent;
-  cairo_region_t *opaque_region;
+  cairo_region_t *opaque_region = NULL;
   MetaSurfaceActor *surface;
 
   is_maybe_transparent = is_actor_maybe_transparent (actor_x11);
-  if (is_maybe_transparent && window->opaque_region)
+  if (is_maybe_transparent &&
+      (window->opaque_region ||
+       (window->frame && window->frame->opaque_region)))
     {
       cairo_rectangle_int_t client_area;
 
+      if (window->frame && window->frame->opaque_region)
+        opaque_region = cairo_region_copy (window->frame->opaque_region);
+
       get_client_area_rect (actor_x11, &client_area);
 
-      /* The opaque region is defined to be a part of the
-       * window which ARGB32 will always paint with opaque
-       * pixels. For these regions, we want to avoid painting
-       * windows and shadows beneath them.
-       *
-       * If the client gives bad coordinates where it does not
-       * fully paint, the behavior is defined by the specification
-       * to be undefined, and considered a client bug. In mutter's
-       * case, graphical glitches will occur.
-       */
-      opaque_region = cairo_region_copy (window->opaque_region);
-      cairo_region_translate (opaque_region, client_area.x, client_area.y);
+      if (opaque_region && meta_window_x11_has_alpha_channel (window))
+        cairo_region_subtract_rectangle (opaque_region, &client_area);
+
+      if (window->opaque_region)
+        {
+          cairo_region_t *client_opaque_region;
+
+          /* The opaque region is defined to be a part of the
+           * window which ARGB32 will always paint with opaque
+           * pixels. For these regions, we want to avoid painting
+           * windows and shadows beneath them.
+           *
+           * If the client gives bad coordinates where it does not
+           * fully paint, the behavior is defined by the specification
+           * to be undefined, and considered a client bug. In mutter's
+           * case, graphical glitches will occur.
+           */
+          client_opaque_region = cairo_region_copy (window->opaque_region);
+          cairo_region_translate (client_opaque_region,
+                                  client_area.x, client_area.y);
+
+          if (opaque_region)
+            cairo_region_union (opaque_region, client_opaque_region);
+          else
+            opaque_region = cairo_region_reference (client_opaque_region);
+
+          cairo_region_destroy (client_opaque_region);
+        }
+
       cairo_region_intersect (opaque_region, actor_x11->shape_region);
     }
-  else if (is_maybe_transparent)
-    {
-      opaque_region = NULL;
-    }
-  else
+  else if (!is_maybe_transparent)
     {
       opaque_region = cairo_region_reference (actor_x11->shape_region);
     }
@@ -1402,6 +1241,8 @@ meta_window_actor_x11_after_paint (MetaWindowActor  *actor,
                                    ClutterStageView *stage_view)
 {
   MetaWindowActorX11 *actor_x11 = META_WINDOW_ACTOR_X11 (actor);
+  MetaSyncCounter *sync_counter;
+  MetaWindowDrag *window_drag;
   MetaWindow *window;
 
   actor_x11->repaint_scheduled = FALSE;
@@ -1409,32 +1250,40 @@ meta_window_actor_x11_after_paint (MetaWindowActor  *actor,
   if (meta_window_actor_is_destroyed (actor))
     return;
 
+  window = meta_window_actor_get_meta_window (actor);
+
   /* If the window had damage, but wasn't actually redrawn because
    * it is obscured, we should wait until timer expiration before
    * sending _NET_WM_FRAME_* messages.
    */
-  if (actor_x11->send_frame_messages_timer == 0 &&
-      actor_x11->needs_frame_drawn)
+  if (actor_x11->send_frame_messages_timer == 0)
     {
-      GList *l;
+      sync_counter = meta_window_x11_get_sync_counter (window);
+      meta_sync_counter_send_frame_drawn (sync_counter);
 
-      for (l = actor_x11->frames; l; l = l->next)
+      if (window->frame)
         {
-          FrameData *frame = l->data;
-
-          if (frame->frame_drawn_time == 0)
-            do_send_frame_drawn (actor_x11, frame);
+          sync_counter = meta_frame_get_sync_counter (window->frame);
+          meta_sync_counter_send_frame_drawn (sync_counter);
         }
-
-      actor_x11->needs_frame_drawn = FALSE;
     }
 
   /* This is for Xwayland, and a no-op on plain Xorg */
-  window = meta_window_actor_get_meta_window (actor);
   if (meta_window_x11_should_thaw_after_paint (window))
     {
       meta_window_x11_thaw_commits (window);
       meta_window_x11_set_thaw_after_paint (window, FALSE);
+    }
+
+  window_drag = meta_compositor_get_current_window_drag (window->display->compositor);
+
+  if (window_drag &&
+      window == meta_window_drag_get_window (window_drag) &&
+      meta_grab_op_is_resizing (meta_window_drag_get_grab_op (window_drag)))
+    {
+      /* This means we are ready for another configure;
+       * no pointer round trip here, to keep in sync */
+      meta_window_x11_check_update_resize (window);
     }
 }
 
@@ -1614,6 +1463,7 @@ meta_window_actor_x11_constructed (GObject *object)
   MetaWindowActorX11 *actor_x11 = META_WINDOW_ACTOR_X11 (object);
   MetaWindowActor *actor = META_WINDOW_ACTOR (actor_x11);
   MetaWindow *window = meta_window_actor_get_meta_window (actor);
+  MetaSyncCounter *sync_counter = meta_window_x11_get_sync_counter (window);
 
   /*
    * Start off with an empty shape region to maintain the invariant that it's
@@ -1626,9 +1476,12 @@ meta_window_actor_x11_constructed (GObject *object)
   /* If a window doesn't start off with updates frozen, we should
    * we should send a _NET_WM_FRAME_DRAWN immediately after the first drawn.
    */
-  if (window->extended_sync_request_counter &&
+  if (sync_counter->extended_sync_request_counter &&
       !meta_window_updates_are_frozen (window))
-    meta_window_actor_queue_frame_drawn (actor, FALSE);
+    {
+      meta_sync_counter_queue_frame_drawn (sync_counter);
+      meta_window_actor_queue_frame_drawn (actor, FALSE);
+    }
 }
 
 static void
@@ -1699,10 +1552,6 @@ meta_window_actor_x11_dispose (GObject *object)
 static void
 meta_window_actor_x11_finalize (GObject *object)
 {
-  MetaWindowActorX11 *actor_x11 = META_WINDOW_ACTOR_X11 (object);
-
-  g_list_free_full (actor_x11->frames, (GDestroyNotify) frame_data_free);
-
   G_OBJECT_CLASS (meta_window_actor_x11_parent_class)->finalize (object);
 }
 

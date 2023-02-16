@@ -1247,48 +1247,17 @@ _cogl_pipeline_layer_get_filters (CoglPipelineLayer *layer,
 }
 
 void
-_cogl_pipeline_get_layer_filters (CoglPipeline *pipeline,
-                                  int layer_index,
-                                  CoglPipelineFilter *min_filter,
-                                  CoglPipelineFilter *mag_filter)
+cogl_pipeline_get_layer_filters (CoglPipeline       *pipeline,
+                                 int                 layer_index,
+                                 CoglPipelineFilter *min_filter,
+                                 CoglPipelineFilter *mag_filter)
 {
   CoglPipelineLayer *layer;
-  CoglPipelineLayer *authority;
 
   g_return_if_fail (cogl_is_pipeline (pipeline));
 
   layer = _cogl_pipeline_get_layer (pipeline, layer_index);
-
-  authority =
-    _cogl_pipeline_layer_get_authority (layer,
-                                        COGL_PIPELINE_LAYER_STATE_SAMPLER);
-
-  *min_filter = authority->sampler_cache_entry->min_filter;
-  *mag_filter = authority->sampler_cache_entry->mag_filter;
-}
-
-CoglPipelineFilter
-cogl_pipeline_get_layer_min_filter (CoglPipeline *pipeline,
-                                    int layer_index)
-{
-  CoglPipelineFilter min_filter;
-  CoglPipelineFilter mag_filter;
-
-  _cogl_pipeline_get_layer_filters (pipeline, layer_index,
-                                    &min_filter, &mag_filter);
-  return min_filter;
-}
-
-CoglPipelineFilter
-cogl_pipeline_get_layer_mag_filter (CoglPipeline *pipeline,
-                                    int layer_index)
-{
-  CoglPipelineFilter min_filter;
-  CoglPipelineFilter mag_filter;
-
-  _cogl_pipeline_get_layer_filters (pipeline, layer_index,
-                                    &min_filter, &mag_filter);
-  return mag_filter;
+  return _cogl_pipeline_layer_get_filters (layer, min_filter, mag_filter);
 }
 
 CoglPipelineFilter

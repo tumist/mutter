@@ -246,16 +246,13 @@ void                            _clutter_actor_pop_clone_paint                  
 
 ClutterActorAlign               _clutter_actor_get_effective_x_align                    (ClutterActor *self);
 
-void                            _clutter_actor_handle_event                             (ClutterActor       *actor,
-                                                                                         ClutterActor       *root,
-                                                                                         const ClutterEvent *event);
-
 void                            _clutter_actor_attach_clone                             (ClutterActor *actor,
                                                                                          ClutterActor *clone);
 void                            _clutter_actor_detach_clone                             (ClutterActor *actor,
                                                                                          ClutterActor *clone);
 void                            _clutter_actor_queue_only_relayout                      (ClutterActor *actor);
-void                            clutter_actor_clear_stage_views_recursive               (ClutterActor *actor);
+void                            clutter_actor_clear_stage_views_recursive               (ClutterActor *actor,
+                                                                                         gboolean      stop_transitions);
 
 float                           clutter_actor_get_real_resource_scale                   (ClutterActor *actor);
 
@@ -277,6 +274,15 @@ void clutter_actor_attach_grab (ClutterActor *actor,
                                 ClutterGrab  *grab);
 void clutter_actor_detach_grab (ClutterActor *actor,
                                 ClutterGrab  *grab);
+
+void clutter_actor_collect_event_actors (ClutterActor *self,
+                                         ClutterActor *deepmost,
+                                         GPtrArray    *actors);
+
+const GList * clutter_actor_peek_actions (ClutterActor *self);
+
+void clutter_actor_set_implicitly_grabbed (ClutterActor *actor,
+                                           gboolean      is_implicitly_grabbed);
 
 G_END_DECLS
 

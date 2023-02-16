@@ -67,6 +67,7 @@
 #include "backends/x11/meta-backend-x11.h"
 #include "clutter/clutter-mutter.h"
 #include "clutter/clutter-seat-private.h"
+#include "compositor/meta-dnd-private.h"
 #include "core/meta-context-private.h"
 #include "meta/main.h"
 #include "meta/meta-backend.h"
@@ -115,22 +116,7 @@ enum
 
 static guint signals[N_SIGNALS];
 
-static MetaBackend *_backend;
-
 #define HIDDEN_POINTER_TIMEOUT 300 /* ms */
-
-/**
- * meta_get_backend:
- *
- * Accessor for the singleton MetaBackend.
- *
- * Returns: (transfer none): The only #MetaBackend there is.
- */
-MetaBackend *
-meta_get_backend (void)
-{
-  return _backend;
-}
 
 struct _MetaBackendPrivate
 {
@@ -211,8 +197,6 @@ meta_backend_dispose (GObject *object)
 {
   MetaBackend *backend = META_BACKEND (object);
   MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
-
-  _backend = NULL;
 
   g_clear_pointer (&priv->cursor_tracker, meta_cursor_tracker_destroy);
   g_clear_object (&priv->current_device);
@@ -516,20 +500,21 @@ input_mapper_device_aspect_ratio_cb (MetaInputMapper    *mapper,
 }
 
 static void
-on_stage_shown_cb (MetaBackend *backend)
+on_prepare_shutdown (MetaContext *context,
+                     MetaBackend *backend)
+{
+  g_signal_emit (backend, signals[PREPARE_SHUTDOWN], 0);
+}
+
+static void
+on_started (MetaContext *context,
+            MetaBackend *backend)
 {
   MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
   ClutterSeat *seat = priv->default_seat;
 
   meta_cursor_tracker_set_pointer_visible (priv->cursor_tracker,
                                            determine_hotplug_pointer_visibility (seat));
-}
-
-static void
-on_prepare_shutdown (MetaContext *context,
-                     MetaBackend *backend)
-{
-  g_signal_emit (backend, signals[PREPARE_SHUTDOWN], 0);
 }
 
 static void
@@ -542,9 +527,6 @@ meta_backend_real_post_init (MetaBackend *backend)
   priv->stage = meta_stage_new (backend);
   clutter_actor_realize (priv->stage);
   META_BACKEND_GET_CLASS (backend)->select_stage_events (backend);
-  g_signal_connect_object (priv->stage, "show",
-                           G_CALLBACK (on_stage_shown_cb), backend,
-                           G_CONNECT_SWAPPED);
 
   meta_monitor_manager_setup (priv->monitor_manager);
 
@@ -558,7 +540,7 @@ meta_backend_real_post_init (MetaBackend *backend)
                            G_CALLBACK (on_device_removed), backend,
                            G_CONNECT_AFTER);
 
-  priv->input_mapper = meta_input_mapper_new ();
+  priv->input_mapper = meta_input_mapper_new (backend);
 
   input_settings = meta_backend_get_input_settings (backend);
 
@@ -595,6 +577,8 @@ meta_backend_real_post_init (MetaBackend *backend)
 
   g_signal_connect (priv->context, "prepare-shutdown",
                     G_CALLBACK (on_prepare_shutdown), backend);
+  g_signal_connect (priv->context, "started",
+                    G_CALLBACK (on_started), backend);
 }
 
 static gboolean
@@ -1207,7 +1191,7 @@ meta_backend_initable_init (GInitable     *initable,
   priv->cursor_tracker =
     META_BACKEND_GET_CLASS (backend)->create_cursor_tracker (backend);
 
-  priv->dnd = g_object_new (META_TYPE_DND, NULL);
+  priv->dnd = meta_dnd_new (backend);
 
   priv->cancellable = g_cancellable_new ();
   g_bus_get (G_BUS_TYPE_SYSTEM,
@@ -1232,7 +1216,6 @@ initable_iface_init (GInitableIface *initable_iface)
 static void
 meta_backend_init (MetaBackend *backend)
 {
-  _backend = backend;
 }
 
 /**
@@ -1595,9 +1578,8 @@ meta_backend_get_capabilities (MetaBackend *backend)
 }
 
 gboolean
-meta_is_stage_views_scaled (void)
+meta_backend_is_stage_views_scaled (MetaBackend *backend)
 {
-  MetaBackend *backend = meta_get_backend ();
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitorLayoutMode layout_mode;

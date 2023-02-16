@@ -55,6 +55,7 @@ typedef enum
   CLUTTER_DEBUG_OOB_TRANSFORMS      = 1 << 16,
   CLUTTER_DEBUG_FRAME_TIMINGS       = 1 << 17,
   CLUTTER_DEBUG_DETAILED_TRACE      = 1 << 18,
+  CLUTTER_DEBUG_GRABS               = 1 << 19,
 } ClutterDebugFlag;
 
 typedef enum
@@ -147,6 +148,9 @@ void                    clutter_remove_debug_flags              (ClutterDebugFla
 
 CLUTTER_EXPORT
 void                    clutter_debug_set_max_render_time_constant (int max_render_time_constant_us);
+
+CLUTTER_EXPORT
+ClutterTextDirection    clutter_get_text_direction (void);
 
 G_END_DECLS
 
