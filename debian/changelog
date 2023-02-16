@@ -1,3 +1,9 @@
+mutter (44~beta-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Thu, 16 Feb 2023 17:54:56 -0500
+
 mutter (43.3-2) unstable; urgency=medium
 
   * Team upload
