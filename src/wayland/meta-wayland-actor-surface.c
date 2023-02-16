@@ -31,7 +31,10 @@
 #include "wayland/meta-wayland-buffer.h"
 #include "wayland/meta-wayland-surface.h"
 #include "wayland/meta-window-wayland.h"
+
+#ifdef HAVE_XWAYLAND
 #include "wayland/meta-xwayland-surface.h"
+#endif
 
 typedef struct _MetaWaylandActorSurfacePrivate MetaWaylandActorSurfacePrivate;
 
@@ -184,16 +187,18 @@ meta_wayland_actor_surface_real_sync_actor_state (MetaWaylandActorSurface *actor
   surface_actor = priv->actor;
   stex = meta_surface_actor_get_texture (surface_actor);
 
-  buffer = surface->buffer_ref->buffer;
+  buffer = meta_wayland_surface_get_buffer (surface);
   if (buffer)
     {
       CoglSnippet *snippet;
       gboolean is_y_inverted;
+      CoglTexture *texture;
 
       snippet = meta_wayland_buffer_create_snippet (buffer);
       is_y_inverted = meta_wayland_buffer_is_y_inverted (buffer);
 
-      meta_shaped_texture_set_texture (stex, surface->texture);
+      texture = meta_wayland_surface_get_texture (surface);
+      meta_shaped_texture_set_texture (stex, texture);
       meta_shaped_texture_set_snippet (stex, snippet);
       meta_shaped_texture_set_is_y_inverted (stex, is_y_inverted);
       meta_shaped_texture_set_buffer_scale (stex, surface->scale);
@@ -223,6 +228,7 @@ meta_wayland_actor_surface_real_sync_actor_state (MetaWaylandActorSurface *actor
       meta_surface_actor_set_input_region (surface_actor, NULL);
     }
 
+#ifdef HAVE_XWAYLAND
   if (!META_IS_XWAYLAND_SURFACE (surface_role))
     {
       if (!meta_shaped_texture_has_alpha (stex))
@@ -247,6 +253,7 @@ meta_wayland_actor_surface_real_sync_actor_state (MetaWaylandActorSurface *actor
           meta_surface_actor_set_opaque_region (surface_actor, NULL);
         }
     }
+#endif
 
   meta_shaped_texture_set_transform (stex, surface->buffer_transform);
 
@@ -273,7 +280,8 @@ meta_wayland_actor_surface_real_sync_actor_state (MetaWaylandActorSurface *actor
 
   meta_shaped_texture_ensure_size_valid (stex);
 
-  META_WAYLAND_SURFACE_FOREACH_SUBSURFACE (surface, subsurface_surface)
+  META_WAYLAND_SURFACE_FOREACH_SUBSURFACE (&surface->output_state,
+                                           subsurface_surface)
     {
       MetaWaylandActorSurface *actor_surface;
 
@@ -326,7 +334,11 @@ meta_wayland_actor_surface_is_on_logical_monitor (MetaWaylandSurfaceRole *surfac
 {
   MetaWaylandActorSurfacePrivate *priv =
     meta_wayland_actor_surface_get_instance_private (META_WAYLAND_ACTOR_SURFACE (surface_role));
-  MetaBackend *backend = meta_get_backend ();
+  MetaWaylandSurface *surface =
+    meta_wayland_surface_role_get_surface (surface_role);
+  MetaContext *context =
+    meta_wayland_compositor_get_context (surface->compositor);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaRenderer *renderer = meta_backend_get_renderer (backend);
   ClutterActor *actor = CLUTTER_ACTOR (priv->actor);
   MetaRectangle logical_monitor_layout;
@@ -422,7 +434,8 @@ meta_wayland_actor_surface_reset_actor (MetaWaylandActorSurface *actor_surface)
     meta_wayland_surface_role_get_surface (META_WAYLAND_SURFACE_ROLE (actor_surface));
   MetaWaylandSurface *subsurface_surface;
 
-  META_WAYLAND_SURFACE_FOREACH_SUBSURFACE (surface, subsurface_surface)
+  META_WAYLAND_SURFACE_FOREACH_SUBSURFACE (&surface->output_state,
+                                           subsurface_surface)
     {
       MetaWaylandActorSurface *actor_surface;
 

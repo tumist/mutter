@@ -41,8 +41,6 @@ G_BEGIN_DECLS
  * @func: the GTestFunc function
  *
  * Adds @func at the given @path in the test suite.
- *
- * Since: 1.18
  */
 #define CLUTTER_TEST_UNIT(path,func) \
   clutter_test_add (path, func);
@@ -75,8 +73,6 @@ G_BEGIN_DECLS
  *   return clutter_test_run ();
  * }
  * ]|
- *
- * Since: 1.18
  */
 #define CLUTTER_TEST_SUITE(units) \
 int \
@@ -90,6 +86,11 @@ main (int argc, char *argv[]) \
 \
   return clutter_test_run (); \
 }
+
+#define CLUTTER_TYPE_TEST_ACTOR (clutter_test_actor_get_type ())
+CLUTTER_EXPORT
+G_DECLARE_FINAL_TYPE (ClutterTestActor, clutter_test_actor,
+                      CLUTTER, TEST_ACTOR, ClutterActor)
 
 CLUTTER_EXPORT
 void            clutter_test_init               (int            *argc,
@@ -116,6 +117,9 @@ void            clutter_test_add_data_full      (const char     *test_path,
                                                  GTestDataFunc   test_func,
                                                  gpointer        test_data,
                                                  GDestroyNotify  test_notify);
+
+CLUTTER_EXPORT
+void            clutter_test_flush_input        (void);
 
 CLUTTER_EXPORT
 ClutterActor *  clutter_test_get_stage          (void);

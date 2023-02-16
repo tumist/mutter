@@ -1704,7 +1704,7 @@ meta_monitor_manager_handle_get_resources (MetaDBusDisplayConfig *skeleton,
       supports_underscanning = output_info->supports_underscanning;
       supports_color_transform = output_info->supports_color_transform;
       vendor = output_info->vendor;
-      product = output_info->product;;
+      product = output_info->product;
       serial = output_info->serial;
 
       g_variant_builder_init (&properties, G_VARIANT_TYPE ("a{sv}"));
@@ -1861,8 +1861,8 @@ restore_previous_config (MetaMonitorManager *manager)
   meta_monitor_manager_ensure_configured (manager);
 }
 
-gint
-meta_monitor_manager_get_display_configuration_timeout (void)
+int
+meta_monitor_manager_get_display_configuration_timeout (MetaMonitorManager *manager)
 {
   return DEFAULT_DISPLAY_CONFIGURATION_TIMEOUT;
 }
@@ -1887,7 +1887,10 @@ cancel_persistent_confirmation (MetaMonitorManager *manager)
 static void
 request_persistent_confirmation (MetaMonitorManager *manager)
 {
-  manager->persistent_timeout_id = g_timeout_add_seconds (meta_monitor_manager_get_display_configuration_timeout (),
+  int timeout_s;
+
+  timeout_s = meta_monitor_manager_get_display_configuration_timeout (manager);
+  manager->persistent_timeout_id = g_timeout_add_seconds (timeout_s,
                                                           save_config_timeout,
                                                           manager);
   g_source_set_name_by_id (manager->persistent_timeout_id,
@@ -3100,21 +3103,6 @@ initialize_dbus_interface (MetaMonitorManager *manager)
 }
 
 /**
- * meta_monitor_manager_get:
- *
- * Accessor for the singleton MetaMonitorManager.
- *
- * Returns: (transfer none): The only #MetaMonitorManager there is.
- */
-MetaMonitorManager *
-meta_monitor_manager_get (void)
-{
-  MetaBackend *backend = meta_get_backend ();
-
-  return meta_backend_get_monitor_manager (backend);
-}
-
-/**
  * meta_monitor_manager_get_num_logical_monitors:
  * @manager: A #MetaMonitorManager object
  *
@@ -3280,8 +3268,9 @@ meta_monitor_manager_get_logical_monitor_at (MetaMonitorManager *manager,
  * @manager: A #MetaMonitorManager object
  * @rect: The rectangle
  *
- * Finds the #MetaLogicalMonitor which has the largest area in common with the
- * given @rect in the total layout.
+ * Finds the #MetaLogicalMonitor which contains the center of the given @rect
+ * or which has the largest area in common with the given @rect in the total
+ * layout if the center is not on a monitor.
  *
  * Returns: (transfer none) (nullable): The #MetaLogicalMonitor which
  *          corresponds the most to the given @rect, or %NULL if none.
@@ -3293,6 +3282,8 @@ meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
   MetaLogicalMonitor *best_logical_monitor;
   int best_logical_monitor_area;
   GList *l;
+  int center_x = rect->x + (rect->width / 2);
+  int center_y = rect->y + (rect->height / 2);
 
   best_logical_monitor = NULL;
   best_logical_monitor_area = 0;
@@ -3302,6 +3293,9 @@ meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
       MetaLogicalMonitor *logical_monitor = l->data;
       MetaRectangle intersection;
       int intersection_area;
+
+      if (META_POINT_IN_RECT (center_x, center_y, logical_monitor->rect))
+        return logical_monitor;
 
       if (!meta_rectangle_intersect (&logical_monitor->rect,
                                      rect,
@@ -3316,10 +3310,6 @@ meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
           best_logical_monitor_area = intersection_area;
         }
     }
-
-  if (!best_logical_monitor && (rect->width == 0 || rect->height == 0))
-    best_logical_monitor =
-      meta_monitor_manager_get_logical_monitor_at (manager, rect->x, rect->y);
 
   if (!best_logical_monitor)
     best_logical_monitor = manager->primary_logical_monitor;
@@ -3878,6 +3868,7 @@ meta_monitor_manager_post_init (MetaMonitorManager *manager)
 MetaViewportInfo *
 meta_monitor_manager_get_viewports (MetaMonitorManager *manager)
 {
+  MetaBackend *backend = meta_monitor_manager_get_backend (manager);
   MetaViewportInfo *info;
   GArray *views, *scales;
   GList *logical_monitors, *l;
@@ -3903,7 +3894,7 @@ meta_monitor_manager_get_viewports (MetaMonitorManager *manager)
   info = meta_viewport_info_new ((cairo_rectangle_int_t *) views->data,
                                  (float *) scales->data,
                                  views->len,
-                                 meta_is_stage_views_scaled ());
+                                 meta_backend_is_stage_views_scaled (backend));
   g_array_unref (views);
   g_array_unref (scales);
 

@@ -28,8 +28,6 @@
 #include "meta/display.h"
 
 #include <glib.h>
-#include <X11/extensions/sync.h>
-#include <X11/Xlib.h>
 
 #include "clutter/clutter.h"
 #include "core/keybindings-private.h"
@@ -46,8 +44,6 @@
 typedef struct _MetaBell       MetaBell;
 typedef struct _MetaStack      MetaStack;
 
-typedef struct MetaEdgeResistanceData MetaEdgeResistanceData;
-
 typedef enum
 {
   META_LIST_DEFAULT                   = 0,      /* normal windows */
@@ -59,15 +55,6 @@ typedef enum
 #define _NET_WM_STATE_ADD           1    /* add/set property */
 #define _NET_WM_STATE_TOGGLE        2    /* toggle property  */
 
-/* This is basically a bogus number, just has to be large enough
- * to handle the expected case of the alt+tab operation, where
- * we want to ignore serials from UnmapNotify on the tab popup,
- * and the LeaveNotify/EnterNotify from the pointer ungrab. It
- * also has to be big enough to hold ignored serials from the point
- * where we reshape the stage to the point where we get events back.
- */
-#define N_IGNORED_CROSSING_SERIALS  10
-
 typedef enum
 {
   META_TILE_NONE,
@@ -75,24 +62,6 @@ typedef enum
   META_TILE_RIGHT,
   META_TILE_MAXIMIZED
 } MetaTileMode;
-
-typedef enum
-{
-  /* Normal interaction where you're interacting with windows.
-   * Events go to windows normally. */
-  META_EVENT_ROUTE_NORMAL,
-
-  /* In a window operation like moving or resizing. All events
-   * goes to MetaWindow, but not to the actual client window. */
-  META_EVENT_ROUTE_WINDOW_OP,
-
-  /* A Wayland application has a popup open. All events go to
-   * the Wayland application. */
-  META_EVENT_ROUTE_WAYLAND_POPUP,
-
-  /* The user is clicking on a window button. */
-  META_EVENT_ROUTE_FRAME_BUTTON,
-} MetaEventRoute;
 
 typedef void (* MetaDisplayWindowFunc) (MetaWindow *window,
                                         gpointer    user_data);
@@ -136,12 +105,6 @@ struct _MetaDisplay
   GHashTable *stamps;
   GHashTable *wayland_windows;
 
-  /* serials of leave/unmap events that may
-   * correspond to an enter event we should
-   * ignore
-   */
-  unsigned long ignored_crossing_serials[N_IGNORED_CROSSING_SERIALS];
-
   guint32 current_time;
 
   /* We maintain a sequence counter, incremented for each #MetaWindow
@@ -162,30 +125,6 @@ struct _MetaDisplay
   /* Pending autoraise */
   guint       autoraise_timeout_id;
   MetaWindow* autoraise_window;
-
-  /* Event routing */
-  MetaEventRoute event_route;
-
-  /* current window operation */
-  MetaGrabOp  grab_op;
-  MetaWindow *grab_window;
-  int         grab_button;
-  int         grab_anchor_root_x;
-  int         grab_anchor_root_y;
-  MetaRectangle grab_anchor_window_pos;
-  MetaTileMode  grab_tile_mode;
-  int           grab_tile_monitor_number;
-  int         grab_latest_motion_x;
-  int         grab_latest_motion_y;
-  guint       grab_have_pointer : 1;
-  guint       grab_have_keyboard : 1;
-  guint       grab_frame_action : 1;
-  MetaRectangle grab_initial_window_pos;
-  int         grab_initial_x, grab_initial_y;  /* These are only relevant for */
-  gboolean    grab_threshold_movement_reached; /* raise_on_click == FALSE.    */
-  MetaEdgeResistanceData *grab_edge_resistance_data;
-  unsigned int grab_last_edge_resistance_flags;
-  unsigned int grab_move_resize_later_id;
 
   MetaKeyBindingManager key_binding_manager;
 
@@ -211,9 +150,6 @@ struct _MetaDisplay
 
   MetaStack *stack;
   MetaStackTracker *stack_tracker;
-
-  guint tile_preview_timeout_id;
-  guint preview_tile_mode : 2;
 
   GSList *startup_sequences;
 
@@ -298,17 +234,8 @@ META_EXPORT_TEST
 GSList*     meta_display_list_windows        (MetaDisplay          *display,
                                               MetaListWindowsFlags  flags);
 
-MetaDisplay* meta_display_for_x_display  (Display     *xdisplay);
-
-META_EXPORT_TEST
-MetaDisplay* meta_get_display            (void);
-
 void meta_display_reload_cursor (MetaDisplay *display);
-void meta_display_update_cursor (MetaDisplay *display);
 
-void    meta_display_check_threshold_reached (MetaDisplay *display,
-                                              int          x,
-                                              int          y);
 void     meta_display_grab_window_buttons    (MetaDisplay *display,
                                               Window       xwindow);
 void     meta_display_ungrab_window_buttons  (MetaDisplay *display,
@@ -318,9 +245,6 @@ void meta_display_grab_focus_window_button   (MetaDisplay *display,
                                               MetaWindow  *window);
 void meta_display_ungrab_focus_window_button (MetaDisplay *display,
                                               MetaWindow  *window);
-
-/* Next function is defined in edge-resistance.c */
-void meta_display_cleanup_edges              (MetaDisplay *display);
 
 /* utility goo */
 const char* meta_event_mode_to_string   (int m);
@@ -339,8 +263,6 @@ gboolean meta_grab_op_is_moving   (MetaGrabOp op);
 gboolean meta_grab_op_is_resizing (MetaGrabOp op);
 gboolean meta_grab_op_is_mouse    (MetaGrabOp op);
 gboolean meta_grab_op_is_keyboard (MetaGrabOp op);
-
-void meta_display_clear_grab_move_resize_later (MetaDisplay *display);
 
 void meta_display_queue_autoraise_callback  (MetaDisplay *display,
                                              MetaWindow  *window);
@@ -399,11 +321,6 @@ void meta_display_foreach_window (MetaDisplay           *display,
                                   gpointer               data);
 
 void meta_display_restacked (MetaDisplay *display);
-
-
-void meta_display_update_tile_preview (MetaDisplay *display,
-                                       gboolean     delay);
-void meta_display_hide_tile_preview   (MetaDisplay *display);
 
 gboolean meta_display_apply_startup_properties (MetaDisplay *display,
                                                 MetaWindow  *window);

@@ -31,7 +31,10 @@
 #include "wayland/meta-wayland-buffer.h"
 #include "wayland/meta-wayland-presentation-time-private.h"
 #include "wayland/meta-wayland-private.h"
+
+#ifdef HAVE_XWAYLAND
 #include "wayland/meta-xwayland.h"
+#endif
 
 typedef struct _MetaWaylandCursorSurfacePrivate MetaWaylandCursorSurfacePrivate;
 
@@ -89,9 +92,16 @@ cursor_sprite_prepare_at (MetaCursorSprite         *cursor_sprite,
   MetaWaylandSurfaceRole *role = META_WAYLAND_SURFACE_ROLE (cursor_surface);
   MetaWaylandSurface *surface = meta_wayland_surface_role_get_surface (role);
 
+#ifdef HAVE_XWAYLAND
   if (!meta_xwayland_is_xwayland_surface (surface))
     {
-      MetaBackend *backend = meta_get_backend ();
+      MetaWaylandSurfaceRole *surface_role =
+        META_WAYLAND_SURFACE_ROLE (cursor_surface);
+      MetaWaylandSurface *surface =
+        meta_wayland_surface_role_get_surface (surface_role);
+      MetaContext *context =
+        meta_wayland_compositor_get_context (surface->compositor);
+      MetaBackend *backend = meta_context_get_backend (context);
       MetaMonitorManager *monitor_manager =
         meta_backend_get_monitor_manager (backend);
       MetaLogicalMonitor *logical_monitor;
@@ -102,7 +112,7 @@ cursor_sprite_prepare_at (MetaCursorSprite         *cursor_sprite,
         {
           float texture_scale;
 
-          if (meta_is_stage_views_scaled ())
+          if (meta_backend_is_stage_views_scaled (backend))
             texture_scale = 1.0 / surface->scale;
           else
             texture_scale = (meta_logical_monitor_get_scale (logical_monitor) /
@@ -113,6 +123,8 @@ cursor_sprite_prepare_at (MetaCursorSprite         *cursor_sprite,
                                                     surface->buffer_transform);
         }
     }
+#endif
+
   meta_wayland_surface_update_outputs (surface);
 }
 
@@ -139,12 +151,10 @@ meta_wayland_cursor_surface_pre_apply_state (MetaWaylandSurfaceRole  *surface_ro
     META_WAYLAND_CURSOR_SURFACE (surface_role);
   MetaWaylandCursorSurfacePrivate *priv =
     meta_wayland_cursor_surface_get_instance_private (cursor_surface);
-  MetaWaylandSurface *surface =
-    meta_wayland_surface_role_get_surface (surface_role);
 
   if (pending->newly_attached && priv->buffer)
     {
-      meta_wayland_surface_unref_buffer_use_count (surface);
+      meta_wayland_buffer_dec_use_count (priv->buffer);
       g_clear_object (&priv->buffer);
     }
 }
@@ -157,15 +167,11 @@ meta_wayland_cursor_surface_apply_state (MetaWaylandSurfaceRole  *surface_role,
     META_WAYLAND_CURSOR_SURFACE (surface_role);
   MetaWaylandCursorSurfacePrivate *priv =
     meta_wayland_cursor_surface_get_instance_private (cursor_surface);
-  MetaWaylandSurface *surface =
-    meta_wayland_surface_role_get_surface (surface_role);
-  MetaWaylandBuffer *buffer = meta_wayland_surface_get_buffer (surface);
 
-  if (pending->newly_attached)
+  if (pending->buffer)
     {
-      g_set_object (&priv->buffer, buffer);
-      if (priv->buffer)
-        meta_wayland_surface_ref_buffer_use_count (surface);
+      priv->buffer = g_object_ref (pending->buffer);
+      meta_wayland_buffer_inc_use_count (priv->buffer);
     }
 
   wl_list_insert_list (&priv->frame_callbacks,
@@ -213,8 +219,6 @@ meta_wayland_cursor_surface_dispose (GObject *object)
     META_WAYLAND_CURSOR_SURFACE (object);
   MetaWaylandCursorSurfacePrivate *priv =
     meta_wayland_cursor_surface_get_instance_private (cursor_surface);
-  MetaWaylandSurface *surface =
-    meta_wayland_surface_role_get_surface (META_WAYLAND_SURFACE_ROLE (object));
   MetaWaylandFrameCallback *cb, *next;
 
   wl_list_for_each_safe (cb, next, &priv->frame_callbacks, link)
@@ -234,7 +238,7 @@ meta_wayland_cursor_surface_dispose (GObject *object)
 
   if (priv->buffer)
     {
-      meta_wayland_surface_unref_buffer_use_count (surface);
+      meta_wayland_buffer_dec_use_count (priv->buffer);
       g_clear_object (&priv->buffer);
     }
 
@@ -263,8 +267,8 @@ meta_wayland_cursor_surface_constructed (GObject *object)
 
   if (buffer && buffer->resource)
     {
-      g_set_object (&priv->buffer, buffer);
-      meta_wayland_surface_ref_buffer_use_count (surface);
+      priv->buffer = g_object_ref (surface->buffer);
+      meta_wayland_buffer_inc_use_count (priv->buffer);
     }
 
   priv->cursor_sprite = meta_cursor_sprite_wayland_new (surface,
@@ -350,8 +354,12 @@ on_cursor_painted (MetaCursorRenderer       *renderer,
   MetaWaylandCursorSurfacePrivate *priv =
     meta_wayland_cursor_surface_get_instance_private (cursor_surface);
   guint32 time = (guint32) (g_get_monotonic_time () / 1000);
-  MetaBackend *backend = meta_get_backend ();
-  MetaContext *context = meta_backend_get_context (backend);
+  MetaWaylandSurfaceRole *surface_role =
+    META_WAYLAND_SURFACE_ROLE (cursor_surface);
+  MetaWaylandSurface *surface =
+    meta_wayland_surface_role_get_surface (surface_role);
+  MetaContext *context =
+    meta_wayland_compositor_get_context (surface->compositor);
   MetaWaylandCompositor *compositor =
     meta_context_get_wayland_compositor (context);
 

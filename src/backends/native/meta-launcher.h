@@ -22,10 +22,13 @@
 
 #include <glib-object.h>
 
-typedef struct _MetaLauncher MetaLauncher;
-typedef struct _MetaDbusLogin1Session MetaDbusLogin1Session;
+#include "backends/meta-backend-types.h"
 
-MetaLauncher     *meta_launcher_new                     (const char    *session_id,
+typedef struct _MetaLauncher MetaLauncher;
+typedef struct _MetaDBusLogin1Session MetaDBusLogin1Session;
+
+MetaLauncher     *meta_launcher_new                     (MetaBackend   *backend,
+                                                         const char    *session_id,
                                                          const char    *custom_seat_id,
                                                          GError       **error);
 void              meta_launcher_free                    (MetaLauncher  *self);
@@ -36,7 +39,9 @@ gboolean          meta_launcher_activate_vt             (MetaLauncher  *self,
 
 const char *      meta_launcher_get_seat_id             (MetaLauncher *launcher);
 
-MetaDbusLogin1Session * meta_launcher_get_session_proxy (MetaLauncher *launcher);
+MetaDBusLogin1Session * meta_launcher_get_session_proxy (MetaLauncher *launcher);
+
+MetaBackend * meta_launcher_get_backend (MetaLauncher *launcher);
 
 
 #endif /* META_LAUNCHER_H */

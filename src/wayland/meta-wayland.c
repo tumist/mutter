@@ -31,14 +31,17 @@
 #include "clutter/clutter.h"
 #include "cogl/cogl-egl.h"
 #include "compositor/meta-surface-actor-wayland.h"
+#include "core/events.h"
 #include "core/meta-context-private.h"
 #include "wayland/meta-wayland-activation.h"
 #include "wayland/meta-wayland-buffer.h"
 #include "wayland/meta-wayland-data-device.h"
 #include "wayland/meta-wayland-dma-buf.h"
 #include "wayland/meta-wayland-egl-stream.h"
+#include "wayland/meta-wayland-filter-manager.h"
 #include "wayland/meta-wayland-inhibit-shortcuts-dialog.h"
 #include "wayland/meta-wayland-inhibit-shortcuts.h"
+#include "wayland/meta-wayland-legacy-xdg-foreign.h"
 #include "wayland/meta-wayland-outputs.h"
 #include "wayland/meta-wayland-presentation-time-private.h"
 #include "wayland/meta-wayland-private.h"
@@ -46,39 +49,40 @@
 #include "wayland/meta-wayland-seat.h"
 #include "wayland/meta-wayland-subsurface.h"
 #include "wayland/meta-wayland-tablet-manager.h"
+#include "wayland/meta-wayland-transaction.h"
 #include "wayland/meta-wayland-xdg-foreign.h"
+
+#ifdef HAVE_XWAYLAND
+#include "wayland/meta-wayland-x11-interop.h"
 #include "wayland/meta-xwayland-grab-keyboard.h"
 #include "wayland/meta-xwayland-private.h"
 #include "wayland/meta-xwayland.h"
+#endif
 
 #ifdef HAVE_NATIVE_BACKEND
 #include "backends/native/meta-renderer-native.h"
 #endif
+
+enum
+{
+  PREPARE_SHUTDOWN,
+
+  N_SIGNALS
+};
+
+static guint signals[N_SIGNALS];
 
 static char *_display_name_override;
 
 typedef struct _MetaWaylandCompositorPrivate
 {
   gboolean is_wayland_egl_display_bound;
+
+  MetaWaylandFilterManager *filter_manager;
 } MetaWaylandCompositorPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MetaWaylandCompositor, meta_wayland_compositor,
                             G_TYPE_OBJECT)
-
-MetaWaylandCompositor *
-meta_wayland_compositor_get_default (void)
-{
-  MetaBackend *backend;
-  MetaContext *context;
-  MetaWaylandCompositor *wayland_compositor;
-
-  backend = meta_get_backend ();
-  context = meta_backend_get_context (backend);
-  wayland_compositor = meta_context_get_wayland_compositor (context);
-  g_assert (wayland_compositor);
-
-  return wayland_compositor;
-}
 
 typedef struct
 {
@@ -143,8 +147,12 @@ void
 meta_wayland_compositor_set_input_focus (MetaWaylandCompositor *compositor,
                                          MetaWindow            *window)
 {
-  MetaWaylandSurface *surface = window ? window->surface : NULL;
+  MetaWaylandSurface *surface;
 
+  if (window)
+    surface = meta_window_get_wayland_surface (window);
+  else
+    surface = NULL;
   meta_wayland_seat_set_input_focus (compositor->seat, surface);
 }
 
@@ -210,6 +218,7 @@ meta_wayland_compositor_update (MetaWaylandCompositor *compositor,
 static void
 on_after_update (ClutterStage          *stage,
                  ClutterStageView      *stage_view,
+                 ClutterFrame          *frame,
                  MetaWaylandCompositor *compositor)
 {
   GList *l;
@@ -369,6 +378,12 @@ meta_wayland_compositor_remove_presentation_feedback_surface (MetaWaylandComposi
     g_list_remove (compositor->presentation_time.feedback_surfaces, surface);
 }
 
+GQueue *
+meta_wayland_compositor_get_committed_transactions (MetaWaylandCompositor *compositor)
+{
+  return &compositor->committed_transactions;
+}
+
 static void
 set_gnome_env (const char *name,
 	       const char *value)
@@ -411,7 +426,9 @@ void
 meta_wayland_compositor_init_display (MetaWaylandCompositor *compositor,
                                       MetaDisplay           *display)
 {
+#ifdef HAVE_XWAYLAND
   meta_xwayland_init_display (&compositor->xwayland_manager, display);
+#endif
 }
 
 static void meta_wayland_log_func (const char *, va_list) G_GNUC_PRINTF (1, 0);
@@ -428,12 +445,7 @@ meta_wayland_log_func (const char *fmt,
 void
 meta_wayland_compositor_prepare_shutdown (MetaWaylandCompositor *compositor)
 {
-  MetaX11DisplayPolicy x11_display_policy;
-
-  x11_display_policy =
-    meta_context_get_x11_display_policy (compositor->context);
-  if (x11_display_policy != META_X11_DISPLAY_POLICY_DISABLED)
-    meta_xwayland_shutdown (&compositor->xwayland_manager);
+  g_signal_emit (compositor, signals[PREPARE_SHUTDOWN], 0, NULL);
 
   if (compositor->wayland_display)
     wl_display_destroy_clients (compositor->wayland_display);
@@ -443,6 +455,8 @@ static void
 meta_wayland_compositor_finalize (GObject *object)
 {
   MetaWaylandCompositor *compositor = META_WAYLAND_COMPOSITOR (object);
+  MetaWaylandCompositorPrivate *priv =
+    meta_wayland_compositor_get_instance_private (compositor);
   MetaBackend *backend = meta_context_get_backend (compositor->context);
   ClutterActor *stage = meta_backend_get_stage (backend);
 
@@ -456,9 +470,13 @@ meta_wayland_compositor_finalize (GObject *object)
   g_signal_handlers_disconnect_by_func (stage, on_after_update, compositor);
   g_signal_handlers_disconnect_by_func (stage, on_presented, compositor);
 
+  meta_wayland_transaction_finalize (compositor);
+
   g_clear_object (&compositor->dma_buf_manager);
 
   g_clear_pointer (&compositor->seat, meta_wayland_seat_free);
+
+  g_clear_pointer (&priv->filter_manager, meta_wayland_filter_manager_free);
 
   g_clear_pointer (&compositor->display_name, g_free);
   g_clear_pointer (&compositor->wayland_display, wl_display_destroy);
@@ -470,6 +488,9 @@ meta_wayland_compositor_finalize (GObject *object)
 static void
 meta_wayland_compositor_init (MetaWaylandCompositor *compositor)
 {
+  MetaWaylandCompositorPrivate *priv =
+    meta_wayland_compositor_get_instance_private (compositor);
+
   compositor->scheduled_surface_associations = g_hash_table_new (NULL, NULL);
 
   wl_log_set_handler_server (meta_wayland_log_func);
@@ -477,6 +498,8 @@ meta_wayland_compositor_init (MetaWaylandCompositor *compositor)
   compositor->wayland_display = wl_display_create ();
   if (compositor->wayland_display == NULL)
     g_error ("Failed to create the global wl_display");
+
+  priv->filter_manager = meta_wayland_filter_manager_new (compositor);
 }
 
 static void
@@ -485,23 +508,14 @@ meta_wayland_compositor_class_init (MetaWaylandCompositorClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = meta_wayland_compositor_finalize;
-}
 
-static bool
-meta_xwayland_global_filter (const struct wl_client *client,
-                             const struct wl_global *global,
-                             void                   *data)
-{
-  MetaWaylandCompositor *compositor = (MetaWaylandCompositor *) data;
-  MetaXWaylandManager *xwayland_manager = &compositor->xwayland_manager;
-
-  /* Keyboard grabbing protocol is for Xwayland only */
-  if (client != xwayland_manager->client)
-    return (wl_global_get_interface (global) !=
-            &zwp_xwayland_keyboard_grab_manager_v1_interface);
-
-  /* All others are visible to all clients */
-  return true;
+  signals[PREPARE_SHUTDOWN] =
+    g_signal_new ("prepare-shutdown",
+                  G_TYPE_FROM_CLASS (klass),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
 }
 
 void
@@ -511,18 +525,13 @@ meta_wayland_override_display_name (const char *display_name)
   _display_name_override = g_strdup (display_name);
 }
 
-static const char *
-meta_wayland_get_xwayland_auth_file (MetaWaylandCompositor *compositor)
-{
-  return compositor->xwayland_manager.auth_file;
-}
-
 static void
 meta_wayland_init_egl (MetaWaylandCompositor *compositor)
 {
   MetaWaylandCompositorPrivate *priv =
     meta_wayland_compositor_get_instance_private (compositor);
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaEgl *egl = meta_backend_get_egl (backend);
   ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
   CoglContext *cogl_context =
@@ -581,7 +590,9 @@ meta_wayland_compositor_new (MetaContext *context)
   ClutterActor *stage = meta_backend_get_stage (backend);
   MetaWaylandCompositor *compositor;
   GSource *wayland_event_source;
+#ifdef HAVE_XWAYLAND
   MetaX11DisplayPolicy x11_display_policy;
+#endif
 
   compositor = g_object_new (META_TYPE_WAYLAND_COMPOSITOR, NULL);
   compositor->context = context;
@@ -594,7 +605,7 @@ meta_wayland_compositor_new (MetaContext *context)
    * relating to X clients when we don't know what's happened to them
    * according to the X protocol.
    */
-  g_source_set_priority (wayland_event_source, GDK_PRIORITY_EVENTS + 1);
+  g_source_set_priority (wayland_event_source, META_PRIORITY_EVENTS + 1);
   g_source_attach (wayland_event_source, NULL);
   compositor->source = wayland_event_source;
   g_source_unref (wayland_event_source);
@@ -624,6 +635,7 @@ meta_wayland_compositor_new (MetaContext *context)
   meta_wayland_relative_pointer_init (compositor);
   meta_wayland_pointer_constraints_init (compositor);
   meta_wayland_xdg_foreign_init (compositor);
+  meta_wayland_legacy_xdg_foreign_init (compositor);
   init_dma_buf_support (compositor);
   meta_wayland_init_single_pixel_buffer_manager (compositor);
   meta_wayland_keyboard_shortcuts_inhibit_init (compositor);
@@ -631,12 +643,7 @@ meta_wayland_compositor_new (MetaContext *context)
   meta_wayland_text_input_init (compositor);
   meta_wayland_init_presentation_time (compositor);
   meta_wayland_activation_init (compositor);
-
-  /* Xwayland specific protocol, needs to be filtered out for all other clients */
-  if (meta_xwayland_grab_keyboard_init (compositor))
-    wl_display_set_global_filter (compositor->wayland_display,
-                                  meta_xwayland_global_filter,
-                                  compositor);
+  meta_wayland_transaction_init (compositor);
 
 #ifdef HAVE_WAYLAND_EGLSTREAM
   {
@@ -659,6 +666,9 @@ meta_wayland_compositor_new (MetaContext *context)
   }
 #endif /* HAVE_WAYLAND_EGLSTREAM */
 
+#ifdef HAVE_XWAYLAND
+  meta_wayland_x11_interop_init (compositor);
+
   x11_display_policy =
     meta_context_get_x11_display_policy (compositor->context);
   if (x11_display_policy != META_X11_DISPLAY_POLICY_DISABLED)
@@ -671,6 +681,7 @@ meta_wayland_compositor_new (MetaContext *context)
                                &error))
         g_error ("Failed to start X Wayland: %s", error->message);
     }
+#endif
 
   if (_display_name_override)
     {
@@ -693,12 +704,14 @@ meta_wayland_compositor_new (MetaContext *context)
 
   g_message ("Using Wayland display name '%s'", compositor->display_name);
 
+#ifdef HAVE_XWAYLAND
   if (x11_display_policy != META_X11_DISPLAY_POLICY_DISABLED)
     {
       set_gnome_env ("GNOME_SETUP_DISPLAY", compositor->xwayland_manager.private_connection.name);
       set_gnome_env ("DISPLAY", compositor->xwayland_manager.public_connection.name);
-      set_gnome_env ("XAUTHORITY", meta_wayland_get_xwayland_auth_file (compositor));
+      set_gnome_env ("XAUTHORITY", compositor->xwayland_manager.auth_file);
     }
+#endif
 
   set_gnome_env ("WAYLAND_DISPLAY", meta_wayland_get_wayland_display_name (compositor));
 
@@ -788,7 +801,10 @@ static void
 on_scheduled_association_unmanaged (MetaWindow *window,
                                     gpointer    user_data)
 {
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaContext *context = meta_display_get_context (display);
+  MetaWaylandCompositor *compositor =
+    meta_context_get_wayland_compositor (context);
 
   meta_wayland_compositor_remove_surface_association (compositor,
                                                       GPOINTER_TO_INT (user_data));
@@ -806,6 +822,7 @@ meta_wayland_compositor_schedule_surface_association (MetaWaylandCompositor *com
                        GINT_TO_POINTER (id), window);
 }
 
+#ifdef HAVE_XWAYLAND
 void
 meta_wayland_compositor_notify_surface_id (MetaWaylandCompositor *compositor,
                                            int                    id,
@@ -821,6 +838,7 @@ meta_wayland_compositor_notify_surface_id (MetaWaylandCompositor *compositor,
       meta_wayland_compositor_remove_surface_association (compositor, id);
     }
 }
+#endif
 
 gboolean
 meta_wayland_compositor_is_egl_display_bound (MetaWaylandCompositor *compositor)
@@ -831,14 +849,37 @@ meta_wayland_compositor_is_egl_display_bound (MetaWaylandCompositor *compositor)
   return priv->is_wayland_egl_display_bound;
 }
 
+#ifdef HAVE_XWAYLAND
 MetaXWaylandManager *
 meta_wayland_compositor_get_xwayland_manager (MetaWaylandCompositor *compositor)
 {
   return &compositor->xwayland_manager;
 }
+#endif
 
 MetaContext *
 meta_wayland_compositor_get_context (MetaWaylandCompositor *compositor)
 {
   return compositor->context;
+}
+
+gboolean
+meta_wayland_compositor_is_grabbed (MetaWaylandCompositor *compositor)
+{
+  return meta_wayland_seat_is_grabbed (compositor->seat);
+}
+
+struct wl_display *
+meta_wayland_compositor_get_wayland_display (MetaWaylandCompositor *compositor)
+{
+  return compositor->wayland_display;
+}
+
+MetaWaylandFilterManager *
+meta_wayland_compositor_get_filter_manager (MetaWaylandCompositor *compositor)
+{
+  MetaWaylandCompositorPrivate *priv =
+    meta_wayland_compositor_get_instance_private (compositor);
+
+  return priv->filter_manager;
 }

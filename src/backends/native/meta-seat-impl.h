@@ -133,6 +133,7 @@ MetaSeatImpl * meta_seat_impl_new (MetaSeatNative     *seat_native,
 
 void meta_seat_impl_destroy (MetaSeatImpl *seat_impl);
 
+META_EXPORT_TEST
 void meta_seat_impl_run_input_task (MetaSeatImpl *seat_impl,
                                     GTask        *task,
                                     GSourceFunc   dispatch_func);
@@ -250,5 +251,7 @@ void meta_seat_impl_queue_main_thread_idle (MetaSeatImpl   *seat_impl,
                                             GSourceFunc     func,
                                             gpointer        user_data,
                                             GDestroyNotify  destroy_notify);
+
+MetaBackend * meta_seat_impl_get_backend (MetaSeatImpl *seat_impl);
 
 #endif /* META_SEAT_IMPL_H */

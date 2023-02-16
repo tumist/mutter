@@ -165,6 +165,7 @@ meta_cursor_renderer_update_stage_overlay (MetaCursorRenderer *renderer,
 static void
 meta_cursor_renderer_after_paint (ClutterStage       *stage,
                                   ClutterStageView   *stage_view,
+                                  ClutterFrame       *frame,
                                   MetaCursorRenderer *renderer)
 {
   MetaCursorRendererPrivate *priv =
@@ -477,4 +478,13 @@ meta_cursor_renderer_get_input_device (MetaCursorRenderer *renderer)
     meta_cursor_renderer_get_instance_private (renderer);
 
   return priv->device;
+}
+
+MetaBackend *
+meta_cursor_renderer_get_backend (MetaCursorRenderer *renderer)
+{
+  MetaCursorRendererPrivate *priv =
+    meta_cursor_renderer_get_instance_private (renderer);
+
+  return priv->backend;
 }

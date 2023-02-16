@@ -27,7 +27,9 @@
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 
+#include "backends/native/meta-backend-native.h"
 #include "backends/native/meta-launcher.h"
+#include "meta/meta-backend.h"
 #include "meta/util.h"
 
 #include "meta-dbus-login1.h"
@@ -50,7 +52,9 @@ struct _MetaDevicePool
 {
   GObject parent;
 
-  MetaDbusLogin1Session *session_proxy;
+  MetaBackend *backend;
+
+  MetaDBusLogin1Session *session_proxy;
 
   GMutex mutex;
 
@@ -174,7 +178,7 @@ find_device_file_from_path (MetaDevicePool *pool,
 }
 
 static gboolean
-take_device (MetaDbusLogin1Session  *session_proxy,
+take_device (MetaDBusLogin1Session  *session_proxy,
              int                     dev_major,
              int                     dev_minor,
              int                    *out_fd,
@@ -320,7 +324,7 @@ release_device_file (MetaDevicePool *pool,
 
   if (file->flags & META_DEVICE_FILE_FLAG_TAKE_CONTROL)
     {
-      MetaDbusLogin1Session *session_proxy;
+      MetaDBusLogin1Session *session_proxy;
 
       meta_topic (META_DEBUG_BACKEND,
                   "Releasing control of and closing device file '%s'",
@@ -351,12 +355,16 @@ release_device_file (MetaDevicePool *pool,
 }
 
 MetaDevicePool *
-meta_device_pool_new (MetaLauncher *launcher)
+meta_device_pool_new (MetaBackendNative *backend_native)
 {
   MetaDevicePool *pool;
+  MetaLauncher *launcher;
 
   pool = g_object_new (META_TYPE_DEVICE_POOL, NULL);
 
+  pool->backend = META_BACKEND (backend_native);
+
+  launcher = meta_backend_native_get_launcher (backend_native);
   if (launcher)
     pool->session_proxy = meta_launcher_get_session_proxy (launcher);
 
@@ -386,4 +394,10 @@ meta_device_pool_class_init (MetaDevicePoolClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = meta_device_pool_finalize;
+}
+
+MetaBackend *
+meta_device_pool_get_backend (MetaDevicePool *pool)
+{
+  return pool->backend;
 }

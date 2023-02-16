@@ -197,7 +197,7 @@ meta_window_actor_wayland_rebuild_surface_tree (MetaWindowActor *actor)
     meta_window_actor_get_surface (actor);
   MetaWaylandSurface *surface = meta_surface_actor_wayland_get_surface (
     META_SURFACE_ACTOR_WAYLAND (surface_actor));
-  GNode *root_node = surface->subsurface_branch_node;
+  GNode *root_node = surface->output_state.subsurface_branch_node;
   g_autoptr (GList) surface_actors = NULL;
   g_autoptr (GList) children = NULL;
   GList *l;
@@ -304,7 +304,11 @@ meta_window_actor_wayland_get_scanout_candidate (MetaWindowActor *actor)
   int n_mapped_surfaces = 0;
 
   if (clutter_actor_get_last_child (CLUTTER_ACTOR (self)) != surface_container)
-    return NULL;
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "Top child of window-actor not a surface");
+      return NULL;
+    }
 
   clutter_actor_iter_init (&iter, surface_container);
   while (clutter_actor_iter_next (&iter, &child_actor))
@@ -317,12 +321,20 @@ meta_window_actor_wayland_get_scanout_candidate (MetaWindowActor *actor)
     }
 
   if (!topmost_surface_actor)
-    return NULL;
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "No surface-actor for window-actor");
+      return NULL;
+    }
 
   window = meta_window_actor_get_meta_window (actor);
   if (!meta_surface_actor_is_opaque (topmost_surface_actor) &&
       !(meta_window_is_fullscreen (window) && n_mapped_surfaces == 1))
-    return NULL;
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "Window-actor is not opaque");
+      return NULL;
+    }
 
   return topmost_surface_actor;
 }

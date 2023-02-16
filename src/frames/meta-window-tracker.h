@@ -1,9 +1,5 @@
-/* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
-
-/* Metacity Theme Rendering */
-
 /*
- * Copyright (C) 2001 Havoc Pennington
+ * Copyright (C) 2022 Red Hat Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -17,25 +13,21 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
- */
-
-#ifndef META_THEME_H
-#define META_THEME_H
-
-#include <glib.h>
-
-/**
- * MetaTheme:
  *
+ * Author: Carlos Garnacho <carlosg@gnome.org>
  */
-typedef struct _MetaTheme MetaTheme;
 
-META_EXPORT
-MetaTheme* meta_theme_get_default (void);
+#ifndef META_WINDOW_TRACKER_H
+#define META_WINDOW_TRACKER_H
 
-META_EXPORT
-MetaTheme* meta_theme_new      (void);
+#include <gtk/gtk.h>
+#include <X11/Xlib.h>
 
-META_EXPORT
-void       meta_theme_free     (MetaTheme *theme);
-#endif
+#define META_TYPE_WINDOW_TRACKER (meta_window_tracker_get_type ())
+G_DECLARE_FINAL_TYPE (MetaWindowTracker, meta_window_tracker,
+                      META, WINDOW_TRACKER,
+                      GObject)
+
+MetaWindowTracker * meta_window_tracker_new (GdkDisplay *display);
+
+#endif /* META_WINDOW_TRACKER_H */

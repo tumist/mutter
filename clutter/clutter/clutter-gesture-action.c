@@ -378,20 +378,12 @@ clutter_gesture_action_handle_event (ClutterAction      *action,
         return CLUTTER_EVENT_PROPAGATE;
     }
 
-  if (point &&
-      event_type == CLUTTER_LEAVE &&
-      (event->crossing.flags & CLUTTER_EVENT_FLAG_GRAB_NOTIFY) != 0)
-    {
-      gesture_unregister_point (gesture_action, position);
-
-      if (priv->in_gesture)
-        cancel_gesture (gesture_action);
-
-      return CLUTTER_EVENT_PROPAGATE;
-    }
-
   switch (clutter_event_type (event))
     {
+    case CLUTTER_ENTER:
+    case CLUTTER_LEAVE:
+      return CLUTTER_EVENT_PROPAGATE;
+
     case CLUTTER_BUTTON_PRESS:
     case CLUTTER_TOUCH_BEGIN:
       if (priv->stage == NULL)
@@ -508,6 +500,38 @@ clutter_gesture_action_handle_event (ClutterAction      *action,
   return priv->in_gesture ?
     CLUTTER_EVENT_STOP :
     CLUTTER_EVENT_PROPAGATE;
+}
+
+static void
+clutter_gesture_action_sequence_cancelled (ClutterAction        *action,
+                                           ClutterInputDevice   *device,
+                                           ClutterEventSequence *sequence)
+{
+  ClutterGestureAction *self = CLUTTER_GESTURE_ACTION (action);
+  ClutterGestureActionPrivate *priv =
+    clutter_gesture_action_get_instance_private (self);
+  int i, position = -1;
+
+  for (i = 0; i < priv->points->len; i++)
+    {
+      if ((g_array_index (priv->points, GesturePoint, i).device == device) &&
+          (g_array_index (priv->points, GesturePoint, i).sequence == sequence))
+        {
+          position = i;
+          break;
+        }
+    }
+
+  if (position == -1)
+    return;
+
+  if (priv->in_gesture)
+    {
+      priv->in_gesture = FALSE;
+      cancel_gesture (self);
+    }
+
+  gesture_unregister_point (self, position);
 }
 
 static void
@@ -640,6 +664,7 @@ clutter_gesture_action_class_init (ClutterGestureActionClass *klass)
   meta_class->set_enabled = clutter_gesture_action_set_enabled;
 
   action_class->handle_event = clutter_gesture_action_handle_event;
+  action_class->sequence_cancelled = clutter_gesture_action_sequence_cancelled;
 
   klass->gesture_begin = default_event_handler;
   klass->gesture_progress = default_event_handler;

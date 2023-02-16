@@ -11,9 +11,13 @@ import tempfile
 uncrustify_cfg = 'tools/uncrustify.cfg'
 
 def run_diff(sha):
-    proc = subprocess.Popen(["git", "diff", "-U0", "--function-context", sha, "HEAD"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    files = proc.stdout.read().strip().decode('utf-8')
-    return files.split('\n')
+    proc = subprocess.run(
+        ["git", "diff", "-U0", "--function-context", sha, "HEAD"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding="utf-8",
+    )
+    return proc.stdout.strip().splitlines()
 
 def find_chunks(diff):
     file_entry_re = re.compile('^\+\+\+ b/(.*)$')
@@ -42,14 +46,15 @@ def reformat_chunks(chunks, rewrite):
     def create_temp_file(file, start, end):
         with open(file) as f:
             tmp = tempfile.NamedTemporaryFile()
-            tmp.write(b'/** *INDENT-OFF* **/\n')
-            for i, line in enumerate(f):
-                if i == start - 2:
+            if start > 1:
+                tmp.write(b'/** *INDENT-OFF* **/\n')
+            for i, line in enumerate(f, start=1):
+                if i == start - 1:
                     tmp.write(b'/** *INDENT-ON* **/\n')
 
                 tmp.write(bytes(line, 'utf-8'))
 
-                if i == end - 2:
+                if i == end - 1:
                     tmp.write(b'/** *INDENT-OFF* **/\n')
 
             tmp.seek(0)
@@ -75,9 +80,11 @@ def reformat_chunks(chunks, rewrite):
         tmp = create_temp_file(chunk['file'], chunk['start'], chunk['end'])
 
         # uncrustify chunk
-        proc = subprocess.Popen(["uncrustify", "-c", uncrustify_cfg, "-f", tmp.name], stdout=subprocess.PIPE)
-        reindented = proc.stdout.readlines()
-        proc.wait()
+        proc = subprocess.run(
+            ["uncrustify", "-c", uncrustify_cfg, "-f", tmp.name],
+            stdout=subprocess.PIPE,
+        )
+        reindented = proc.stdout.splitlines(keepends=True)
         if proc.returncode != 0:
             continue
 
@@ -88,25 +95,32 @@ def reformat_chunks(chunks, rewrite):
 
         if dry_run is True:
             # Show changes
-            proc = subprocess.Popen(["diff", "-up", "--color=always", chunk['file'], formatted.name], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            diff = proc.stdout.read().decode('utf-8')
+            proc = subprocess.run(
+                ["diff", "-up", "--color=always", chunk['file'], formatted.name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                encoding="utf-8",
+            )
+            diff = proc.stdout
             if diff != '':
                 output = re.sub('\t', '↦\t', diff)
                 print(output)
                 changed = True
         else:
             # Apply changes
-            diff = subprocess.Popen(["diff", "-up", chunk['file'], formatted.name], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            patch = subprocess.Popen(["patch", chunk['file']], stdin=diff.stdout)
-            diff.stdout.close()
-            patch.communicate()
+            diff = subprocess.run(
+                ["diff", "-up", chunk['file'], formatted.name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            patch = subprocess.run(["patch", chunk['file']], input=diff.stdout)
 
         formatted.close()
 
     return changed
 
 
-parser = argparse.ArgumentParser(description='Check code style.')
+parser = argparse.ArgumentParser(description='Check code style. Needs uncrustify installed.')
 parser.add_argument('--sha', metavar='SHA', type=str,
                     help='SHA for the commit to compare HEAD with')
 parser.add_argument('--dry-run', '-d', type=bool,
@@ -129,10 +143,14 @@ chunks = find_chunks(diff)
 changed = reformat_chunks(chunks, rewrite)
 
 if dry_run is not True and rewrite is True:
-    proc = subprocess.Popen(["git", "commit", "--all", "--amend", "-C", "HEAD"], stdout=subprocess.DEVNULL)
+    subprocess.run(["git", "commit", "--all", "--amend", "-C", "HEAD"], stdout=subprocess.DEVNULL)
     os._exit(0)
 elif dry_run is True and changed is True:
-    print ("\nIssue the following command in your local tree to apply the suggested changes (needs uncrustify installed):\n\n $ git rebase origin/main --exec \"./check-style.py -r\" \n")
+    print(f"""
+Issue the following command in your local tree to apply the suggested changes:
+
+    $ git rebase {sha} --exec "./check-style.py -r"
+""")
     os._exit(-1)
 
 os._exit(0)

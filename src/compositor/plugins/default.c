@@ -32,6 +32,7 @@
 #include "meta/meta-background-actor.h"
 #include "meta/meta-background-content.h"
 #include "meta/meta-background-group.h"
+#include "meta/meta-context.h"
 #include "meta/meta-monitor-manager.h"
 #include "meta/meta-plugin.h"
 #include "meta/util.h"
@@ -148,8 +149,6 @@ typedef struct
 typedef struct _DisplayTilePreview
 {
   ClutterActor   *actor;
-
-  GdkRGBA        *preview_color;
 
   MetaRectangle   tile_rect;
 } DisplayTilePreview;
@@ -413,7 +412,8 @@ on_monitors_changed (MetaMonitorManager *monitor_manager,
 }
 
 static void
-init_keymap (MetaDefaultPlugin *self)
+init_keymap (MetaDefaultPlugin *self,
+             MetaBackend       *backend)
 {
   g_autoptr (GError) error = NULL;
   g_autoptr (GDBusProxy) proxy = NULL;
@@ -469,8 +469,7 @@ init_keymap (MetaDefaultPlugin *self)
   if (!g_variant_lookup (props, "X11Variant", "s", &x11_variant))
     x11_variant = g_strdup ("");
 
-  meta_backend_set_keymap (meta_get_backend (),
-                           x11_layout, x11_variant, x11_options);
+  meta_backend_set_keymap (backend, x11_layout, x11_variant, x11_options);
 }
 
 static void
@@ -485,8 +484,10 @@ start (MetaPlugin *plugin)
 {
   MetaDefaultPlugin *self = META_DEFAULT_PLUGIN (plugin);
   MetaDisplay *display = meta_plugin_get_display (plugin);
-  MetaMonitorManager *monitor_manager = meta_monitor_manager_get ();
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
+  MetaMonitorManager *monitor_manager =
+    meta_backend_get_monitor_manager (backend);
 
   self->priv->background_group = meta_background_group_new ();
   clutter_actor_insert_child_below (meta_get_window_group_for_display (display),
@@ -502,7 +503,7 @@ start (MetaPlugin *plugin)
                     self);
 
   if (meta_is_wayland_compositor ())
-    init_keymap (self);
+    init_keymap (self, backend);
 
   clutter_actor_show (meta_get_stage_for_display (display));
 }
@@ -554,42 +555,47 @@ switch_workspace (MetaPlugin *plugin,
       ActorPrivate    *apriv	    = get_actor_private (window_actor);
       ClutterActor    *actor	    = CLUTTER_ACTOR (window_actor);
       MetaWindow      *window;
+      MetaWorkspace   *workspace;
+      gint             workspace_idx;
 
       window = meta_window_actor_get_meta_window (window_actor);
+      workspace = meta_window_get_workspace (window);
+
+      if (!workspace)
+        {
+          /* unmanaging window */
+          clutter_actor_hide (actor);
+          apriv->orig_parent = NULL;
+          continue;
+        }
 
       if (meta_window_is_on_all_workspaces (window))
         {
           /* Sticky window */
           apriv->orig_parent = NULL;
+          continue;
         }
-      else
-        {
-          MetaWorkspace *workspace;
-          gint           win_workspace;
 
-          workspace = meta_window_get_workspace (window);
-          win_workspace = meta_workspace_index (workspace);
+        workspace_idx = meta_workspace_index (workspace);
 
-          if (win_workspace == to || win_workspace == from)
-            {
-              ClutterActor *parent = win_workspace == to ? workspace1
-                                                         : workspace2;
-              apriv->orig_parent = clutter_actor_get_parent (actor);
+        if (workspace_idx == to || workspace_idx == from)
+          {
+            ClutterActor *parent = workspace_idx == to ? workspace1
+                                                       : workspace2;
+            apriv->orig_parent = clutter_actor_get_parent (actor);
 
-              g_object_ref (actor);
-              clutter_actor_remove_child (clutter_actor_get_parent (actor),
-                                          actor);
-              clutter_actor_add_child (parent, actor);
-              clutter_actor_set_child_below_sibling (parent, actor, NULL);
-              g_object_unref (actor);
-            }
-          else
-            {
-              /* Window on some other desktop */
-              clutter_actor_hide (actor);
-              apriv->orig_parent = NULL;
-            }
-        }
+            g_object_ref (actor);
+            clutter_actor_remove_child (clutter_actor_get_parent (actor),
+                                        actor);
+            clutter_actor_add_child (parent, actor);
+            clutter_actor_set_child_below_sibling (parent, actor, NULL);
+            g_object_unref (actor);
+            continue;
+          }
+
+        /* Window on some other desktop */
+        clutter_actor_hide (actor);
+        apriv->orig_parent = NULL;
     }
 
   priv->desktop1 = workspace1;

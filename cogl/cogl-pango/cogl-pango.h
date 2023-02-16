@@ -72,8 +72,6 @@ typedef PangoCairoFontMap CoglPangoFontMap;
  * Creates a new font map.
  *
  * Return value: (transfer full): the newly created #PangoFontMap
- *
- * Since: 1.14
  */
 COGL_EXPORT PangoFontMap *
 cogl_pango_font_map_new (void);
@@ -82,9 +80,9 @@ cogl_pango_font_map_new (void);
  * cogl_pango_font_map_create_context:
  * @font_map: a #CoglPangoFontMap
  *
- * Create a #PangoContext for the given @font_map.
+ * Create a [class@Pango.Context] for the given @font_map.
  *
- * Returns: (transfer full): the newly created context: free with g_object_unref().
+ * Returns: (transfer full): the newly created context: free with [method@GObject.Object.unref].
  */
 COGL_EXPORT PangoContext *
 cogl_pango_font_map_create_context (CoglPangoFontMap *font_map);
@@ -95,12 +93,12 @@ cogl_pango_font_map_create_context (CoglPangoFontMap *font_map);
  * @dpi: The resolution in "dots per inch". (Physical inches aren't
  *       actually involved; the terminology is conventional.)
  *
- * Sets the resolution for the @font_map. This is a scale factor
- * between points specified in a #PangoFontDescription and Cogl units.
+ * Sets the resolution for the @font_map. 
+ * 
+ * This is a scale factor between points specified in a 
+ * [struct@Pango.FontDescription] and Cogl units.
  * The default value is %96, meaning that a 10 point font will be 13
  * units high. (10 * 96. / 72. = 13.3).
- *
- * Since: 1.14
  */
 COGL_EXPORT void
 cogl_pango_font_map_set_resolution (CoglPangoFontMap *font_map,
@@ -111,8 +109,6 @@ cogl_pango_font_map_set_resolution (CoglPangoFontMap *font_map,
  * @font_map: a #CoglPangoFontMap
  *
  * Clears the glyph cache for @font_map.
- *
- * Since: 1.0
  */
 COGL_EXPORT void
 cogl_pango_font_map_clear_glyph_cache (CoglPangoFontMap *font_map);
@@ -126,8 +122,6 @@ cogl_pango_font_map_clear_glyph_cache (CoglPangoFontMap *font_map);
  *
  * This api should be used to avoid mid-scene modifications of
  * glyph-cache textures which can lead to undefined rendering results.
- *
- * Since: 1.0
  */
 COGL_EXPORT void
 cogl_pango_ensure_glyph_cache_for_layout (PangoLayout *layout);
@@ -138,9 +132,7 @@ cogl_pango_ensure_glyph_cache_for_layout (PangoLayout *layout);
  * @value: %TRUE to enable the use of mipmapping
  *
  * Sets whether the renderer for the passed font map should use
- * mipmapping when rendering a #PangoLayout.
- *
- * Since: 1.0
+ * mipmapping when rendering a [class@Pango.Layout].
  */
 COGL_EXPORT void
 cogl_pango_font_map_set_use_mipmapping (CoglPangoFontMap *font_map,
@@ -150,12 +142,10 @@ cogl_pango_font_map_set_use_mipmapping (CoglPangoFontMap *font_map,
  * cogl_pango_font_map_get_use_mipmapping:
  * @font_map: a #CoglPangoFontMap
  *
- * Retrieves whether the #CoglPangoRenderer used by @font_map will use
+ * Retrieves whether the [class@CoglPango.Renderer] used by @font_map will use
  * mipmapping when rendering the glyphs.
  *
  * Return value: %TRUE if mipmapping is used, %FALSE otherwise.
- *
- * Since: 1.0
  */
 COGL_EXPORT gboolean
 cogl_pango_font_map_get_use_mipmapping (CoglPangoFontMap *font_map);
@@ -164,11 +154,9 @@ cogl_pango_font_map_get_use_mipmapping (CoglPangoFontMap *font_map);
  * cogl_pango_font_map_get_renderer:
  * @font_map: a #CoglPangoFontMap
  *
- * Retrieves the #CoglPangoRenderer for the passed @font_map.
+ * Retrieves the [class@CoglPango.Renderer] for the passed @font_map.
  *
  * Return value: (transfer none): a #PangoRenderer
- *
- * Since: 1.0
  */
 COGL_EXPORT PangoRenderer *
 cogl_pango_font_map_get_renderer (CoglPangoFontMap *font_map);
@@ -182,10 +170,7 @@ cogl_pango_font_map_get_renderer (CoglPangoFontMap *font_map);
  * @color: color to use when rendering the layout
  *
  * Draws a solidly coloured @layout on the given @framebuffer at (@x,
- * @y) within the @framebuffer<!-- -->'s current model-view coordinate
- * space.
- *
- * Since: 1.14
+ * @y) within the `framebuffer`'s current model-view coordinate space.
  */
 COGL_EXPORT void
 cogl_pango_show_layout (CoglFramebuffer *framebuffer,
@@ -203,10 +188,7 @@ cogl_pango_show_layout (CoglFramebuffer *framebuffer,
  * @color: color to use when rendering the line
  *
  * Draws a solidly coloured @line on the given @framebuffer at (@x,
- * @y) within the @framebuffer<!-- -->'s current model-view coordinate
- * space.
- *
- * Since: 1.14
+ * @y) within the `framebuffer`'s current model-view coordinate space.
  */
 COGL_EXPORT void
 cogl_pango_show_layout_line (CoglFramebuffer *framebuffer,

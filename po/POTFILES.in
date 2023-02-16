@@ -4,7 +4,6 @@ data/50-mutter-navigation.xml
 data/50-mutter-system.xml
 data/50-mutter-wayland.xml
 data/50-mutter-windows.xml
-data/mutter.desktop.in
 data/org.gnome.mutter.gschema.xml.in
 data/org.gnome.mutter.wayland.gschema.xml.in
 src/backends/meta-input-settings.c
@@ -24,8 +23,6 @@ src/core/prefs.c
 src/core/util.c
 src/core/window.c
 src/core/workspace.c
-src/ui/frames.c
-src/ui/theme.c
 src/wayland/meta-wayland-tablet-pad.c
 src/x11/meta-x11-display.c
 src/x11/meta-x11-errors.c

@@ -62,6 +62,8 @@ struct _MetaXWaylandManager
   guint abstract_fd_watch_id;
   guint unix_fd_watch_id;
 
+  gulong prepare_shutdown_id;
+
   struct wl_display *wayland_display;
   struct wl_client *client;
   struct wl_resource *xserver_resource;
@@ -95,11 +97,18 @@ struct _MetaWaylandCompositor
   MetaWaylandSeat *seat;
   MetaWaylandTabletManager *tablet_manager;
   MetaWaylandActivation *activation;
+  MetaWaylandXdgForeign *foreign;
 
   GHashTable *scheduled_surface_associations;
 
   MetaWaylandPresentationTime presentation_time;
   MetaWaylandDmaBufManager *dma_buf_manager;
+
+  /*
+   * Queue of transactions which have been committed but not applied yet, in the
+   * order they were committed.
+   */
+  GQueue committed_transactions;
 };
 
 #define META_TYPE_WAYLAND_COMPOSITOR (meta_wayland_compositor_get_type ())

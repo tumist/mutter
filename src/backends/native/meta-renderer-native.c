@@ -415,7 +415,8 @@ meta_renderer_native_choose_egl_config (CoglDisplay  *cogl_display,
 {
   CoglRenderer *cogl_renderer = cogl_display->renderer;
   CoglRendererEGL *cogl_renderer_egl = cogl_renderer->winsys;
-  MetaBackend *backend = meta_get_backend ();
+  MetaRenderer *renderer = cogl_renderer->custom_winsys_user_data;
+  MetaBackend *backend = meta_renderer_get_backend (renderer);
   MetaEgl *egl = meta_backend_get_egl (backend);
   MetaRendererNativeGpuData *renderer_gpu_data = cogl_renderer_egl->platform;
   EGLDisplay egl_display = cogl_renderer_egl->edpy;
@@ -486,10 +487,12 @@ meta_renderer_native_destroy_egl_display (CoglDisplay *cogl_display)
 }
 
 static EGLSurface
-create_dummy_pbuffer_surface (EGLDisplay egl_display,
-                              GError   **error)
+create_dummy_pbuffer_surface (CoglRenderer  *cogl_renderer,
+                              EGLDisplay     egl_display,
+                              GError       **error)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaRenderer *renderer = cogl_renderer->custom_winsys_user_data;
+  MetaBackend *backend = meta_renderer_get_backend (renderer);
   MetaEgl *egl = meta_backend_get_egl (backend);
   EGLConfig pbuffer_config;
   static const EGLint pbuffer_config_attribs[] = {
@@ -528,7 +531,9 @@ meta_renderer_native_egl_context_created (CoglDisplay *cogl_display,
        COGL_EGL_WINSYS_FEATURE_SURFACELESS_CONTEXT) == 0)
     {
       cogl_display_egl->dummy_surface =
-        create_dummy_pbuffer_surface (cogl_renderer_egl->edpy, error);
+        create_dummy_pbuffer_surface (cogl_renderer,
+                                      cogl_renderer_egl->edpy,
+                                      error);
       if (cogl_display_egl->dummy_surface == EGL_NO_SURFACE)
         return FALSE;
     }
@@ -1367,7 +1372,7 @@ meta_renderer_native_create_view (MetaRenderer       *renderer,
         g_error ("Failed to allocate back buffer texture: %s", error->message);
     }
 
-  if (meta_is_stage_views_scaled ())
+  if (meta_backend_is_stage_views_scaled (backend))
     scale = meta_logical_monitor_get_scale (logical_monitor);
   else
     scale = 1.0;
@@ -1447,6 +1452,24 @@ meta_renderer_native_rebuild_views (MetaRenderer *renderer)
   meta_renderer_native_queue_modes_reset (META_RENDERER_NATIVE (renderer));
 }
 
+static void
+meta_renderer_native_resume (MetaRenderer *renderer)
+{
+  GList *l;
+
+  for (l = meta_renderer_get_views (renderer); l; l = l->next)
+    {
+      ClutterStageView *stage_view = l->data;
+      CoglFramebuffer *framebuffer;
+
+      framebuffer = clutter_stage_view_get_onscreen (stage_view);
+      if (!META_IS_ONSCREEN_NATIVE (framebuffer))
+        continue;
+
+      meta_onscreen_native_invalidate (META_ONSCREEN_NATIVE (framebuffer));
+    }
+}
+
 void
 meta_renderer_native_prepare_frame (MetaRendererNative *renderer_native,
                                     MetaRendererView   *view,
@@ -1456,24 +1479,20 @@ meta_renderer_native_prepare_frame (MetaRendererNative *renderer_native,
   MetaBackend *backend = meta_renderer_get_backend (renderer);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
-  MetaCrtc *crtc = meta_renderer_view_get_crtc (view);
+  CoglFramebuffer *framebuffer =
+    clutter_stage_view_get_onscreen (CLUTTER_STAGE_VIEW (view));
   MetaPowerSave power_save_mode;
-  MetaCrtcKms *crtc_kms;
-  MetaKmsCrtc *kms_crtc;
-  MetaKmsDevice *kms_device;
-
-  if (!META_IS_CRTC_KMS (crtc))
-    return;
 
   power_save_mode = meta_monitor_manager_get_power_save_mode (monitor_manager);
   if (power_save_mode != META_POWER_SAVE_ON)
     return;
 
-  crtc_kms = META_CRTC_KMS (crtc);
-  kms_crtc = meta_crtc_kms_get_kms_crtc (META_CRTC_KMS (crtc));
-  kms_device = meta_kms_crtc_get_device (kms_crtc);
+  if (COGL_IS_ONSCREEN (framebuffer))
+    {
+      CoglOnscreen *onscreen = COGL_ONSCREEN (framebuffer);
 
-  meta_crtc_kms_maybe_set_gamma (crtc_kms, kms_device);
+      meta_onscreen_native_prepare_frame (onscreen, frame);
+    }
 }
 
 void
@@ -2172,6 +2191,7 @@ meta_renderer_native_class_init (MetaRendererNativeClass *klass)
   renderer_class->create_cogl_renderer = meta_renderer_native_create_cogl_renderer;
   renderer_class->create_view = meta_renderer_native_create_view;
   renderer_class->rebuild_views = meta_renderer_native_rebuild_views;
+  renderer_class->resume = meta_renderer_native_resume;
 }
 
 MetaRendererNative *

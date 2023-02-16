@@ -40,6 +40,16 @@
 
 #define TABLET_AXIS_MAX 65535
 
+static MetaBackend *
+backend_from_tool (MetaWaylandTabletTool *tool)
+{
+  MetaWaylandCompositor *compositor =
+    meta_wayland_seat_get_compositor (tool->seat->seat);
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+
+  return meta_context_get_backend (context);
+}
+
 static void
 unbind_resource (struct wl_resource *resource)
 {
@@ -354,7 +364,7 @@ tool_cursor_prepare_at (MetaCursorSpriteXcursor *sprite_xcursor,
                         int                      y,
                         MetaWaylandTabletTool   *tool)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_tool (tool);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;
@@ -372,7 +382,7 @@ tool_cursor_prepare_at (MetaCursorSpriteXcursor *sprite_xcursor,
       meta_cursor_sprite_xcursor_set_theme_scale (sprite_xcursor,
                                                   (int) ceiled_scale);
 
-      if (meta_is_stage_views_scaled ())
+      if (meta_backend_is_stage_views_scaled (backend))
         meta_cursor_sprite_set_texture_scale (cursor_sprite,
                                               1.0 / ceiled_scale);
       else
@@ -385,7 +395,10 @@ meta_wayland_tablet_tool_new (MetaWaylandTabletSeat  *seat,
                               ClutterInputDevice     *device,
                               ClutterInputDeviceTool *device_tool)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaWaylandCompositor *compositor =
+    meta_wayland_seat_get_compositor (seat->seat);
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaCursorTracker *cursor_tracker = meta_backend_get_cursor_tracker (backend);
   MetaWaylandTabletTool *tool;
 
@@ -552,8 +565,7 @@ static void
 sync_focus_surface (MetaWaylandTabletTool *tool,
                     const ClutterEvent    *event)
 {
-  MetaDisplay *display = meta_get_display ();
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_tool (tool);
   ClutterStage *stage = CLUTTER_STAGE (meta_backend_get_stage (backend));
 
   if (clutter_stage_get_grab_actor (stage))
@@ -562,22 +574,7 @@ sync_focus_surface (MetaWaylandTabletTool *tool,
       return;
     }
 
-  switch (display->event_route)
-    {
-    case META_EVENT_ROUTE_WINDOW_OP:
-    case META_EVENT_ROUTE_FRAME_BUTTON:
-      /* The compositor has a grab, so remove our focus */
-      meta_wayland_tablet_tool_set_focus (tool, NULL, event);
-      break;
-
-    case META_EVENT_ROUTE_NORMAL:
-    case META_EVENT_ROUTE_WAYLAND_POPUP:
-      meta_wayland_tablet_tool_set_focus (tool, tool->current, event);
-      break;
-
-    default:
-      g_assert_not_reached ();
-    }
+  meta_wayland_tablet_tool_set_focus (tool, tool->current, event);
 }
 
 static void
@@ -842,7 +839,7 @@ meta_wayland_tablet_tool_update (MetaWaylandTabletTool *tool,
           MetaCursorRenderer *renderer;
 
           renderer =
-            meta_backend_get_cursor_renderer_for_device (meta_get_backend (),
+            meta_backend_get_cursor_renderer_for_device (backend_from_tool (tool),
                                                          clutter_event_get_source_device (event));
           g_set_object (&tool->cursor_renderer, renderer);
         }
@@ -899,7 +896,8 @@ tablet_tool_can_grab_surface (MetaWaylandTabletTool *tool,
   if (tool->focus_surface == surface)
     return TRUE;
 
-  META_WAYLAND_SURFACE_FOREACH_SUBSURFACE (surface, subsurface)
+  META_WAYLAND_SURFACE_FOREACH_SUBSURFACE (&surface->output_state,
+                                           subsurface)
     {
       if (tablet_tool_can_grab_surface (tool, subsurface))
         return TRUE;

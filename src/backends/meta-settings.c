@@ -28,7 +28,6 @@
 #include "backends/meta-backend-private.h"
 #include "backends/meta-logical-monitor.h"
 #include "backends/meta-monitor-manager-private.h"
-#include "ui/theme-private.h"
 
 #ifndef XWAYLAND_GRAB_DEFAULT_ACCESS_RULES
 # warning "XWAYLAND_GRAB_DEFAULT_ACCESS_RULES is not set"
@@ -75,6 +74,9 @@ struct _MetaSettings
 
   /* A bitmask of MetaXwaylandExtension enum */
   int xwayland_disable_extensions;
+
+  /* Whether Xwayland should allow X11 clients from different endianness */
+  gboolean xwayland_allow_byte_swapped_clients;
 };
 
 G_DEFINE_TYPE (MetaSettings, meta_settings, G_TYPE_OBJECT)
@@ -99,7 +101,7 @@ update_ui_scaling_factor (MetaSettings *settings)
 {
   int ui_scaling_factor;
 
-  if (meta_is_stage_views_scaled ())
+  if (meta_backend_is_stage_views_scaled (settings->backend))
     ui_scaling_factor = 1;
   else
     ui_scaling_factor = calculate_ui_scaling_factor (settings);
@@ -430,6 +432,15 @@ update_privacy_settings (MetaSettings *settings)
 }
 
 static void
+update_xwayland_allow_byte_swapped_clients (MetaSettings *settings)
+{
+
+  settings->xwayland_allow_byte_swapped_clients =
+    g_settings_get_flags (settings->wayland_settings,
+                          "xwayland-allow-byte-swapped-clients");
+}
+
+static void
 wayland_settings_changed (GSettings    *wayland_settings,
                           gchar        *key,
                           MetaSettings *settings)
@@ -446,6 +457,10 @@ wayland_settings_changed (GSettings    *wayland_settings,
   else if (g_str_equal (key, "xwayland-disable-extension"))
     {
       update_xwayland_disable_extensions (settings);
+    }
+  else if (g_str_equal (key, "xwayland-allow-byte-swapped-clients"))
+    {
+      update_xwayland_allow_byte_swapped_clients (settings);
     }
 }
 
@@ -468,6 +483,13 @@ int
 meta_settings_get_xwayland_disable_extensions (MetaSettings *settings)
 {
   return (settings->xwayland_disable_extensions);
+}
+
+gboolean
+meta_settings_are_xwayland_byte_swapped_clients_allowed (MetaSettings *settings)
+{
+
+  return settings->xwayland_allow_byte_swapped_clients;
 }
 
 gboolean

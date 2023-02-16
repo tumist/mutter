@@ -37,10 +37,10 @@ static MetaWindow *test_window = NULL;
 
 #define assert_wayland_surface_size(window, width, height) \
 { \
-  g_assert_cmpint (meta_wayland_surface_get_width (window->surface), \
+  g_assert_cmpint (meta_wayland_surface_get_width (meta_window_get_wayland_surface (window)), \
                    ==, \
                    width); \
-  g_assert_cmpint (meta_wayland_surface_get_height (window->surface), \
+  g_assert_cmpint (meta_wayland_surface_get_height (meta_window_get_wayland_surface (window)), \
                    ==, \
                    height); \
 }
@@ -175,7 +175,8 @@ on_before_tests (void)
 
   virtual_monitor = meta_create_test_monitor (test_context, 100, 100, 10.0);
 
-  wayland_test_client = meta_wayland_test_client_new ("fullscreen");
+  wayland_test_client = meta_wayland_test_client_new (test_context,
+                                                      "fullscreen");
 
   while (!(test_window =
            meta_find_window_from_title (test_context, "fullscreen")))

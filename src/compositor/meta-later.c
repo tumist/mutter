@@ -28,6 +28,8 @@
 
 typedef struct _MetaLater
 {
+  MetaLaters *laters;
+
   unsigned int id;
   unsigned int ref_count;
   MetaLaterType when;
@@ -44,6 +46,8 @@ typedef struct _MetaLater
 
 struct _MetaLaters
 {
+  GObject parent;
+
   MetaCompositor *compositor;
 
   unsigned int last_later_id;
@@ -52,6 +56,8 @@ struct _MetaLaters
 
   gulong before_update_handler_id;
 };
+
+G_DEFINE_TYPE (MetaLaters, meta_laters, G_TYPE_OBJECT)
 
 static MetaLater *
 meta_later_ref (MetaLater *later)
@@ -167,6 +173,7 @@ run_repaint_laters (GSList **laters_list)
 static void
 on_before_update (ClutterStage     *stage,
                   ClutterStageView *stage_view,
+                  ClutterFrame     *frame,
                   MetaLaters       *laters)
 {
   unsigned int i;
@@ -198,7 +205,7 @@ invoke_later_idle (gpointer data)
 
   if (!later->func (later->user_data))
     {
-      meta_later_remove (later->id);
+      meta_laters_remove (later->laters, later->id);
       return FALSE;
     }
   else
@@ -206,6 +213,35 @@ invoke_later_idle (gpointer data)
       later->run_once = TRUE;
       return TRUE;
     }
+}
+
+static void
+meta_laters_finalize (GObject *object)
+{
+  MetaLaters *laters = META_LATERS (object);
+
+  ClutterStage *stage = meta_compositor_get_stage (laters->compositor);
+  unsigned int i;
+
+  for (i = 0; i < G_N_ELEMENTS (laters->laters); i++)
+    g_slist_free_full (laters->laters[i], (GDestroyNotify) meta_later_unref);
+
+  g_clear_signal_handler (&laters->before_update_handler_id, stage);
+
+  G_OBJECT_CLASS (meta_laters_parent_class)->finalize (object);
+}
+
+static void
+meta_laters_class_init (MetaLatersClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->finalize = meta_laters_finalize;
+}
+
+static void
+meta_laters_init (MetaLaters *laters)
+{
 }
 
 /**
@@ -237,6 +273,7 @@ meta_laters_add (MetaLaters     *laters,
   MetaLater *later = g_new0 (MetaLater, 1);
 
   later->id = ++laters->last_later_id;
+  later->laters = laters;
   later->ref_count = 1;
   later->when = when;
   later->func = func;
@@ -272,40 +309,6 @@ meta_laters_add (MetaLaters     *laters,
 }
 
 /**
- * meta_later_add:
- * @when: enumeration value determining the phase at which to run the callback
- * @func: callback to run later
- * @data: data to pass to the callback
- * @notify: function to call to destroy @data when it is no longer in use, or %NULL
- *
- * Sets up a callback  to be called at some later time. @when determines the
- * particular later occasion at which it is called. This is much like g_idle_add(),
- * except that the functions interact properly with clutter event handling.
- * If a "later" function is added from a clutter event handler, and is supposed
- * to be run before the stage is redrawn, it will be run before that redraw
- * of the stage, not the next one.
- *
- * Return value: an integer ID (guaranteed to be non-zero) that can be used
- *  to cancel the callback and prevent it from being run.
- */
-unsigned int
-meta_later_add (MetaLaterType  when,
-                GSourceFunc    func,
-                gpointer       data,
-                GDestroyNotify notify)
-{
-  MetaDisplay *display = meta_get_display ();
-  MetaCompositor *compositor;
-
-  g_return_val_if_fail (display, 0);
-  g_return_val_if_fail (display->compositor, 0);
-
-  compositor = display->compositor;
-  return meta_laters_add (meta_compositor_get_laters (compositor),
-                          when, func, data, notify);
-}
-
-/**
  * meta_laters_remove:
  * @laters: a #MetaLaters
  * @later_id: the integer ID returned from meta_later_add()
@@ -325,34 +328,13 @@ meta_laters_remove (MetaLaters   *laters,
     }
 }
 
-/**
- * meta_later_remove:
- * @later_id: the integer ID returned from meta_later_add()
- *
- * Removes a callback added with meta_later_add()
- */
-void
-meta_later_remove (unsigned int later_id)
-{
-  MetaDisplay *display = meta_get_display ();
-  MetaCompositor *compositor;
-
-  g_return_if_fail (display);
-
-  compositor = display->compositor;
-  if (!compositor)
-    return;
-
-  meta_laters_remove (meta_compositor_get_laters (compositor), later_id);
-}
-
 MetaLaters *
 meta_laters_new (MetaCompositor *compositor)
 {
   ClutterStage *stage = meta_compositor_get_stage (compositor);
   MetaLaters *laters;
 
-  laters = g_new0 (MetaLaters, 1);
+  laters = g_object_new (META_TYPE_LATERS, NULL);
   laters->compositor = compositor;
 
   laters->before_update_handler_id =
@@ -361,17 +343,4 @@ meta_laters_new (MetaCompositor *compositor)
                       laters);
 
   return laters;
-}
-
-void
-meta_laters_free (MetaLaters *laters)
-{
-  ClutterStage *stage = meta_compositor_get_stage (laters->compositor);
-  unsigned int i;
-
-  for (i = 0; i < G_N_ELEMENTS (laters->laters); i++)
-    g_slist_free_full (laters->laters[i], (GDestroyNotify) meta_later_unref);
-
-  g_clear_signal_handler (&laters->before_update_handler_id, stage);
-  g_free (laters);
 }
