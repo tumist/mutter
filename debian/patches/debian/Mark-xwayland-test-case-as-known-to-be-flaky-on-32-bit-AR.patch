@@ -9,14 +9,14 @@ Forwarded: no
  1 file changed, 1 insertion(+)
 
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index 53401d4..5d7bfb5 100644
+index a4bb2e7..bce1b08 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
-@@ -370,6 +370,7 @@ if have_native_tests
-     {
-       'name': 'xwayland',
-       'suite': 'wayland',
-+      'flaky': host_machine.cpu_family() == 'arm',
-       'sources': [
-         'xwayland-tests.c',
-       ],
+@@ -455,6 +455,7 @@ if have_native_tests
+       {
+         'name': 'xwayland',
+         'suite': 'wayland',
++        'flaky': host_machine.cpu_family() == 'arm',
+         'sources': [
+           'xwayland-tests.c',
+         ],
