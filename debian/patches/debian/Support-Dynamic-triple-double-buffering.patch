@@ -12,14 +12,15 @@ because even a fixed frequency GPU will benefit from not over-sleeping anymore.
 If the previous frame is not running late then we stick to double buffering so
 there's no latency penalty when the system is able to maintain full frame rate.
 
-Origin: https://gitlab.gnome.org/Community/Ubuntu/mutter/-/commits/triple-buffering-v4-43
-
-Formatted for Debian with:
+Formatted for Debian (as of 43.3-51-ga6f23c151c) with:
 git remote add community-ubuntu git@ssh.gitlab.gnome.org:Community/Ubuntu/mutter.git
 git fetch community-ubuntu
 git merge --squash -e community-ubuntu/triple-buffering-v4-43
 And then git commit but using all this as the header instead of what
 git suggests. Also add Gbp-Pq: Topic debian
+
+Origin: https://gitlab.gnome.org/Community/Ubuntu/mutter/-/commits/triple-buffering-v4-43
+Last-Update: 2023-02-16
 ---
  clutter/clutter/clutter-frame-clock.c             | 188 ++++++--
  clutter/clutter/clutter-frame-clock.h             |  11 +-
