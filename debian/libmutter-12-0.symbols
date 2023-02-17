@@ -1,5 +1,6 @@
 libmutter-12.so.0 libmutter-12-0 #MINVER#
 * Build-Depends-Package: libmutter-12-dev
+ meta_accelerator_name@Base 44~beta
  meta_add_clutter_debug_flags@Base 43.0
  meta_add_debug_paint_flag@Base 43.0
  meta_add_verbose_topic@Base 43.0
@@ -95,30 +96,10 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_color_store_get_profile@Base 43.0
  meta_color_store_has_pending_profiles@Base 43.0
  meta_comp_effect_get_type@Base 43.0
- meta_compositor_add_window@Base 43.0
- meta_compositor_destroy@Base 43.0
- meta_compositor_filter_keybinding@Base 43.0
- meta_compositor_flash_display@Base 43.0
+ meta_compositor_get_feedback_group@Base 44~beta
  meta_compositor_get_laters@Base 43.0
  meta_compositor_get_type@Base 43.0
- meta_compositor_hide_tile_preview@Base 43.0
- meta_compositor_hide_window@Base 43.0
- meta_compositor_manage@Base 43.0
- meta_compositor_queue_frame_drawn@Base 43.0
- meta_compositor_remove_window@Base 43.0
- meta_compositor_show_tile_preview@Base 43.0
- meta_compositor_show_window@Base 43.0
- meta_compositor_show_window_menu@Base 43.0
- meta_compositor_show_window_menu_for_rect@Base 43.0
- meta_compositor_size_change_window@Base 43.0
- meta_compositor_switch_workspace@Base 43.0
- meta_compositor_sync_stack@Base 43.0
- meta_compositor_sync_updates_frozen@Base 43.0
- meta_compositor_sync_window_geometry@Base 43.0
  meta_compositor_type_get_type@Base 43.0
- meta_compositor_unmanage@Base 43.0
- meta_compositor_window_opacity_changed@Base 43.0
- meta_compositor_window_shape_changed@Base 43.0
  meta_context_add_option_entries@Base 43.0
  meta_context_add_option_group@Base 43.0
  meta_context_configure@Base 43.0
@@ -126,6 +107,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_context_get_backend@Base 43.0
  meta_context_get_compositor_type@Base 43.0
  meta_context_get_display@Base 43.0
+ meta_context_get_service_channel@Base 44~beta
  meta_context_get_type@Base 43.0
  meta_context_get_wayland_compositor@Base 43.0
  meta_context_is_replacing@Base 43.0
@@ -143,6 +125,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_context_terminate_with_error@Base 43.0
  meta_create_context@Base 43.0
  meta_create_monitors_config_key_for_current_state@Base 43.0
+ meta_crtc_get_backend@Base 44~beta
  meta_crtc_get_config@Base 43.0
  meta_crtc_get_gpu@Base 43.0
  meta_crtc_get_id@Base 43.0
@@ -174,14 +157,11 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_device_pool_open@Base 43.0
  meta_direction_get_type@Base 43.0
  meta_disable_unredirect_for_display@Base 43.0
- meta_display_add_ignored_crossing_serial@Base 43.0
  meta_display_add_keybinding@Base 43.0
- meta_display_begin_grab_op@Base 43.0
  meta_display_clear_mouse_mode@Base 43.0
  meta_display_close@Base 43.0
  meta_display_corner_get_type@Base 43.0
  meta_display_direction_get_type@Base 43.0
- meta_display_end_grab_op@Base 43.0
  meta_display_focus_default_window@Base 43.0
  meta_display_freeze_keyboard@Base 43.0
  meta_display_get_compositor@Base 43.0
@@ -191,7 +171,6 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_display_get_current_time@Base 43.0
  meta_display_get_current_time_roundtrip@Base 43.0
  meta_display_get_focus_window@Base 43.0
- meta_display_get_grab_op@Base 43.0
  meta_display_get_keybinding_action@Base 43.0
  meta_display_get_last_user_time@Base 43.0
  meta_display_get_monitor_geometry@Base 43.0
@@ -213,6 +192,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_display_get_workspace_manager@Base 43.0
  meta_display_get_x11_display@Base 43.0
  meta_display_grab_accelerator@Base 43.0
+ meta_display_is_grabbed@Base 44~beta
  meta_display_is_pointer_emulating_sequence@Base 43.0
  meta_display_list_all_windows@Base 43.0
  meta_display_list_windows@Base 43.0
@@ -246,10 +226,8 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_frame_type_get_type@Base 43.0
  meta_frame_type_to_string@Base 43.0
  meta_g_utf8_strndup@Base 43.0
- meta_get_backend@Base 43.0
  meta_get_clutter_debug_flags@Base 43.0
  meta_get_debug_paint_flags@Base 43.0
- meta_get_display@Base 43.0
  meta_get_feedback_group_for_display@Base 43.0
  meta_get_locale_direction@Base 43.0
  meta_get_stage_for_display@Base 43.0
@@ -348,15 +326,15 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_kms_update_mode_set@Base 43.0
  meta_kms_update_new@Base 43.0
  meta_kms_update_states_sync@Base 43.0
- meta_later_add@Base 43.0
- meta_later_remove@Base 43.0
  meta_later_type_get_type@Base 43.0
  meta_laters_add@Base 43.0
+ meta_laters_get_type@Base 44~beta
  meta_laters_remove@Base 43.0
  meta_launch_context_get_type@Base 43.0
  meta_launch_context_set_timestamp@Base 43.0
  meta_launch_context_set_workspace@Base 43.0
  meta_locale_direction_get_type@Base 43.0
+ meta_log@Base 44~beta
  meta_logical_monitor_config_free@Base 43.0
  meta_logical_monitor_configs_have_monitor@Base 43.0
  meta_logical_monitor_get_layout@Base 43.0
@@ -418,11 +396,11 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_monitor_get_type@Base 43.0
  meta_monitor_get_vendor@Base 43.0
  meta_monitor_is_active@Base 43.0
+ meta_monitor_is_primary@Base 44~beta
  meta_monitor_logical_to_crtc_transform@Base 43.0
  meta_monitor_manager_can_switch_config@Base 43.0
  meta_monitor_manager_create_virtual_monitor@Base 43.0
  meta_monitor_manager_ensure_configured@Base 43.0
- meta_monitor_manager_get@Base 43.0
  meta_monitor_manager_get_backend@Base 43.0
  meta_monitor_manager_get_config_manager@Base 43.0
  meta_monitor_manager_get_display_configuration_timeout@Base 43.0
@@ -594,7 +572,11 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_remove_verbose_topic@Base 43.0
  meta_renderer_get_view_for_crtc@Base 43.0
  meta_renderer_get_views@Base 43.0
+ meta_renderer_view_get_crtc@Base 44~beta
+ meta_renderer_view_get_type@Base 44~beta
  meta_restart@Base 43.0
+ meta_seat_impl_run_input_task@Base 44~beta
+ meta_seat_native_get_type@Base 44~beta
  meta_selection_get_mimetypes@Base 43.0
  meta_selection_get_type@Base 43.0
  meta_selection_new@Base 43.0
@@ -610,6 +592,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_selection_transfer_finish@Base 43.0
  meta_selection_type_get_type@Base 43.0
  meta_selection_unset_owner@Base 43.0
+ meta_service_channel_get_service_client@Base 44~beta
  meta_set_color_efivar_test_path@Base 43.0
  meta_settings_enable_experimental_feature@Base 43.0
  meta_settings_get_font_dpi@Base 43.0
@@ -660,10 +643,6 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_startup_sequence_get_workspace@Base 43.0
  meta_tab_list_get_type@Base 43.0
  meta_tab_show_type_get_type@Base 43.0
- meta_theme_free@Base 43.0
- meta_theme_get_default@Base 43.0
- meta_theme_new@Base 43.0
- meta_ui_window_is_dummy@Base 43.0
  meta_unsigned_long_equal@Base 43.0
  meta_unsigned_long_hash@Base 43.0
  meta_verify_logical_monitor_config@Base 43.0
@@ -681,18 +660,26 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  (arch=linux-any)meta_wayland_actor_surface_get_actor@Base 43.0
  (arch=linux-any)meta_wayland_client_get_type@Base 43.0
  (arch=linux-any)meta_wayland_client_hide_from_window_list@Base 43.0
+ meta_wayland_client_matches@Base 44~beta
  (arch=linux-any)meta_wayland_client_new@Base 43.0
+ meta_wayland_client_new_indirect@Base 44~beta
  (arch=linux-any)meta_wayland_client_owns_window@Base 43.0
+ meta_wayland_client_setup_fd@Base 44~beta
  (arch=linux-any)meta_wayland_client_show_in_window_list@Base 43.0
  (arch=linux-any)meta_wayland_client_spawn@Base 43.0
  (arch=linux-any)meta_wayland_client_spawnv@Base 43.0
- (arch=linux-any)meta_wayland_compositor_get_default@Base 43.0
+ meta_wayland_compositor_get_context@Base 44~beta
+ meta_wayland_compositor_get_filter_manager@Base 44~beta
+ meta_wayland_compositor_get_wayland_display@Base 44~beta
  (arch=linux-any)meta_wayland_compositor_get_xwayland_manager@Base 43.0
+ meta_wayland_filter_manager_add_global@Base 44~beta
+ meta_wayland_filter_manager_remove_global@Base 44~beta
  (arch=linux-any)meta_wayland_get_public_xwayland_display_name@Base 43.0
  (arch=linux-any)meta_wayland_get_wayland_display_name@Base 43.0
  (arch=linux-any)meta_wayland_override_display_name@Base 43.0
  (arch=linux-any)meta_wayland_surface_get_actor@Base 43.0
  (arch=linux-any)meta_wayland_surface_get_height@Base 43.1
+ meta_wayland_surface_get_resource@Base 44~beta
  (arch=linux-any)meta_wayland_surface_get_width@Base 43.1
  meta_wayland_surface_get_window@Base 43.0
  meta_window_activate@Base 43.0
@@ -765,6 +752,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_window_get_transient_for@Base 43.0
  meta_window_get_type@Base 43.0
  meta_window_get_user_time@Base 43.0
+ meta_window_get_wayland_surface@Base 44~beta
  meta_window_get_window_type@Base 43.0
  meta_window_get_wm_class@Base 43.0
  meta_window_get_wm_class_instance@Base 43.0
@@ -834,6 +822,8 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_window_untile@Base 43.0
  (arch=linux-any)meta_window_wayland_get_type@Base 43.1
  (arch=linux-any)meta_window_wayland_is_acked_fullscreen@Base 43.1
+ meta_window_x11_get_toplevel_xwindow@Base 44~beta
+ meta_window_x11_get_type@Base 44~beta
  meta_workspace_activate@Base 43.0
  meta_workspace_activate_with_focus@Base 43.0
  meta_workspace_get_display@Base 43.0
@@ -873,7 +863,6 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_x11_error_trap_pop@Base 43.0
  meta_x11_error_trap_pop_with_return@Base 43.0
  meta_x11_error_trap_push@Base 43.0
- meta_x11_init_gdk_display@Base 43.0
  (arch=linux-any)meta_xwayland_override_display_number@Base 43.0
  (arch=linux-any)meta_xwayland_signal@Base 43.0
 libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
@@ -993,7 +982,6 @@ libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
  clutter_actor_get_content_gravity@Base 43.0
  clutter_actor_get_content_repeat@Base 43.0
  clutter_actor_get_content_scaling_filters@Base 43.0
- clutter_actor_get_default_paint_volume@Base 43.0
  clutter_actor_get_easing_delay@Base 43.0
  clutter_actor_get_easing_duration@Base 43.0
  clutter_actor_get_easing_mode@Base 43.0
@@ -1467,13 +1455,19 @@ libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
  clutter_frame_clock_schedule_update@Base 43.0
  clutter_frame_clock_schedule_update_now@Base 43.0
  clutter_frame_clock_uninhibit@Base 43.0
+ clutter_frame_get_count@Base 44~beta
  clutter_frame_get_hints@Base 43.0
+ clutter_frame_get_target_presentation_time@Base 44~beta
+ clutter_frame_get_type@Base 44~beta
  clutter_frame_has_result@Base 43.0
  clutter_frame_hint_get_type@Base 43.0
  clutter_frame_info_flag_get_type@Base 43.0
+ clutter_frame_new@Base 44~beta
+ clutter_frame_ref@Base 44~beta
  clutter_frame_result_get_type@Base 43.0
  clutter_frame_set_hint@Base 43.0
  clutter_frame_set_result@Base 43.0
+ clutter_frame_unref@Base 44~beta
  clutter_gesture_action_cancel@Base 43.0
  clutter_gesture_action_get_device@Base 43.0
  clutter_gesture_action_get_last_event@Base 43.0
@@ -1502,6 +1496,7 @@ libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
  clutter_get_default_text_direction@Base 43.0
  clutter_get_font_map@Base 43.0
  clutter_get_script_id@Base 43.0
+ clutter_get_text_direction@Base 44~beta
  clutter_grab_dismiss@Base 43.0
  clutter_grab_get_seat_state@Base 43.0
  clutter_grab_get_type@Base 43.0
@@ -1544,6 +1539,7 @@ libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
  clutter_input_device_get_device_name@Base 43.0
  clutter_input_device_get_device_node@Base 43.0
  clutter_input_device_get_device_type@Base 43.0
+ clutter_input_device_get_dimensions@Base 44~beta
  clutter_input_device_get_group_n_modes@Base 43.0
  clutter_input_device_get_has_cursor@Base 43.0
  clutter_input_device_get_mode_switch_button_group@Base 43.0
@@ -1627,6 +1623,8 @@ libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
  clutter_keymap_get_type@Base 43.0
  clutter_keymap_set_lock_modifier_state@Base 43.0
  clutter_keysym_to_unicode@Base 43.0
+ clutter_keyval_convert_case@Base 44~beta
+ clutter_keyval_name@Base 44~beta
  clutter_knot_copy@Base 43.0
  clutter_knot_equal@Base 43.0
  clutter_knot_free@Base 43.0
@@ -1905,6 +1903,7 @@ libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
  clutter_stage_manager_get_type@Base 43.0
  clutter_stage_manager_list_stages@Base 43.0
  clutter_stage_manager_peek_stages@Base 43.0
+ clutter_stage_notify_action_implicit_grab@Base 44~beta
  clutter_stage_paint_to_buffer@Base 43.0
  clutter_stage_paint_to_content@Base 43.0
  clutter_stage_paint_to_framebuffer@Base 43.0
@@ -2359,6 +2358,7 @@ libmutter-cogl-12.so.0 libmutter-12-0 #MINVER#
  cogl_frame_info_is_vsync@Base 43.0
  cogl_frame_info_is_zero_copy@Base 43.0
  cogl_frame_info_new@Base 43.0
+ cogl_frame_info_set_target_presentation_time@Base 44~beta
  cogl_framebuffer_add_fence_callback@Base 43.0
  cogl_framebuffer_allocate@Base 43.0
  cogl_framebuffer_cancel_fence_callback@Base 43.0
@@ -2553,8 +2553,7 @@ libmutter-cogl-12.so.0 libmutter-12-0 #MINVER#
  cogl_pipeline_get_depth_state@Base 43.0
  cogl_pipeline_get_front_face_winding@Base 43.0
  cogl_pipeline_get_gtype@Base 43.0
- cogl_pipeline_get_layer_mag_filter@Base 43.0
- cogl_pipeline_get_layer_min_filter@Base 43.0
+ cogl_pipeline_get_layer_filters@Base 44~beta
  cogl_pipeline_get_layer_point_sprite_coords_enabled@Base 43.0
  cogl_pipeline_get_layer_texture@Base 43.0
  cogl_pipeline_get_layer_wrap_mode_s@Base 43.0
@@ -2679,6 +2678,7 @@ libmutter-cogl-12.so.0 libmutter-12-0 #MINVER#
  cogl_texture_2d_new_from_data@Base 43.0
  cogl_texture_2d_new_from_egl_image_external@Base 43.0
  cogl_texture_2d_new_from_file@Base 43.0
+ cogl_texture_2d_new_with_format@Base 44~beta
  cogl_texture_2d_new_with_size@Base 43.0
  cogl_texture_2d_sliced_get_gtype@Base 43.0
  cogl_texture_2d_sliced_new_from_bitmap@Base 43.0
