@@ -241,6 +241,7 @@ Depends: libmutter-12-0 (= ${binary:Version}),
          mutter (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
+Provides: gir1.2-metatest-12
 Description: Test helper library for GNOME's window manager library
  Mutter is a Wayland display server and X11 window manager and
  compositor library. It contains functionality related to, among other
