@@ -40,6 +40,7 @@
 #include "wayland/meta-wayland-dma-buf.h"
 
 #include <drm_fourcc.h>
+#include <glib/gstdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -571,7 +572,7 @@ meta_wayland_dma_buf_try_acquire_scanout (MetaWaylandDmaBufBuffer *dma_buf,
                                   &error);
   if (!gbm_bo)
     {
-      meta_topic (META_DEBUG_WAYLAND,
+      meta_topic (META_DEBUG_RENDER,
                   "Failed to import scanout gbm_bo: %s", error->message);
       return NULL;
     }
@@ -583,7 +584,7 @@ meta_wayland_dma_buf_try_acquire_scanout (MetaWaylandDmaBufBuffer *dma_buf,
   fb = meta_drm_buffer_gbm_new_take (device_file, gbm_bo, flags, &error);
   if (!fb)
     {
-      meta_topic (META_DEBUG_WAYLAND,
+      meta_topic (META_DEBUG_RENDER,
                   "Failed to create scanout buffer: %s", error->message);
       gbm_bo_destroy (gbm_bo);
       return NULL;
@@ -591,7 +592,11 @@ meta_wayland_dma_buf_try_acquire_scanout (MetaWaylandDmaBufBuffer *dma_buf,
 
   if (!meta_onscreen_native_is_buffer_scanout_compatible (onscreen,
                                                           META_DRM_BUFFER (fb)))
-    return NULL;
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "Buffer not scanout compatible (see also KMS debug topic)");
+      return NULL;
+    }
 
   return COGL_SCANOUT (g_steal_pointer (&fb));
 #else
@@ -690,6 +695,62 @@ static const struct wl_buffer_interface dma_buf_buffer_impl =
 };
 
 /**
+ * meta_wayland_dma_buf_fds_for_wayland_buffer:
+ * @buffer: A #MetaWaylandBuffer object
+ *
+ * Creates an associated #MetaWaylandDmaBufBuffer for the wayland buffer, which
+ * contains just the dma-buf file descriptors.
+ *
+ * Returns: The new #MetaWaylandDmaBufBuffer (or
+ * %NULL if it couldn't be created)
+ */
+MetaWaylandDmaBufBuffer *
+meta_wayland_dma_buf_fds_for_wayland_buffer (MetaWaylandBuffer *buffer)
+{
+#ifdef HAVE_NATIVE_BACKEND
+  MetaContext *context =
+    meta_wayland_compositor_get_context (buffer->compositor);
+  MetaBackend *backend = meta_context_get_backend (context);
+  MetaRenderer *renderer = meta_backend_get_renderer (backend);
+  MetaRendererNative *renderer_native;
+  MetaGpuKms *gpu_kms;
+  struct gbm_device *gbm_device;
+  struct gbm_bo *gbm_bo;
+  MetaWaylandDmaBufBuffer *dma_buf;
+  uint32_t i, n_planes;
+
+  if (!META_IS_RENDERER_NATIVE (renderer))
+    return NULL;
+
+  renderer_native = META_RENDERER_NATIVE (renderer);
+  gpu_kms = meta_renderer_native_get_primary_gpu (renderer_native);
+  if (!gpu_kms)
+    return NULL;
+
+  gbm_device = meta_gbm_device_from_gpu (gpu_kms);
+
+  gbm_bo = gbm_bo_import (gbm_device,
+                          GBM_BO_IMPORT_WL_BUFFER, buffer->resource,
+                          GBM_BO_USE_RENDERING);
+  if (!gbm_bo)
+    return NULL;
+
+  dma_buf = g_object_new (META_TYPE_WAYLAND_DMA_BUF_BUFFER, NULL);
+
+  n_planes = gbm_bo_get_plane_count (gbm_bo);
+  for (i = 0; i < n_planes; i++)
+    dma_buf->fds[i] = gbm_bo_get_fd_for_plane (gbm_bo, i);
+  while (i < META_WAYLAND_DMA_BUF_MAX_FDS)
+    dma_buf->fds[i++] = -1;
+
+  gbm_bo_destroy (gbm_bo);
+  return dma_buf;
+#else
+  return NULL;
+#endif
+}
+
+/**
  * meta_wayland_dma_buf_from_buffer:
  * @buffer: A #MetaWaylandBuffer object
  *
@@ -710,7 +771,154 @@ meta_wayland_dma_buf_from_buffer (MetaWaylandBuffer *buffer)
                                &dma_buf_buffer_impl))
     return wl_resource_get_user_data (buffer->resource);
 
-  return NULL;
+  return buffer->dma_buf.dma_buf;
+}
+
+typedef struct _MetaWaylandDmaBufSource
+{
+  GSource base;
+
+  MetaWaylandDmaBufSourceDispatch dispatch;
+  MetaWaylandBuffer *buffer;
+  gpointer user_data;
+
+  gpointer fd_tags[META_WAYLAND_DMA_BUF_MAX_FDS];
+} MetaWaylandDmaBufSource;
+
+static gboolean
+meta_wayland_dma_buf_fd_readable (int fd)
+{
+  GPollFD poll_fd;
+
+  poll_fd.fd = fd;
+  poll_fd.events = G_IO_IN;
+  poll_fd.revents = 0;
+
+  if (!g_poll (&poll_fd, 1, 0))
+    return FALSE;
+
+  return (poll_fd.revents & (G_IO_IN | G_IO_NVAL)) != 0;
+}
+
+static gboolean
+meta_wayland_dma_buf_source_dispatch (GSource     *base,
+                                      GSourceFunc  callback,
+                                      gpointer     user_data)
+{
+  MetaWaylandDmaBufSource *source;
+  MetaWaylandDmaBufBuffer *dma_buf;
+  gboolean ready;
+  uint32_t i;
+
+  source = (MetaWaylandDmaBufSource *) base;
+  dma_buf = source->buffer->dma_buf.dma_buf;
+  ready = TRUE;
+
+  for (i = 0; i < META_WAYLAND_DMA_BUF_MAX_FDS; i++)
+    {
+      gpointer fd_tag = source->fd_tags[i];
+
+      if (!fd_tag)
+        continue;
+
+      if (!meta_wayland_dma_buf_fd_readable (dma_buf->fds[i]))
+        {
+          ready = FALSE;
+          continue;
+        }
+
+      g_source_remove_unix_fd (&source->base, fd_tag);
+      source->fd_tags[i] = NULL;
+    }
+
+  if (!ready)
+    return G_SOURCE_CONTINUE;
+
+  source->dispatch (source->buffer, source->user_data);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+meta_wayland_dma_buf_source_finalize (GSource *base)
+{
+  MetaWaylandDmaBufSource *source;
+  uint32_t i;
+
+  source = (MetaWaylandDmaBufSource *) base;
+
+  for (i = 0; i < META_WAYLAND_DMA_BUF_MAX_FDS; i++)
+    {
+      gpointer fd_tag = source->fd_tags[i];
+
+      if (fd_tag)
+        {
+          g_source_remove_unix_fd (&source->base, fd_tag);
+          source->fd_tags[i] = NULL;
+        }
+    }
+
+  g_clear_object (&source->buffer);
+}
+
+static GSourceFuncs meta_wayland_dma_buf_source_funcs = {
+  .dispatch = meta_wayland_dma_buf_source_dispatch,
+  .finalize = meta_wayland_dma_buf_source_finalize
+};
+
+/**
+ * meta_wayland_dma_buf_create_source:
+ * @buffer: A #MetaWaylandBuffer object
+ * @dispatch: Callback
+ * @user_data: User data for the callback
+ *
+ * Creates a GSource which will call the specified dispatch callback when all
+ * dma-buf file descriptors for the buffer have become readable.
+ *
+ * Returns: The new GSource (or
+ * %NULL if there are no dma-buf file descriptors, or they were all readable
+ * already)
+ */
+GSource *
+meta_wayland_dma_buf_create_source (MetaWaylandBuffer               *buffer,
+                                    MetaWaylandDmaBufSourceDispatch  dispatch,
+                                    gpointer                         user_data)
+{
+  MetaWaylandDmaBufBuffer *dma_buf;
+  MetaWaylandDmaBufSource *source = NULL;
+  uint32_t i;
+
+  dma_buf = buffer->dma_buf.dma_buf;
+  if (!dma_buf)
+    return NULL;
+
+  for (i = 0; i < META_WAYLAND_DMA_BUF_MAX_FDS; i++)
+    {
+      int fd = dma_buf->fds[i];
+
+      if (fd < 0)
+        break;
+
+      if (meta_wayland_dma_buf_fd_readable (fd))
+        continue;
+
+      if (!source)
+        {
+          source =
+            (MetaWaylandDmaBufSource *) g_source_new (&meta_wayland_dma_buf_source_funcs,
+                                                      sizeof (*source));
+          source->buffer = g_object_ref (buffer);
+          source->dispatch = dispatch;
+          source->user_data = user_data;
+        }
+
+      source->fd_tags[i] = g_source_add_unix_fd (&source->base, fd, G_IO_IN);
+    }
+
+  if (!source)
+    return NULL;
+
+  return &source->base;
 }
 
 static void
@@ -1582,10 +1790,7 @@ meta_wayland_dma_buf_buffer_finalize (GObject *object)
   int i;
 
   for (i = 0; i < META_WAYLAND_DMA_BUF_MAX_FDS; i++)
-    {
-      if (dma_buf->fds[i] != -1)
-        close (dma_buf->fds[i]);
-    }
+    g_clear_fd (&dma_buf->fds[i], NULL);
 
   G_OBJECT_CLASS (meta_wayland_dma_buf_buffer_parent_class)->finalize (object);
 }

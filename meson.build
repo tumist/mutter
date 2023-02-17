@@ -1,13 +1,13 @@
 project('mutter', 'c',
-  version: '43.2',
-  meson_version: '>= 0.55.0',
+  version: '44.beta',
+  meson_version: '>= 0.58.0',
   license: 'GPLv2+'
 )
 
 split_version = meson.project_version().split('.')
 
 # API version, bump each development cycle
-libmutter_api_version = '11'
+libmutter_api_version = '12'
 
 mutter_srcdir = meson.current_source_dir()
 mutter_builddir = meson.current_build_dir()
@@ -16,10 +16,11 @@ mutter_builddir = meson.current_build_dir()
 lcms2_req = '>= 2.6'
 colord_req = '>= 1.4.5'
 fribidi_req = '>= 1.0.0'
-glib_req = '>= 2.69.0'
+glib_req = '>= 2.75.1'
 gi_req = '>= 0.9.5'
 graphene_req = '>= 1.10.2'
 gtk3_req = '>= 3.19.8'
+gtk4_req = '>= 4.0.0'
 gdk_pixbuf_req = '>= 2.0'
 uprof_req = '>= 0.3'
 pango_req = '>= 1.46.0'
@@ -27,6 +28,7 @@ cairo_req = '>= 1.10.0'
 pangocairo_req = '>= 1.20'
 gsettings_desktop_schemas_req = '>= 40.alpha'
 json_glib_req = '>= 0.12.0'
+x11_req = '>= 1.7.0'
 xcomposite_req = '>= 0.4'
 xkbcommon_req = '>= 0.4.3'
 xfixes_req = '>= 6'
@@ -36,6 +38,7 @@ libstartup_notification_req = '>= 0.7'
 libcanberra_req = '>= 0.26'
 libwacom_req = '>= 0.13'
 atk_req = '>= 2.5.3'
+harfbuzz_req = '>= 2.6'
 
 # optional version requirements
 udev_req = '>= 228'
@@ -104,7 +107,6 @@ mutter_installed_tests_libexecdir = join_paths(
 
 m_dep = cc.find_library('m', required: true)
 graphene_dep = dependency('graphene-gobject-1.0', version: graphene_req)
-gtk3_dep = dependency('gtk+-3.0', version: gtk3_req)
 gdk_pixbuf_dep = dependency('gdk-pixbuf-2.0')
 pango_dep = dependency('pango', version: pango_req)
 cairo_dep = dependency('cairo', version: cairo_req)
@@ -127,11 +129,12 @@ atk_dep = dependency('atk', version: atk_req)
 dbus_dep = dependency('dbus-1')
 colord_dep = dependency('colord', version: colord_req)
 lcms2_dep = dependency('lcms2', version: lcms2_req)
+harfbuzz_dep = dependency('harfbuzz', version: harfbuzz_req)
 
 have_wayland = get_option('wayland')
 # For now always require X11 support
 have_x11 = true
-have_xwayland = have_wayland # for now default to have_wayland
+have_xwayland = get_option('xwayland')
 have_x11_client = have_x11 or have_xwayland
 
 if have_xwayland and not have_wayland
@@ -143,7 +146,10 @@ if not have_wayland and not have_x11
 endif
 
 if have_x11_client
-  x11_dep = dependency('x11')
+  gtk3_dep = dependency('gtk+-3.0', version: gtk3_req)
+  gtk4_dep = dependency('gtk4', version: gtk4_req)
+
+  x11_dep = dependency('x11', version: x11_req)
   xcomposite_dep = dependency('xcomposite', version: xcomposite_req)
   xcursor_dep = dependency('xcursor')
   xdamage_dep = dependency('xdamage')
@@ -224,7 +230,7 @@ if have_libgudev
 
   udev_dir = get_option('udev_dir')
   if udev_dir == ''
-    udev_dir = udev_dep.get_pkgconfig_variable('udevdir')
+    udev_dir = udev_dep.get_variable('udevdir')
   endif
 endif
 
@@ -285,8 +291,12 @@ endif
 
 have_startup_notification = get_option('startup_notification')
 if have_startup_notification
-  libstartup_notification_dep = dependency('libstartup-notification-1.0',
-                                           version: libstartup_notification_req)
+  if have_x11_client
+    libstartup_notification_dep = dependency('libstartup-notification-1.0',
+                                             version: libstartup_notification_req)
+  else
+    error('startup_notification requires X11 or Xwayland to be enabled')
+  endif
 endif
 
 have_remote_desktop = get_option('remote_desktop')
@@ -401,19 +411,26 @@ endif
 have_profiler = get_option('profiler')
 if have_profiler
   # libsysprof-capture support
-  sysprof_dep = dependency('sysprof-capture-4',
+  libsysprof_capture_dep = dependency('sysprof-capture-4',
     required: true,
     default_options: [
-      'enable_examples=false',
-      'enable_gtk=false',
-      'enable_tests=false',
-      'enable_tools=false',
+      'examples=false',
+      'gtk=false',
+      'tests=false',
+      'tools=false',
       'libsysprof=false',
-      'with_sysprofd=none',
+      'sysprofd=none',
       'help=false',
     ],
     fallback: ['sysprof', 'libsysprof_capture_dep'],
   )
+
+  if libsysprof_capture_dep.type_name() == 'pkgconfig'
+    sysprof_dep = dependency('sysprof-4')
+    sysprof_dbus_interfaces_dir = join_paths(sysprof_dep.get_variable('datadir'), 'dbus-1', 'interfaces')
+  else
+    sysprof_dbus_interfaces_dir = join_paths(mutter_srcdir, 'subprojects', 'sysprof', 'src')
+  endif
 endif
 
 required_functions = [
@@ -515,7 +532,7 @@ cdata.set('HAVE_INTROSPECTION', have_introspection)
 cdata.set('HAVE_PROFILER', have_profiler)
 
 if have_x11_client
-  xkb_base = xkeyboard_config_dep.get_pkgconfig_variable('xkb_base')
+  xkb_base = xkeyboard_config_dep.get_variable('xkb_base')
   cdata.set_quoted('XKB_BASE', xkb_base)
 endif
 
@@ -526,13 +543,14 @@ endif
 have_xwayland_initfd = false
 have_xwayland_listenfd = false
 have_xwayland_terminate_delay = false
+have_xwayland_byte_swapped_clients = false
 if have_xwayland
   xwayland_dep = dependency('xwayland', required: false)
 
   xwayland_path = get_option('xwayland_path')
   if xwayland_path == ''
     if xwayland_dep.found()
-      xwayland_path = xwayland_dep.get_pkgconfig_variable('xwayland')
+      xwayland_path = xwayland_dep.get_variable('xwayland')
     else
       xwayland_path = find_program('Xwayland').path()
     endif
@@ -551,7 +569,7 @@ if have_xwayland
   # For Xwayland -initfd usage
   use_initfd = get_option('xwayland_initfd')
   if xwayland_dep.found()
-    xwayland_supports_initfd = xwayland_dep.get_pkgconfig_variable('have_initfd') == 'true'
+    xwayland_supports_initfd = xwayland_dep.get_variable('have_initfd') == 'true'
   else
     xwayland_options = run_command(xwayland_path, '-help')
     xwayland_supports_initfd = xwayland_options.stderr().contains('-initfd')
@@ -572,7 +590,7 @@ if have_xwayland
 
   # For Xwayland -listenfd usage
   if xwayland_dep.found()
-    have_xwayland_listenfd = xwayland_dep.get_pkgconfig_variable('have_listenfd') == 'true'
+    have_xwayland_listenfd = xwayland_dep.get_variable('have_listenfd') == 'true'
   endif
 
   if (have_xwayland_listenfd)
@@ -581,20 +599,21 @@ if have_xwayland
 
   # For Xwayland -listenfd usage
   if xwayland_dep.found()
-    have_xwayland_terminate_delay = xwayland_dep.get_pkgconfig_variable('have_terminate_delay') == 'true'
+    have_xwayland_terminate_delay = xwayland_dep.get_variable('have_terminate_delay') == 'true'
   endif
 
   if (have_xwayland_terminate_delay)
     cdata.set('HAVE_XWAYLAND_TERMINATE_DELAY', 1)
   endif
-endif
 
-have_xsetioerrorexithandler = false
-if have_x11_client
-  if cc.has_function('XSetIOErrorExitHandler', dependencies: x11_dep,
-                    prefix: '''#include <X11/Xlib.h>''')
-    have_xsetioerrorexithandler = true
-    cdata.set('HAVE_XSETIOERROREXITHANDLER', 1)
+  # For Xwayland +/-byteswappedclients usage
+  if xwayland_dep.found()
+    have_xwayland_byte_swapped_clients = xwayland_dep.get_variable('have_byteswappedclients',
+                                                                   default_value: 'false') == 'true'
+  endif
+
+  if (have_xwayland_byte_swapped_clients)
+    cdata.set('HAVE_XWAYLAND_BYTE_SWAPPED_CLIENTS', 1)
   endif
 endif
 
@@ -640,7 +659,10 @@ if have_documentation
   subdir('doc/reference')
 endif
 
-meson.add_install_script('meson/meson-postinstall.sh')
+gnome.post_install(
+  glib_compile_schemas: true,
+)
+
 meson.add_dist_script('meson/check-version.py', meson.project_version(), 'NEWS')
 
 summary('prefix', prefix, section: 'Directories')
@@ -673,8 +695,8 @@ summary('Documentation', have_documentation, section: 'Options')
 summary('Profiler', have_profiler, section: 'Options')
 summary('Xwayland initfd', have_xwayland_initfd, section: 'Options')
 summary('Xwayland listenfd', have_xwayland_listenfd, section: 'Options')
-summary('Safe X11 I/O errors', have_xsetioerrorexithandler, section: 'Options')
 summary('Xwayland terminate delay', have_xwayland_terminate_delay, section: 'Options')
+summary('Xwayland byte-swapped clients', have_xwayland_byte_swapped_clients, section: 'Options')
 
 summary('Enabled', have_tests, section: 'Tests')
 summary('Core tests', have_core_tests, section: 'Tests')

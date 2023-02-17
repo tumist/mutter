@@ -46,7 +46,7 @@ close_dialog_response_cb (MetaCloseDialog         *dialog,
 }
 
 static void
-meta_window_ensure_close_dialog (MetaWindow *window)
+meta_window_maybe_ensure_close_dialog (MetaWindow *window)
 {
   MetaDisplay *display;
 
@@ -65,11 +65,15 @@ meta_window_ensure_close_dialog (MetaWindow *window)
 void
 meta_window_show_close_dialog (MetaWindow *window)
 {
-  meta_window_ensure_close_dialog (window);
+  meta_window_maybe_ensure_close_dialog (window);
+
+  if (!window->close_dialog)
+    return;
+
   meta_close_dialog_show (window->close_dialog);
 
   if (window->display &&
-      window->display->event_route == META_EVENT_ROUTE_NORMAL &&
+      !meta_compositor_get_current_window_drag (window->display->compositor) &&
       window == window->display->focus_window)
     meta_close_dialog_focus (window->close_dialog);
 }

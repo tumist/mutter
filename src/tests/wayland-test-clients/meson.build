@@ -3,42 +3,13 @@ wayland_test_client_installed_tests_libexecdir = join_paths(
   'wayland-test-clients',
 )
 
-test_driver_server_header = custom_target(
-  'test-driver server header',
-  input: 'test-driver.xml',
-  output: 'test-driver-server-protocol.h',
-  command: [
-    wayland_scanner,
-    'server-header',
-    '@INPUT@', '@OUTPUT@',
-  ]
-)
-
-test_driver_client_header = custom_target(
-  'test-driver client header',
-  input: 'test-driver.xml',
-  output: 'test-driver-client-protocol.h',
-  command: [
-    wayland_scanner,
-    'client-header',
-    '@INPUT@', '@OUTPUT@',
-  ]
-)
-
-test_driver_protocol_code = custom_target(
-  'test-driver source',
-  input: 'test-driver.xml',
-  output: 'test-driver-protocol.c',
-  command: [
-    wayland_scanner,
-    'private-code',
-    '@INPUT@', '@OUTPUT@',
-  ]
-)
-
-common_sources = [
+wayland_test_client_sources = files([
   'wayland-test-client-utils.c',
   'wayland-test-client-utils.h',
+])
+
+wayland_test_client_utils = [
+  wayland_test_client_sources,
   wayland_protocol_client_headers,
   wayland_protocol_sources,
   test_driver_client_header,
@@ -74,6 +45,9 @@ wayland_test_clients = [
     'name': 'xdg-activation',
   },
   {
+    'name': 'xdg-foreign',
+  },
+  {
     'name': 'xdg-toplevel-bounds',
   },
   {
@@ -84,6 +58,15 @@ wayland_test_clients = [
     'extra_deps': [
       libdrm_dep,
       libgbm_dep,
+    ],
+  },
+  {
+    'name': 'service-client',
+    'extra_sources': [
+      built_dbus_sources['meta-dbus-service-channel'],
+    ],
+    'extra_deps': [
+      gio_unix_dep,
     ],
   },
 ]
@@ -99,11 +82,16 @@ foreach test : wayland_test_clients
     deps += test['extra_deps']
   endif
 
+  test_client_sources = [
+    '@0@.c'.format(test_name),
+    wayland_test_client_utils,
+  ]
+  if test.has_key('extra_sources')
+    test_client_sources += test['extra_sources']
+  endif
+
   executable(test_name,
-    sources: [
-      '@0@.c'.format(test_name),
-      common_sources,
-    ],
+    sources: test_client_sources,
     include_directories: tests_includes,
     c_args: tests_c_args,
     dependencies: deps,

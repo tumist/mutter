@@ -73,6 +73,16 @@ struct _MetaPadActionMapper
 
 G_DEFINE_TYPE (MetaPadActionMapper, meta_pad_action_mapper, G_TYPE_OBJECT)
 
+static MetaDisplay *
+display_from_mapper (MetaPadActionMapper *mapper)
+{
+  MetaBackend *backend =
+    meta_monitor_manager_get_backend (mapper->monitor_manager);
+  MetaContext *context = meta_backend_get_context (backend);
+
+  return meta_context_get_display (context);
+}
+
 static void
 meta_pad_action_mapper_finalize (GObject *object)
 {
@@ -436,7 +446,7 @@ meta_pad_action_mapper_cycle_tablet_output (MetaPadActionMapper *mapper,
     }
 
   g_settings_set_strv (info->settings, "output", edid);
-  meta_display_show_tablet_mapping_notification (meta_get_display (),
+  meta_display_show_tablet_mapping_notification (display_from_mapper (mapper),
                                                  device, pretty_name);
 }
 
@@ -466,7 +476,7 @@ emulate_modifiers (ClutterVirtualInputDevice *device,
   } mod_map[] = {
     { CLUTTER_SHIFT_MASK, CLUTTER_KEY_Shift_L },
     { CLUTTER_CONTROL_MASK, CLUTTER_KEY_Control_L },
-    { CLUTTER_MOD1_MASK, CLUTTER_KEY_Meta_L }
+    { CLUTTER_META_MASK, CLUTTER_KEY_Meta_L }
   };
 
   for (i = 0; i < G_N_ELEMENTS (mod_map); i++)
@@ -486,13 +496,16 @@ meta_pad_action_mapper_emulate_keybinding (MetaPadActionMapper *mapper,
                                            gboolean             is_press)
 {
   ClutterKeyState state;
-  guint key, mods;
+  MetaKeyCombo combo = { 0 };
 
   if (!accel || !*accel)
     return;
 
-  /* FIXME: This is appalling */
-  gtk_accelerator_parse (accel, &key, &mods);
+  if (!meta_parse_accelerator (accel, &combo))
+    {
+      g_warning ("\"%s\" is not a valid accelerator", accel);
+      return;
+    }
 
   if (!mapper->virtual_pad_keyboard)
     {
@@ -510,13 +523,13 @@ meta_pad_action_mapper_emulate_keybinding (MetaPadActionMapper *mapper,
   state = is_press ? CLUTTER_KEY_STATE_PRESSED : CLUTTER_KEY_STATE_RELEASED;
 
   if (is_press)
-    emulate_modifiers (mapper->virtual_pad_keyboard, mods, state);
+    emulate_modifiers (mapper->virtual_pad_keyboard, combo.modifiers, state);
 
   clutter_virtual_input_device_notify_keyval (mapper->virtual_pad_keyboard,
                                               clutter_get_current_event_time (),
-                                              key, state);
+                                              combo.keysym, state);
   if (!is_press)
-    emulate_modifiers (mapper->virtual_pad_keyboard, mods, state);
+    emulate_modifiers (mapper->virtual_pad_keyboard, combo.modifiers, state);
 }
 
 static gboolean
@@ -558,7 +571,7 @@ meta_pad_action_mapper_handle_button (MetaPadActionMapper         *mapper,
       if (wacom_device)
         pretty_name = libwacom_get_name (wacom_device);
 #endif
-      meta_display_notify_pad_group_switch (meta_get_display (), pad,
+      meta_display_notify_pad_group_switch (display_from_mapper (mapper), pad,
                                             pretty_name, group, mode, n_modes);
       info->group_modes[group] = mode;
     }
@@ -573,7 +586,7 @@ meta_pad_action_mapper_handle_button (MetaPadActionMapper         *mapper,
       return TRUE;
     case G_DESKTOP_PAD_BUTTON_ACTION_HELP:
       if (is_press)
-        meta_display_request_pad_osd (meta_get_display (), pad, FALSE);
+        meta_display_request_pad_osd (display_from_mapper (mapper), pad, FALSE);
       return TRUE;
     case G_DESKTOP_PAD_BUTTON_ACTION_KEYBINDING:
       settings = lookup_pad_action_settings (pad, META_PAD_ACTION_BUTTON,

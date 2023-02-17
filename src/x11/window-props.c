@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "compositor/compositor-private.h"
 #include "core/frame.h"
 #include "core/meta-workspace-manager-private.h"
 #include "core/util-private.h"
@@ -346,14 +347,14 @@ reload_icon_geometry (MetaWindow    *window,
 }
 
 static void
-meta_window_set_custom_frame_extents (MetaWindow *window,
-                                      GtkBorder  *extents,
-                                      gboolean    is_initial)
+meta_window_set_custom_frame_extents (MetaWindow      *window,
+                                      MetaFrameBorder *extents,
+                                      gboolean         is_initial)
 {
   if (extents)
     {
       if (window->has_custom_frame_extents &&
-          memcmp (&window->custom_frame_extents, extents, sizeof (GtkBorder)) == 0)
+          memcmp (&window->custom_frame_extents, extents, sizeof (MetaFrameBorder)) == 0)
         return;
 
       window->has_custom_frame_extents = TRUE;
@@ -396,7 +397,7 @@ reload_gtk_frame_extents (MetaWindow    *window,
         }
       else
         {
-          GtkBorder extents;
+          MetaFrameBorder extents;
           extents.left   = (int)value->v.cardinal_list.cardinals[0];
           extents.right  = (int)value->v.cardinal_list.cardinals[1];
           extents.top    = (int)value->v.cardinal_list.cardinals[2];
@@ -709,8 +710,12 @@ reload_opaque_region (MetaWindow    *window,
     }
 
  out:
-  meta_window_set_opaque_region (window, opaque_region);
-  cairo_region_destroy (opaque_region);
+  if (value->source_xwindow == window->xwindow)
+    meta_window_set_opaque_region (window, opaque_region);
+  else if (window->frame && value->source_xwindow == window->frame->xwindow)
+    meta_frame_set_opaque_region (window->frame, opaque_region);
+
+  g_clear_pointer (&opaque_region, cairo_region_destroy);
 }
 
 static void
@@ -1052,31 +1057,34 @@ reload_update_counter (MetaWindow    *window,
 {
   if (value->type != META_PROP_VALUE_INVALID)
     {
-      meta_window_x11_destroy_sync_request_alarm (window);
-      window->sync_request_counter = None;
+      MetaSyncCounter *sync_counter;
+
+      if (value->source_xwindow == window->xwindow)
+        sync_counter = meta_window_x11_get_sync_counter (window);
+      else if (window->frame && value->source_xwindow == window->frame->xwindow)
+        sync_counter = meta_frame_get_sync_counter (window->frame);
+      else
+        g_assert_not_reached ();
 
       if (value->v.xcounter_list.n_counters == 0)
         {
           meta_warning ("_NET_WM_SYNC_REQUEST_COUNTER is empty");
+          meta_sync_counter_set_counter (sync_counter, None, FALSE);
           return;
         }
 
       if (value->v.xcounter_list.n_counters == 1)
         {
-          window->sync_request_counter = value->v.xcounter_list.counters[0];
-          window->extended_sync_request_counter = FALSE;
+          meta_sync_counter_set_counter (sync_counter,
+                                         value->v.xcounter_list.counters[0],
+                                         FALSE);
         }
       else
         {
-          window->sync_request_counter = value->v.xcounter_list.counters[1];
-          window->extended_sync_request_counter = TRUE;
+          meta_sync_counter_set_counter (sync_counter,
+                                         value->v.xcounter_list.counters[1],
+                                         TRUE);
         }
-      meta_verbose ("Window has _NET_WM_SYNC_REQUEST_COUNTER 0x%lx (extended=%s)",
-                    window->sync_request_counter,
-                    window->extended_sync_request_counter ? "true" : "false");
-
-      if (window->extended_sync_request_counter)
-        meta_window_x11_create_sync_request_alarm (window);
     }
 }
 
@@ -1817,9 +1825,6 @@ reload_gtk_theme_variant (MetaWindow    *window,
       g_free (current_variant);
 
       window->gtk_theme_variant = g_strdup (requested_variant);
-
-      if (window->frame)
-        meta_frame_update_style (window->frame);
     }
 }
 

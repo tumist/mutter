@@ -23,8 +23,6 @@
 
 #include "meta-x11-selection-input-stream-private.h"
 
-#include <gdk/gdkx.h>
-
 #include "meta/meta-x11-errors.h"
 #include "x11/meta-x11-display-private.h"
 
@@ -341,11 +339,11 @@ XFree_without_return_value (gpointer data)
 }
 
 static GBytes *
-get_selection_property (Display *xdisplay,
-                        Window   owner,
-                        Atom     property,
-                        Atom    *ret_type,
-                        gint    *ret_format)
+get_selection_property (MetaX11Display *x11_display,
+                        Window          owner,
+                        Atom            property,
+                        Atom           *ret_type,
+                        gint           *ret_format)
 {
   gulong nitems;
   gulong nbytes;
@@ -353,10 +351,18 @@ get_selection_property (Display *xdisplay,
   gint prop_format;
   uint8_t *data = NULL;
 
-  if (XGetWindowProperty (xdisplay, owner, property,
+  meta_x11_error_trap_push (x11_display);
+
+  if (XGetWindowProperty (x11_display->xdisplay, owner, property,
                           0, 0x1FFFFFFF, False,
                           AnyPropertyType, &prop_type, &prop_format,
                           &nitems, &nbytes, &data) != Success)
+    {
+      meta_x11_error_trap_pop (x11_display);
+      goto err;
+    }
+
+  if (meta_x11_error_trap_pop_with_return (x11_display) != Success)
     goto err;
 
   if (prop_type != None)
@@ -426,7 +432,8 @@ meta_x11_selection_input_stream_xevent (MetaX11SelectionInputStream *stream,
           xevent->xproperty.state != PropertyNewValue)
         return FALSE;
 
-      bytes = get_selection_property (xdisplay, xwindow, xevent->xproperty.atom,
+      bytes = get_selection_property (priv->x11_display, xwindow,
+                                      xevent->xproperty.atom,
                                       &type, &format);
 
       if (bytes == NULL)
@@ -477,10 +484,10 @@ meta_x11_selection_input_stream_xevent (MetaX11SelectionInputStream *stream,
           }
         else
           {
-            bytes = get_selection_property (xdisplay, xwindow,
+            bytes = get_selection_property (priv->x11_display, xwindow,
                                             xevent->xselection.property,
                                             &priv->xtype, &priv->format);
-            priv->type = gdk_x11_get_xatom_name (priv->xtype);
+            priv->type = XGetAtomName (xdisplay, priv->xtype);
 
             g_task_return_pointer (task, g_object_ref (stream), g_object_unref);
 

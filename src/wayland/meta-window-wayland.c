@@ -32,6 +32,7 @@
 #include "backends/meta-backend-private.h"
 #include "backends/meta-backend-private.h"
 #include "backends/meta-logical-monitor.h"
+#include "compositor/compositor-private.h"
 #include "compositor/meta-surface-actor-wayland.h"
 #include "compositor/meta-window-actor-private.h"
 #include "core/boxes-private.h"
@@ -44,11 +45,24 @@
 #include "wayland/meta-wayland-window-configuration.h"
 #include "wayland/meta-wayland-xdg-shell.h"
 
+enum
+{
+  PROP_0,
+
+  PROP_SURFACE,
+
+  PROP_LAST
+};
+
+static GParamSpec *obj_props[PROP_LAST];
+
 struct _MetaWindowWayland
 {
   MetaWindow parent;
 
   int geometry_scale;
+
+  MetaWaylandSurface *surface;
 
   GList *pending_configurations;
   gboolean has_pending_state_change;
@@ -88,9 +102,11 @@ set_geometry_scale_for_window (MetaWindowWayland *wl_window,
 static int
 get_window_geometry_scale_for_logical_monitor (MetaLogicalMonitor *logical_monitor)
 {
-  g_assert (logical_monitor);
+  MetaMonitor *monitor =
+    meta_logical_monitor_get_monitors (logical_monitor)->data;
+  MetaBackend *backend = meta_monitor_get_backend (monitor);
 
-  if (meta_is_stage_views_scaled ())
+  if (meta_backend_is_stage_views_scaled (backend))
     return 1;
   else
     return meta_logical_monitor_get_scale (logical_monitor);
@@ -112,7 +128,7 @@ meta_window_wayland_manage (MetaWindow *window)
                                    0);
   }
 
-  meta_wayland_surface_window_managed (window->surface, window);
+  meta_wayland_surface_window_managed (wl_window->surface, window);
 }
 
 static void
@@ -131,21 +147,29 @@ static void
 meta_window_wayland_ping (MetaWindow *window,
                           guint32     serial)
 {
-  meta_wayland_surface_ping (window->surface, serial);
+  MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
+
+  meta_wayland_surface_ping (wl_window->surface, serial);
 }
 
 static void
 meta_window_wayland_delete (MetaWindow *window,
                             guint32     timestamp)
 {
-  meta_wayland_surface_delete (window->surface);
+  MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
+
+  meta_wayland_surface_delete (wl_window->surface);
 }
 
 static void
 meta_window_wayland_kill (MetaWindow *window)
 {
-  MetaWaylandSurface *surface = window->surface;
-  struct wl_resource *resource = surface->resource;
+  MetaWaylandSurface *surface = meta_window_get_wayland_surface (window);
+  struct wl_resource *resource;
+
+  resource = surface->resource;
+  if (!resource)
+    return;
 
   /* Send the client an unrecoverable error to kill the client. */
   wl_resource_post_error (resource,
@@ -170,9 +194,7 @@ static void
 meta_window_wayland_configure (MetaWindowWayland              *wl_window,
                                MetaWaylandWindowConfiguration *configuration)
 {
-  MetaWindow *window = META_WINDOW (wl_window);
-
-  meta_wayland_surface_configure_notify (window->surface, configuration);
+  meta_wayland_surface_configure_notify (wl_window->surface, configuration);
 
   wl_window->pending_configurations =
     g_list_prepend (wl_window->pending_configurations, configuration);
@@ -378,7 +400,7 @@ meta_window_wayland_move_resize_internal (MetaWindow                *window,
           int bounds_width;
           int bounds_height;
 
-          if (!meta_wayland_surface_get_buffer (window->surface) &&
+          if (!meta_wayland_surface_get_buffer (wl_window->surface) &&
               !META_WINDOW_MAXIMIZED (window) &&
               window->tile_mode == META_TILE_NONE &&
               !meta_window_is_fullscreen (window))
@@ -486,9 +508,12 @@ static void
 meta_window_wayland_update_main_monitor (MetaWindow                   *window,
                                          MetaWindowUpdateMonitorFlags  flags)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
+  MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
   MetaWindow *toplevel_window;
   MetaLogicalMonitor *from;
   MetaLogicalMonitor *to;
@@ -501,7 +526,7 @@ meta_window_wayland_update_main_monitor (MetaWindow                   *window,
 
   /* If the window is not a toplevel window (i.e. it's a popup window) just use
    * the monitor of the toplevel. */
-  toplevel_window = meta_wayland_surface_get_toplevel_window (window->surface);
+  toplevel_window = meta_wayland_surface_get_toplevel_window (wl_window->surface);
   if (toplevel_window != window)
     {
       meta_window_update_monitor (toplevel_window, flags);
@@ -546,7 +571,7 @@ meta_window_wayland_update_main_monitor (MetaWindow                   *window,
       return;
     }
 
-  if (meta_is_stage_views_scaled ())
+  if (meta_backend_is_stage_views_scaled (backend))
     {
       window->monitor = to;
       return;
@@ -626,7 +651,7 @@ meta_window_wayland_main_monitor_changed (MetaWindow               *window,
                                         window,
                                         TRUE);
 
-  surface = window->surface;
+  surface = wl_window->surface;
   if (surface)
     {
       MetaWaylandActorSurface *actor_surface =
@@ -642,9 +667,13 @@ meta_window_wayland_main_monitor_changed (MetaWindow               *window,
 static pid_t
 meta_window_wayland_get_client_pid (MetaWindow *window)
 {
-  MetaWaylandSurface *surface = window->surface;
-  struct wl_resource *resource = surface->resource;
+  MetaWaylandSurface *surface = meta_window_get_wayland_surface (window);
+  struct wl_resource *resource;
   pid_t pid;
+
+  resource = surface->resource;
+  if (!resource)
+    return 0;
 
   wl_client_get_credentials (wl_resource_get_client (resource), &pid, NULL, NULL);
   return pid;
@@ -693,7 +722,10 @@ static void
 meta_window_wayland_force_restore_shortcuts (MetaWindow         *window,
                                              ClutterInputDevice *source)
 {
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaContext *context = meta_display_get_context (display);
+  MetaWaylandCompositor *compositor =
+    meta_context_get_wayland_compositor (context);
 
   meta_wayland_compositor_restore_shortcuts (compositor, source);
 }
@@ -702,7 +734,10 @@ static gboolean
 meta_window_wayland_shortcuts_inhibited (MetaWindow         *window,
                                          ClutterInputDevice *source)
 {
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaContext *context = meta_display_get_context (display);
+  MetaWaylandCompositor *compositor =
+    meta_context_get_wayland_compositor (context);
 
   return meta_wayland_compositor_is_shortcuts_inhibited (compositor, source);
 }
@@ -722,7 +757,8 @@ meta_window_wayland_can_ping (MetaWindow *window)
 static gboolean
 meta_window_wayland_is_stackable (MetaWindow *window)
 {
-  return meta_wayland_surface_get_buffer (window->surface) != NULL;
+  MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
+  return meta_wayland_surface_get_buffer (wl_window->surface) != NULL;
 }
 
 static gboolean
@@ -737,6 +773,14 @@ static gboolean
 meta_window_wayland_is_focus_async (MetaWindow *window)
 {
   return FALSE;
+}
+
+static MetaWaylandSurface *
+meta_window_wayland_get_wayland_surface (MetaWindow *window)
+{
+  MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
+
+  return wl_window->surface;
 }
 
 static MetaStackLayer
@@ -756,6 +800,35 @@ meta_window_wayland_unmap (MetaWindow *window)
 }
 
 static void
+meta_window_wayland_constructed (GObject *object)
+{
+  MetaWindow *window = META_WINDOW (object);
+
+  window->client_type = META_WINDOW_CLIENT_TYPE_WAYLAND;
+
+  window->override_redirect = FALSE;
+  window->rect.x = 0;
+  window->rect.y = 0;
+  window->rect.width = 0;
+  window->rect.height = 0;
+  /* size_hints are the "request" */
+  window->size_hints.x = 0;
+  window->size_hints.y = 0;
+  window->size_hints.width = 0;
+  window->size_hints.height = 0;
+
+  window->depth = 24;
+  window->xvisual = NULL;
+
+  window->mapped = FALSE;
+
+  window->decorated = FALSE;
+  window->hidden = TRUE;
+
+  G_OBJECT_CLASS (meta_window_wayland_parent_class)->constructed (object);
+}
+
+static void
 meta_window_wayland_finalize (GObject *object)
 {
   MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (object);
@@ -769,12 +842,53 @@ meta_window_wayland_finalize (GObject *object)
 }
 
 static void
+meta_window_wayland_get_property (GObject    *object,
+                                  guint       prop_id,
+                                  GValue     *value,
+                                  GParamSpec *pspec)
+{
+  MetaWindowWayland *window = META_WINDOW_WAYLAND (object);
+
+  switch (prop_id)
+    {
+    case PROP_SURFACE:
+      g_value_set_object (value, window->surface);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
+}
+
+static void
+meta_window_wayland_set_property (GObject      *object,
+                                  guint         prop_id,
+                                  const GValue *value,
+                                  GParamSpec   *pspec)
+{
+  MetaWindowWayland *window = META_WINDOW_WAYLAND (object);
+
+  switch (prop_id)
+    {
+    case PROP_SURFACE:
+      window->surface = g_value_get_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
+}
+
+static void
 meta_window_wayland_class_init (MetaWindowWaylandClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   MetaWindowClass *window_class = META_WINDOW_CLASS (klass);
 
   object_class->finalize = meta_window_wayland_finalize;
+  object_class->get_property = meta_window_wayland_get_property;
+  object_class->set_property = meta_window_wayland_set_property;
+  object_class->constructed = meta_window_wayland_constructed;
 
   window_class->manage = meta_window_wayland_manage;
   window_class->unmanage = meta_window_wayland_unmanage;
@@ -798,37 +912,31 @@ meta_window_wayland_class_init (MetaWindowWaylandClass *klass)
   window_class->map = meta_window_wayland_map;
   window_class->unmap = meta_window_wayland_unmap;
   window_class->is_focus_async = meta_window_wayland_is_focus_async;
+  window_class->get_wayland_surface = meta_window_wayland_get_wayland_surface;
+
+  obj_props[PROP_SURFACE] =
+    g_param_spec_object ("surface",
+                         "Surface",
+                         "The corresponding Wayland surface",
+                         META_TYPE_WAYLAND_SURFACE,
+                         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
+
+  g_object_class_install_properties (object_class, PROP_LAST, obj_props);
 }
 
 MetaWindow *
 meta_window_wayland_new (MetaDisplay        *display,
                          MetaWaylandSurface *surface)
 {
-  XWindowAttributes attrs = { 0 };
   MetaWindowWayland *wl_window;
   MetaWindow *window;
 
-  /*
-   * Set attributes used by _meta_window_shared_new, don't bother trying to fake
-   * X11 window attributes with the rest, since they'll be ignored anyway.
-   */
-  attrs.x = 0;
-  attrs.y = 0;
-  attrs.width = 0;
-  attrs.height = 0;
-  attrs.depth = 24;
-  attrs.visual = NULL;
-  attrs.map_state = IsUnmapped;
-  attrs.override_redirect = False;
-
-  window = _meta_window_shared_new (display,
-                                    META_WINDOW_CLIENT_TYPE_WAYLAND,
-                                    surface,
-                                    None,
-                                    WithdrawnState,
-                                    META_COMP_EFFECT_CREATE,
-                                    &attrs);
-
+  window = g_initable_new (META_TYPE_WINDOW_WAYLAND,
+                           NULL, NULL,
+                           "display", display,
+                           "effect", META_COMP_EFFECT_CREATE,
+                           "surface", surface,
+                           NULL);
   wl_window = META_WINDOW_WAYLAND (window);
   set_geometry_scale_for_window (wl_window, wl_window->geometry_scale);
 
@@ -1008,7 +1116,7 @@ meta_window_wayland_finish_move_resize (MetaWindow              *window,
 {
   MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
   MetaDisplay *display = window->display;
-  MetaWaylandSurface *surface = window->surface;
+  MetaWaylandSurface *surface = wl_window->surface;
   int dx, dy;
   int geometry_scale;
   MetaGravity gravity;
@@ -1017,6 +1125,7 @@ meta_window_wayland_finish_move_resize (MetaWindow              *window,
   MetaWaylandWindowConfiguration *acked_configuration;
   gboolean is_window_being_resized;
   gboolean is_client_resize;
+  MetaWindowDrag *window_drag;
 
   /* new_geom is in the logical pixel coordinate space, but MetaWindow wants its
    * rects to represent what in turn will end up on the stage, i.e. we need to
@@ -1055,14 +1164,18 @@ meta_window_wayland_finish_move_resize (MetaWindow              *window,
     }
   else
     {
-      window->custom_frame_extents = (GtkBorder) { 0 };
+      window->custom_frame_extents = (MetaFrameBorder) { 0 };
     }
 
   flags = META_MOVE_RESIZE_WAYLAND_FINISH_MOVE_RESIZE;
 
+  window_drag = meta_compositor_get_current_window_drag (display->compositor);
+
   /* x/y are ignored when we're doing interactive resizing */
-  is_window_being_resized = (meta_grab_op_is_resizing (display->grab_op) &&
-                             display->grab_window == window);
+  is_window_being_resized =
+    (window_drag &&
+     meta_grab_op_is_resizing (meta_window_drag_get_grab_op (window_drag)) &&
+     meta_window_drag_get_window (window_drag) == window);
 
   rect = (MetaRectangle) {
     .x = window->rect.x,
@@ -1121,8 +1234,9 @@ meta_window_wayland_finish_move_resize (MetaWindow              *window,
                    meta_wayland_window_configuration_free);
   wl_window->last_acked_configuration = g_steal_pointer (&acked_configuration);
 
-  if (window->display->grab_window == window)
-    gravity = meta_resize_gravity_from_grab_op (window->display->grab_op);
+  if (window_drag &&
+      meta_window_drag_get_window (window_drag) == window)
+    gravity = meta_resize_gravity_from_grab_op (meta_window_drag_get_grab_op (window_drag));
   else
     gravity = META_GRAVITY_STATIC;
   meta_window_move_resize_internal (window, flags, gravity, rect);

@@ -110,7 +110,9 @@ meta_backend_x11_cm_post_init (MetaBackend *backend)
   g_signal_connect_object (seat, "device-added",
                            G_CALLBACK (on_device_added), backend, 0);
 
-  x11_cm->input_settings = g_object_new (META_TYPE_INPUT_SETTINGS_X11, NULL);
+  x11_cm->input_settings = g_object_new (META_TYPE_INPUT_SETTINGS_X11,
+                                         "backend", backend,
+                                         NULL);
 
   parent_backend_class->post_init (backend);
   take_touch_grab (backend);
@@ -379,21 +381,20 @@ meta_backend_x11_cm_lock_layout_group (MetaBackend *backend,
 }
 
 static gboolean
-meta_backend_x11_cm_handle_host_xevent (MetaBackendX11 *backend_x11,
+meta_backend_x11_cm_handle_host_xevent (MetaBackendX11 *x11,
                                         XEvent         *event)
 {
-  MetaBackend *backend = META_BACKEND (backend_x11);
-  MetaBackendX11 *x11 = META_BACKEND_X11 (backend);
+  MetaBackend *backend = META_BACKEND (x11);
+  MetaContext *context = meta_backend_get_context (backend);
   MetaBackendX11Cm *x11_cm = META_BACKEND_X11_CM (x11);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaMonitorManagerXrandr *monitor_manager_xrandr =
     META_MONITOR_MANAGER_XRANDR (monitor_manager);
   Display *xdisplay = meta_backend_x11_get_xdisplay (x11);
-  gboolean bypass_clutter = FALSE;
   MetaDisplay *display;
 
-  display = meta_get_display ();
+  display = meta_context_get_display (context);
   if (display)
     {
       MetaCompositor *compositor = display->compositor;
@@ -402,7 +403,7 @@ meta_backend_x11_cm_handle_host_xevent (MetaBackendX11 *backend_x11,
 
       if (meta_dnd_handle_xdnd_event (backend, compositor_x11,
                                       xdisplay, event))
-        bypass_clutter = TRUE;
+        return TRUE;
     }
 
   if (event->type == meta_backend_x11_get_xkb_event_base (x11))
@@ -427,10 +428,10 @@ meta_backend_x11_cm_handle_host_xevent (MetaBackendX11 *backend_x11,
         }
     }
 
-  bypass_clutter |=
-    meta_monitor_manager_xrandr_handle_xevent (monitor_manager_xrandr, event);
+  if (meta_monitor_manager_xrandr_handle_xevent (monitor_manager_xrandr, event))
+    return TRUE;
 
-  return bypass_clutter;
+  return FALSE;
 }
 
 static void

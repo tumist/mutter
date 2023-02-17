@@ -1,3 +1,73 @@
+mutter (44~beta-1) experimental; urgency=medium
+
+  * New upstream release
+  * Rename packages for API bump (mutter-11 -> mutter-12)
+  * Update symbols files
+  * Add mutter-common-bin to install libexec binaries
+  * Have libmutter-test-12 install the new MetaTest typelib
+    and add a Provides for it instead of creating a new binary package
+  * debian/mutter.install: mutter.desktop is no longer provided
+  * Bump minimum glib to 2.75.1
+  * Refresh patches
+  * Update triple buffering patch to the latest version
+  * Drop patch applied in new release
+  * Drop 2 patches that no longer apply:
+    - theme-load-icons-as-Gtk-does-with-fallback-and-RTL-suppor.patch
+    - theme-use-gtk_render_icon_suface-to-paint-button-icon.patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Fri, 17 Feb 2023 16:41:43 -0500
+
+mutter (43.3-2) unstable; urgency=medium
+
+  * Team upload
+  * Mention LP: #1985089 in the 43.2-6 changelog
+  * d/p/Support-Dynamic-triple-double-buffering.patch:
+    Record the exact revision that was used (no content changes)
+  * Remove Lintian overrides that are no longer necessary now that
+    lintian/lintian!452 is in a release
+  * Upload to unstable
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 16 Feb 2023 09:37:11 +0000
+
+mutter (43.3-1) experimental; urgency=medium
+
+  * Team upload
+  * Initially uploading to experimental pending feedback on whether the
+    downclocking patch needs adjustment for 43.3
+
+  [ Daniel van Vugt ]
+  * d/p/Support-Dynamic-triple-double-buffering.patch:
+    Improve downclocking (triple to double buffering) support so it
+    happens sooner and more reliably. This reduces input latency during
+    light rendering as well as reducing CPU usage of cursor movement.
+    Also correct the origin information.
+
+  [ Simon McVittie ]
+  * New upstream release
+    - Make sure there is always a non-null list of extensions
+      (LP: #1994011)
+    - Fix a crash when colour management operations are cancelled
+      (mutter!2794)
+    - Fix lockup when pointer crosses the intersection of 4 displays
+      (mutter#2598)
+    - Fix some small memory leaks (mutter!2811)
+    - Fix a misleading error message (mutter!2811)
+    - Revert a problematic change to the handling of frame event timing
+      (mutter!2835)
+    - On X11, Don't allow focus to be taken by an app during grabs
+      (gnome-shell#5932, mutter!2832)
+    - Many changes that were already in 43.2-6
+  * Drop patches that were applied upstream
+  * d/p/wayland-Don-t-overwrite-surface-offsets.patch:
+    Add patch from upstream to fix drag-and-drop cursor position on Wayland
+    (mutter#2622)
+    This updates us to upstream gnome-43 branch commit 43.3-1-ga8a348185b.
+  * d/control.in, d/gbp.conf, d/watch: Set up branches for 43.x in bookworm.
+    This leaves the default branch available for GNOME 44 betas in
+    experimental and Ubuntu.
+
+ -- Simon McVittie <smcv@debian.org>  Wed, 15 Feb 2023 17:00:58 +0000
+
 mutter (43.2-6ubuntu1) lunar; urgency=medium
 
   * Merge with Debian. Remaining change:
@@ -10,7 +80,8 @@ mutter (43.2-6) unstable; urgency=medium
   * Team upload
   * d/patches: Update to upstream gnome-43 branch commit 43.2-29-g35763ca0cc
     - Avoid lag while altering the split point between edge-tiled windows
-      on the left and right halves of the screen (mutter#2246)
+      on the left and right halves of the screen
+      (mutter#2246, LP: #1985089)
     - Disable direct scanout optimization during drag-and-drop to ensure
       the dragged content is visible (mutter#2470)
     - Performance improvements (mutter!2671)

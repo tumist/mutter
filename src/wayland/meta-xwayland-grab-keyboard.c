@@ -26,6 +26,7 @@
 
 #include "meta/meta-backend.h"
 #include "backends/meta-settings-private.h"
+#include "wayland/meta-wayland-filter-manager.h"
 #include "wayland/meta-wayland-private.h"
 #include "wayland/meta-wayland-versions.h"
 #include "wayland/meta-wayland-seat.h"
@@ -87,9 +88,14 @@ meta_xwayland_keyboard_grab_end (MetaXwaylandKeyboardActiveGrab *active_grab)
 
   if (seat->keyboard->grab->interface->key == meta_xwayland_keyboard_grab_key)
     {
+      MetaWaylandCompositor *compositor =
+        meta_wayland_seat_get_compositor (active_grab->seat);
+      MetaContext *context = meta_wayland_compositor_get_context (compositor);
+      MetaDisplay *display = meta_context_get_display (context);
+
       meta_wayland_keyboard_end_grab (active_grab->keyboard_grab.keyboard);
       meta_wayland_keyboard_set_focus (active_grab->keyboard_grab.keyboard, NULL);
-      meta_display_sync_wayland_input_focus (meta_get_display ());
+      meta_display_sync_wayland_input_focus (display);
     }
 
   if (!active_grab->surface)
@@ -193,14 +199,14 @@ application_is_in_pattern_array (MetaWindow *window,
 static gboolean
 meta_xwayland_grab_is_granted (MetaWindow *window)
 {
-  MetaBackend *backend;
-  MetaSettings *settings;
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
+  MetaSettings *settings = meta_backend_get_settings (backend);
   GPtrArray *allow_list;
   GPtrArray *deny_list;
   gboolean may_grab;
 
-  backend = meta_get_backend ();
-  settings = meta_backend_get_settings (backend);
 
   /* Check whether the window is in the deny list */
   meta_settings_get_xwayland_grab_patterns (settings, &allow_list, &deny_list);
@@ -223,15 +229,14 @@ meta_xwayland_grab_is_granted (MetaWindow *window)
 static gboolean
 meta_xwayland_grab_should_lock_focus (MetaWindow *window)
 {
-  MetaBackend *backend;
-  MetaSettings *settings;
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
+  MetaSettings *settings = meta_backend_get_settings (backend);
 
   /* Lock focus applies to O-R windows which never receive keyboard focus otherwise */
   if (!window->override_redirect)
     return FALSE;
-
-  backend = meta_get_backend ();
-  settings = meta_backend_get_settings (backend);
 
   return meta_settings_are_xwayland_grabs_allowed (settings);
 }
@@ -335,12 +340,37 @@ bind_keyboard_grab (struct wl_client *client,
                                   NULL, NULL);
 }
 
+static MetaWaylandAccess
+xwayland_grab_keyboard_filter (const struct wl_client *client,
+                               const struct wl_global *global,
+                               gpointer                user_data)
+{
+  MetaWaylandCompositor *compositor = user_data;
+  MetaXWaylandManager *xwayland_manager = &compositor->xwayland_manager;
+
+  if (client == xwayland_manager->client)
+    return META_WAYLAND_ACCESS_ALLOWED;
+  else
+    return META_WAYLAND_ACCESS_DENIED;
+}
+
 gboolean
 meta_xwayland_grab_keyboard_init (MetaWaylandCompositor *compositor)
 {
-  return (wl_global_create (compositor->wayland_display,
-                            &zwp_xwayland_keyboard_grab_manager_v1_interface,
-                            META_ZWP_XWAYLAND_KEYBOARD_GRAB_V1_VERSION,
-                            NULL,
-                            bind_keyboard_grab) != NULL);
+  struct wl_global *global;
+  MetaWaylandFilterManager *filter_manager;
+
+  global = wl_global_create (compositor->wayland_display,
+                             &zwp_xwayland_keyboard_grab_manager_v1_interface,
+                             META_ZWP_XWAYLAND_KEYBOARD_GRAB_V1_VERSION,
+                             NULL,
+                             bind_keyboard_grab);
+
+  filter_manager = meta_wayland_compositor_get_filter_manager (compositor);
+  meta_wayland_filter_manager_add_global (filter_manager,
+                                          global,
+                                          xwayland_grab_keyboard_filter,
+                                          compositor);
+
+  return TRUE;
 }

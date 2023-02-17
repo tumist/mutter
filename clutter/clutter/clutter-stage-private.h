@@ -45,18 +45,24 @@ ClutterStageWindow *_clutter_stage_get_default_window    (void);
 CLUTTER_EXPORT
 void                clutter_stage_paint_view             (ClutterStage          *stage,
                                                           ClutterStageView      *view,
-                                                          const cairo_region_t  *redraw_clip);
+                                                          const cairo_region_t  *redraw_clip,
+                                                          ClutterFrame          *frame);
 
 void                clutter_stage_emit_before_update     (ClutterStage          *stage,
-                                                          ClutterStageView      *view);
+                                                          ClutterStageView      *view,
+                                                          ClutterFrame          *frame);
 void                clutter_stage_emit_prepare_frame     (ClutterStage          *stage,
-                                                          ClutterStageView      *view);
+                                                          ClutterStageView      *view,
+                                                          ClutterFrame          *frame);
 void                clutter_stage_emit_before_paint      (ClutterStage          *stage,
-                                                          ClutterStageView      *view);
+                                                          ClutterStageView      *view,
+                                                          ClutterFrame          *frame);
 void                clutter_stage_emit_after_paint       (ClutterStage          *stage,
-                                                          ClutterStageView      *view);
+                                                          ClutterStageView      *view,
+                                                          ClutterFrame          *frame);
 void                clutter_stage_emit_after_update      (ClutterStage          *stage,
-                                                          ClutterStageView      *view);
+                                                          ClutterStageView      *view,
+                                                          ClutterFrame          *frame);
 
 CLUTTER_EXPORT
 void                _clutter_stage_set_window            (ClutterStage          *stage,
@@ -149,6 +155,7 @@ void clutter_stage_remove_device_entry (ClutterStage         *self,
 ClutterActor * clutter_stage_pick_and_update_device (ClutterStage             *stage,
                                                      ClutterInputDevice       *device,
                                                      ClutterEventSequence     *sequence,
+                                                     ClutterInputDevice       *source_device,
                                                      ClutterDeviceUpdateFlags  flags,
                                                      graphene_point_t          point,
                                                      uint32_t                  time_ms);
@@ -161,6 +168,21 @@ void clutter_stage_invalidate_focus (ClutterStage *self,
 
 void clutter_stage_maybe_invalidate_focus (ClutterStage *self,
                                            ClutterActor *actor);
+
+void clutter_stage_emit_event (ClutterStage       *self,
+                               const ClutterEvent *event);
+
+void clutter_stage_maybe_lost_implicit_grab (ClutterStage         *self,
+                                             ClutterInputDevice   *device,
+                                             ClutterEventSequence *sequence);
+
+void clutter_stage_implicit_grab_actor_unmapped (ClutterStage *self,
+                                                 ClutterActor *actor);
+
+CLUTTER_EXPORT_TEST
+void clutter_stage_notify_action_implicit_grab (ClutterStage         *self,
+                                                ClutterInputDevice   *device,
+                                                ClutterEventSequence *sequence);
 
 G_END_DECLS
 

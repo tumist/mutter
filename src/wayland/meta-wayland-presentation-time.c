@@ -130,6 +130,7 @@ discard_non_cursor_feedbacks (struct wl_list *feedbacks)
 static void
 on_after_paint (ClutterStage          *stage,
                 ClutterStageView      *stage_view,
+                ClutterFrame          *frame,
                 MetaWaylandCompositor *compositor)
 {
   struct wl_list *feedbacks;
@@ -156,7 +157,6 @@ on_after_paint (ClutterStage          *stage,
       GList *l_cur = l;
       MetaWaylandSurface *surface = l->data;
       MetaSurfaceActor *actor;
-      ClutterStageView *surface_primary_view;
 
       l = l->next;
 
@@ -164,9 +164,8 @@ on_after_paint (ClutterStage          *stage,
       if (!actor)
         continue;
 
-      surface_primary_view =
-        meta_surface_actor_wayland_get_current_primary_view (actor, stage);
-      if (stage_view != surface_primary_view)
+      if (!meta_surface_actor_wayland_is_view_primary (actor,
+                                                       stage_view))
         continue;
 
       if (!wl_list_empty (&surface->presentation_time.feedback_list))

@@ -445,8 +445,8 @@ meta_screen_cast_stream_src_set_cursor_sprite_metadata (MetaScreenCastStreamSrc 
 
   texture_width = cogl_texture_get_width (cursor_texture);
   texture_height = cogl_texture_get_height (cursor_texture);
-  bitmap_width = texture_width * scale;
-  bitmap_height = texture_height * scale;
+  bitmap_width = ceilf (texture_width * scale);
+  bitmap_height = ceilf (texture_height * scale);
 
   spa_meta_bitmap->size.width = bitmap_width;
   spa_meta_bitmap->size.height = bitmap_height;
@@ -624,8 +624,8 @@ meta_screen_cast_stream_src_maybe_record_frame (MetaScreenCastStreamSrc  *src,
       int64_t time_since_last_frame_us;
 
       min_interval_us =
-        ((G_USEC_PER_SEC * priv->video_format.max_framerate.denom) /
-         priv->video_format.max_framerate.num);
+        ((G_USEC_PER_SEC * ((int64_t) priv->video_format.max_framerate.denom)) /
+         ((int64_t) priv->video_format.max_framerate.num));
 
       time_since_last_frame_us = now_us - priv->last_frame_timestamp_us;
       if (time_since_last_frame_us < min_interval_us)
@@ -634,12 +634,20 @@ meta_screen_cast_stream_src_maybe_record_frame (MetaScreenCastStreamSrc  *src,
 
           timeout_us = min_interval_us - time_since_last_frame_us;
           maybe_schedule_follow_up_frame (src, timeout_us);
+          meta_topic (META_DEBUG_SCREEN_CAST,
+                      "Skipped recording frame on stream %u, too early",
+                      priv->node_id);
           return;
         }
     }
 
   if (!priv->pipewire_stream)
     return;
+
+  meta_topic (META_DEBUG_SCREEN_CAST, "Recording %s frame on stream %u",
+              flags & META_SCREEN_CAST_RECORD_FLAG_CURSOR_ONLY ?
+                "cursor" : "full",
+              priv->node_id);
 
   buffer = pw_stream_dequeue_buffer (priv->pipewire_stream);
   if (!buffer)
@@ -784,6 +792,11 @@ on_stream_state_changed (void                 *data,
   MetaScreenCastStreamSrc *src = data;
   MetaScreenCastStreamSrcPrivate *priv =
     meta_screen_cast_stream_src_get_instance_private (src);
+
+  meta_topic (META_DEBUG_SCREEN_CAST,
+              "New PipeWire stream (%u) state '%s'",
+              priv->node_id,
+              pw_stream_state_as_string (state));
 
   switch (state)
     {

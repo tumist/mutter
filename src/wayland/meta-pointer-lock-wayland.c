@@ -43,7 +43,6 @@
 struct _MetaPointerLockWayland
 {
   GObject parent;
-  MetaWaylandPointerConstraint *constraint;
 };
 
 G_DEFINE_TYPE (MetaPointerLockWayland, meta_pointer_lock_wayland,
@@ -52,14 +51,19 @@ G_DEFINE_TYPE (MetaPointerLockWayland, meta_pointer_lock_wayland,
 static MetaPointerConstraint *
 meta_pointer_lock_wayland_create_constraint (MetaPointerConfinementWayland *confinement)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaWaylandPointerConstraint *wayland_constraint =
+    meta_pointer_confinement_wayland_get_wayland_pointer_constraint (confinement);
+  MetaWaylandSurface *surface =
+    meta_wayland_pointer_constraint_get_surface (wayland_constraint);
+  MetaWaylandCompositor *compositor = surface->compositor;
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+  MetaBackend *backend = meta_context_get_backend (context);
   ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
   ClutterSeat *seat = clutter_backend_get_default_seat (clutter_backend);
   ClutterInputDevice *pointer = clutter_seat_get_pointer (seat);
-  MetaWaylandPointerConstraint *wayland_constraint;
   MetaPointerConstraint *constraint;
-  MetaWaylandSurface *surface;
   graphene_point_t point;
+  cairo_rectangle_int_t rect;
   cairo_region_t *region;
   float sx, sy, x, y;
 
@@ -72,7 +76,8 @@ meta_pointer_lock_wayland_create_constraint (MetaPointerConfinementWayland *conf
                                                  &sx, &sy);
 
   meta_wayland_surface_get_absolute_coordinates (surface, sx, sy, &x, &y);
-  region = cairo_region_create_rectangle (&(cairo_rectangle_int_t) { (int) x, (int) y, 1 , 1 });
+  rect = (cairo_rectangle_int_t) { .x = x, .y = y, .width = 1, .height = 1 };
+  region = cairo_region_create_rectangle (&rect);
 
   constraint = meta_pointer_constraint_new (region, 0.0);
   cairo_region_destroy (region);

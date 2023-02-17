@@ -39,7 +39,8 @@ struct _MetaKeyHandler
   char *name;
   MetaKeyHandlerFunc func;
   MetaKeyHandlerFunc default_func;
-  gint data, flags;
+  int data;
+  MetaKeyBindingFlags flags;
   gpointer user_data;
   GDestroyNotify user_data_free_func;
 };
@@ -60,7 +61,7 @@ struct _MetaKeyCombo
 {
   unsigned int keysym;
   unsigned int keycode;
-  MetaVirtualModifier modifiers;
+  ClutterModifierType modifiers;
 };
 
 struct _MetaKeyBinding
@@ -133,10 +134,6 @@ void     meta_display_init_keys             (MetaDisplay *display);
 void     meta_display_shutdown_keys         (MetaDisplay *display);
 void     meta_window_grab_keys              (MetaWindow  *window);
 void     meta_window_ungrab_keys            (MetaWindow  *window);
-gboolean meta_window_grab_all_keys          (MetaWindow  *window,
-                                             guint32      timestamp);
-void     meta_window_ungrab_all_keys        (MetaWindow  *window,
-                                             guint32      timestamp);
 gboolean meta_keybindings_process_event     (MetaDisplay        *display,
                                              MetaWindow         *window,
                                              const ClutterEvent *event);

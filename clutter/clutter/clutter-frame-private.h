@@ -22,11 +22,19 @@
 
 struct _ClutterFrame
 {
+  grefcount ref_count;
+
+  int64_t frame_count;
+
+  gboolean has_target_presentation_time;
+  int64_t target_presentation_time_us;
+
   gboolean has_result;
   ClutterFrameResult result;
 };
 
-#define CLUTTER_FRAME_INIT ((ClutterFrame) { 0 })
+CLUTTER_EXPORT
+ClutterFrame * clutter_frame_new (void);
 
 ClutterFrameResult clutter_frame_get_result (ClutterFrame *frame);
 

@@ -17,16 +17,14 @@ variables:
 
 .mutter.fedora@common:
   variables:
-    FDO_DISTRIBUTION_VERSION: 36
-    BASE_TAG: '2022-09-01.0'
+    FDO_DISTRIBUTION_VERSION: 37
+    BASE_TAG: '2022-12-22.0'
     FDO_DISTRIBUTION_PACKAGES:
       asciidoc
       clang
       gcovr
       gdm
       gnome-shell
-      mozjs91-devel
-      python3-dbusmock
       sassc
       uncrustify
       xorg-x11-server-Xvfb
@@ -35,6 +33,7 @@ variables:
       qemu-system-x86-core
       busybox
       gi-docgen
+      python3-pip
       pkgconfig(libgcrypt)
       pkgconfig(colord)
       pkgconfig(lcms2)
@@ -49,30 +48,14 @@ variables:
       dnf builddep -y kernel --setopt=install_weak_deps=False &&
 
       ./.gitlab-ci/install-meson-project.sh \
-        https://gitlab.gnome.org/GNOME/gjs.git \
-        1.73.1 . &&
-
-      ./.gitlab-ci/install-meson-project.sh \
-        -Dvapi=false \
-        -Dgtk3=false \
-        -Dgtk4=false \
-        -Dgtk_doc=false \
-        -Dssh_agent=false \
-        -Dsystemd=disabled \
-        https://gitlab.gnome.org/GNOME/gcr.git \
-        3.90.0 . &&
-
-      ./.gitlab-ci/install-meson-project.sh \
-        https://gitlab.freedesktop.org/wayland/wayland.git \
-        1.21.0 . &&
-
-      ./.gitlab-ci/install-meson-project.sh \
-        https://gitlab.freedesktop.org/wayland/wayland-protocols.git \
-        1.26 . &&
-
-      ./.gitlab-ci/install-meson-project.sh \
         https://gitlab.gnome.org/jadahl/catch.git \
         main . 29ad36e2b1d28ac9d8b2bc44af46296cb1db5d66 &&
+
+      ./.gitlab-ci/install-meson-project.sh \
+        https://gitlab.gnome.org/GNOME/glib.git \
+        2.75.1 . &&
+
+      pip install git+https://github.com/martinpitt/python-dbusmock.git@743da675c37bfc469ec385b88c3b4ad4838cfa48 &&
 
       rpm -e --nodeps gnome-bluetooth-libs-devel \
                       mutter mutter-devel \
@@ -317,6 +300,27 @@ build-without-native-backend-and-wayland@x86_64:
         -Dnative_backend=false
         -Dudev=false
         -Dwayland=false
+        -Dxwayland=false
+        -Dcore_tests=false
+        -Dnative_tests=false
+    - meson compile -C build
+    - meson install -C build
+  artifacts:
+    paths:
+      - build/meson-logs
+
+build-wayland-only@x86_64:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .mutter.fedora@x86_64
+  stage: build
+  needs:
+    - build-fedora-container@x86_64
+  script:
+    - meson . build --werror --prefix /usr
+        -Dbuildtype=debugoptimized
+        -Dwayland=true
+        -Dxwayland=false
         -Dcore_tests=false
         -Dnative_tests=false
     - meson compile -C build
@@ -378,7 +382,7 @@ build-without-native-backend-and-wayland@x86_64:
             --timeout-multiplier 10
   artifacts:
     reports:
-      junit: "build/meson-logs/testlog.junit.xml"
+      junit: "build/meson-logs/testlog-plain.junit.xml"
 
 test-mutter@x86_64:
   extends:

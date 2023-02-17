@@ -27,6 +27,9 @@
 
 #include "backends/meta-monitor-config-store.h"
 #include "backends/meta-virtual-monitor.h"
+#include "backends/native/meta-backend-native.h"
+#include "backends/native/meta-input-thread.h"
+#include "backends/native/meta-seat-native.h"
 #include "core/display-private.h"
 #include "core/window-private.h"
 #include "meta-test/meta-context-test.h"
@@ -36,6 +39,8 @@
 
 struct _MetaTestClient
 {
+  MetaContext *context;
+
   char *id;
   MetaWindowClientType type;
   GSubprocess *subprocess;
@@ -239,13 +244,63 @@ test_client_line_read (GObject      *source,
   g_main_loop_quit (client->loop);
 }
 
+static gboolean
+meta_test_client_do_line (MetaTestClient  *client,
+                          const char      *line_out,
+                          GError         **error)
+{
+  g_autoptr (GError) local_error = NULL;
+  g_autofree char *line = NULL;
+
+  if (!g_data_output_stream_put_string (client->in, line_out,
+                                        client->cancellable, error))
+    return FALSE;
+
+  g_data_input_stream_read_line_async (client->out,
+                                       G_PRIORITY_DEFAULT,
+                                       client->cancellable,
+                                       test_client_line_read,
+                                       client);
+
+  client->error = &local_error;
+  g_main_loop_run (client->loop);
+  line = client->line;
+  client->line = NULL;
+  client->error = NULL;
+
+  if (local_error)
+    {
+      g_propagate_error (error, g_steal_pointer (&local_error));
+      return FALSE;
+    }
+
+  if (!line)
+    {
+      g_set_error (error,
+                   META_TEST_CLIENT_ERROR,
+                   META_TEST_CLIENT_ERROR_RUNTIME_ERROR,
+                   "test client exited");
+      return FALSE;
+    }
+
+  if (strcmp (line, "OK") != 0)
+    {
+      g_set_error (error,
+                   META_TEST_CLIENT_ERROR,
+                   META_TEST_CLIENT_ERROR_RUNTIME_ERROR,
+                   "%s", line);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
 gboolean
 meta_test_client_dov (MetaTestClient  *client,
                       GError         **error,
                       va_list          vap)
 {
   GString *command = g_string_new (NULL);
-  char *line = NULL;
   GError *local_error = NULL;
 
   while (TRUE)
@@ -266,46 +321,11 @@ meta_test_client_dov (MetaTestClient  *client,
 
   g_string_append_c (command, '\n');
 
-  if (!g_data_output_stream_put_string (client->in, command->str,
-                                        client->cancellable, &local_error))
+  if (!meta_test_client_do_line (client, command->str, &local_error))
     goto out;
-
-  g_data_input_stream_read_line_async (client->out,
-                                       G_PRIORITY_DEFAULT,
-                                       client->cancellable,
-                                       test_client_line_read,
-                                       client);
-
-  client->error = &local_error;
-  g_main_loop_run (client->loop);
-  line = client->line;
-  client->line = NULL;
-  client->error = NULL;
-
-  if (!line)
-    {
-      if (!local_error)
-        {
-          g_set_error (&local_error,
-                       META_TEST_CLIENT_ERROR,
-                       META_TEST_CLIENT_ERROR_RUNTIME_ERROR,
-                       "test client exited");
-        }
-      goto out;
-    }
-
-  if (strcmp (line, "OK") != 0)
-    {
-      g_set_error (&local_error,
-                   META_TEST_CLIENT_ERROR,
-                   META_TEST_CLIENT_ERROR_RUNTIME_ERROR,
-                   "%s", line);
-      goto out;
-    }
 
  out:
   g_string_free (command, TRUE);
-  g_free (line);
 
   if (local_error)
     {
@@ -331,6 +351,29 @@ meta_test_client_do (MetaTestClient  *client,
   va_end (vap);
 
   return retval;
+}
+
+void
+meta_test_client_run (MetaTestClient *client,
+                      const char     *script)
+{
+  g_auto (GStrv) lines = NULL;
+  int i;
+
+  lines = g_strsplit (script, "\n", -1);
+  for (i = 0; lines[i]; i++)
+    {
+      g_autoptr (GError) error = NULL;
+
+      if (strlen (lines[i]) > 1)
+        {
+          g_autofree char *line = NULL;
+
+          line = g_strdup_printf ("%s\n", lines[i]);
+          if (!meta_test_client_do_line (client, line, &error))
+            g_error ("Failed to do line '%s': %s", lines[i], error->message);
+        }
+    }
 }
 
 gboolean
@@ -385,7 +428,7 @@ meta_test_client_find_window (MetaTestClient  *client,
                               const char      *window_id,
                               GError         **error)
 {
-  MetaDisplay *display = meta_get_display ();
+  MetaDisplay *display = meta_context_get_display (client->context);
   g_autofree char *expected_title = NULL;
   MetaWindow *window;
 
@@ -442,14 +485,18 @@ void
 meta_test_client_wait_for_window_shown (MetaTestClient *client,
                                         MetaWindow     *window)
 {
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaCompositor *compositor = meta_display_get_compositor (display);
+  MetaLaters *laters = meta_compositor_get_laters (compositor);
+
   WaitForShownData data = {
     .loop = g_main_loop_new (NULL, FALSE),
     .window = window,
   };
-  meta_later_add (META_LATER_BEFORE_REDRAW,
-                  wait_for_showing_before_redraw,
-                  &data,
-                  NULL);
+  meta_laters_add (laters, META_LATER_BEFORE_REDRAW,
+                   wait_for_showing_before_redraw,
+                   &data,
+                   NULL);
   g_main_loop_run (data.loop);
   g_clear_signal_handler (&data.shown_handler_id, window);
   g_main_loop_unref (data.loop);
@@ -611,6 +658,7 @@ meta_test_client_new (MetaContext           *context,
                                  process_handler);
 
   client = g_new0 (MetaTestClient, 1);
+  client->context = context;
   client->type = type;
   client->id = g_strdup (id);
   client->cancellable = g_cancellable_new ();
@@ -666,7 +714,7 @@ meta_test_client_quit (MetaTestClient  *client,
 void
 meta_test_client_destroy (MetaTestClient *client)
 {
-  MetaDisplay *display = meta_get_display ();
+  MetaDisplay *display = meta_context_get_display (client->context);
   MetaX11Display *x11_display;
   GError *error = NULL;
 
@@ -794,4 +842,48 @@ meta_create_test_monitor (MetaContext *context,
   meta_monitor_manager_reload (monitor_manager);
 
   return virtual_monitor;
+}
+
+#ifdef HAVE_NATIVE_BACKEND
+static gboolean
+callback_idle (gpointer user_data)
+{
+  GMainLoop *loop = user_data;
+
+  g_main_loop_quit (loop);
+  return G_SOURCE_REMOVE;
+}
+
+static gboolean
+queue_callback (GTask *task)
+{
+  g_idle_add (callback_idle, g_task_get_task_data (task));
+  return G_SOURCE_REMOVE;
+}
+#endif
+
+void
+meta_flush_input (MetaContext *context)
+{
+#ifdef HAVE_NATIVE_BACKEND
+  MetaBackend *backend = meta_context_get_backend (context);
+  ClutterSeat *seat;
+  MetaSeatNative *seat_native;
+  g_autoptr (GTask) task = NULL;
+  g_autoptr (GMainLoop) loop = NULL;
+
+  g_assert_true (META_IS_BACKEND_NATIVE (backend));
+
+  seat = meta_backend_get_default_seat (backend);
+  seat_native = META_SEAT_NATIVE (seat);
+
+  task = g_task_new (backend, NULL, NULL, NULL);
+  loop = g_main_loop_new (NULL, FALSE);
+  g_task_set_task_data (task, loop, NULL);
+
+  meta_seat_impl_run_input_task (seat_native->impl, task,
+                                 (GSourceFunc) queue_callback);
+
+  g_main_loop_run (loop);
+#endif
 }

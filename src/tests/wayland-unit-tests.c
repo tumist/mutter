@@ -24,12 +24,17 @@
 #include "core/display-private.h"
 #include "core/window-private.h"
 #include "meta-test/meta-context-test.h"
-#include "tests/meta-test-utils.h"
 #include "meta/meta-later.h"
 #include "meta/meta-workspace-manager.h"
+#include "tests/meta-test-utils.h"
 #include "tests/meta-wayland-test-driver.h"
 #include "tests/meta-wayland-test-utils.h"
+#include "wayland/meta-wayland-client-private.h"
+#include "wayland/meta-wayland-filter-manager.h"
 #include "wayland/meta-wayland-surface.h"
+
+#include "dummy-client-protocol.h"
+#include "dummy-server-protocol.h"
 
 static MetaContext *test_context;
 static MetaWaylandTestDriver *test_driver;
@@ -39,20 +44,7 @@ static ClutterVirtualInputDevice *virtual_pointer;
 static MetaWindow *
 find_client_window (const char *title)
 {
-  MetaDisplay *display = meta_get_display ();
-  g_autoptr (GSList) windows = NULL;
-  GSList *l;
-
-  windows = meta_display_list_windows (display, META_LIST_DEFAULT);
-  for (l = windows; l; l = l->next)
-    {
-      MetaWindow *window = l->data;
-
-      if (g_strcmp0 (meta_window_get_title (window), title) == 0)
-        return window;
-    }
-
-  return NULL;
+  return meta_find_client_window (test_context, title);
 }
 
 static void
@@ -61,7 +53,7 @@ subsurface_remap_toplevel (void)
   MetaWaylandTestClient *wayland_test_client;
 
   wayland_test_client =
-    meta_wayland_test_client_new ("subsurface-remap-toplevel");
+    meta_wayland_test_client_new (test_context, "subsurface-remap-toplevel");
   meta_wayland_test_client_finish (wayland_test_client);
 }
 
@@ -71,7 +63,7 @@ buffer_transform (void)
   MetaWaylandTestClient *wayland_test_client;
 
   wayland_test_client =
-    meta_wayland_test_client_new ("buffer-transform");
+    meta_wayland_test_client_new (test_context, "buffer-transform");
   meta_wayland_test_client_finish (wayland_test_client);
 }
 
@@ -81,7 +73,7 @@ single_pixel_buffer (void)
   MetaWaylandTestClient *wayland_test_client;
 
   wayland_test_client =
-    meta_wayland_test_client_new ("single-pixel-buffer");
+    meta_wayland_test_client_new (test_context, "single-pixel-buffer");
   meta_wayland_test_client_finish (wayland_test_client);
 }
 
@@ -91,7 +83,7 @@ subsurface_reparenting (void)
   MetaWaylandTestClient *wayland_test_client;
 
   wayland_test_client =
-    meta_wayland_test_client_new ("subsurface-reparenting");
+    meta_wayland_test_client_new (test_context, "subsurface-reparenting");
   meta_wayland_test_client_finish (wayland_test_client);
 }
 
@@ -101,7 +93,7 @@ subsurface_invalid_subsurfaces (void)
   MetaWaylandTestClient *wayland_test_client;
 
   wayland_test_client =
-    meta_wayland_test_client_new ("invalid-subsurfaces");
+    meta_wayland_test_client_new (test_context, "invalid-subsurfaces");
   g_test_expect_message ("libmutter", G_LOG_LEVEL_WARNING,
                          "WL: error in client communication*");
   g_test_expect_message ("libmutter", G_LOG_LEVEL_WARNING,
@@ -116,7 +108,7 @@ subsurface_invalid_xdg_shell_actions (void)
   MetaWaylandTestClient *wayland_test_client;
 
   wayland_test_client =
-    meta_wayland_test_client_new ("invalid-xdg-shell-actions");
+    meta_wayland_test_client_new (test_context, "invalid-xdg-shell-actions");
   g_test_expect_message ("libmutter", G_LOG_LEVEL_WARNING,
                          "Invalid geometry * set on xdg_surface*");
   meta_wayland_test_client_finish (wayland_test_client);
@@ -126,6 +118,7 @@ subsurface_invalid_xdg_shell_actions (void)
 static void
 on_after_paint (ClutterStage     *stage,
                 ClutterStageView *view,
+                ClutterFrame     *frame,
                 gboolean         *was_painted)
 {
   *was_painted = TRUE;
@@ -287,7 +280,7 @@ subsurface_parent_unmapped (void)
                                                         CLUTTER_POINTER_DEVICE);
 
   wayland_test_client =
-    meta_wayland_test_client_new ("subsurface-parent-unmapped");
+    meta_wayland_test_client_new (test_context, "subsurface-parent-unmapped");
 
   window_added_id =
     g_signal_connect (display->stack, "window-added",
@@ -364,7 +357,8 @@ toplevel_apply_limits (void)
   gulong handler_id;
 
   data.loop = g_main_loop_new (NULL, FALSE);
-  data.wayland_test_client = meta_wayland_test_client_new ("xdg-apply-limits");
+  data.wayland_test_client =
+    meta_wayland_test_client_new (test_context, "xdg-apply-limits");
   handler_id = g_signal_connect (test_driver, "sync-point",
                                  G_CALLBACK (on_apply_limits_sync_point),
                                  &data);
@@ -381,7 +375,8 @@ toplevel_activation (void)
   ApplyLimitData data = {};
 
   data.loop = g_main_loop_new (NULL, FALSE);
-  data.wayland_test_client = meta_wayland_test_client_new ("xdg-activation");
+  data.wayland_test_client =
+    meta_wayland_test_client_new (test_context, "xdg-activation");
   meta_wayland_test_client_finish (data.wayland_test_client);
 }
 
@@ -505,7 +500,8 @@ toplevel_bounds_struts (void)
               },
               META_SIDE_TOP);
 
-  wayland_test_client = meta_wayland_test_client_new ("xdg-toplevel-bounds");
+  wayland_test_client =
+    meta_wayland_test_client_new (test_context, "xdg-toplevel-bounds");
 
   wait_for_sync_point (1);
   wait_until_after_paint ();
@@ -525,7 +521,8 @@ toplevel_bounds_struts (void)
 
   clear_struts ();
 
-  wayland_test_client = meta_wayland_test_client_new ("xdg-toplevel-bounds");
+  wayland_test_client =
+    meta_wayland_test_client_new (test_context, "xdg-toplevel-bounds");
 
   wait_for_sync_point (1);
   wait_until_after_paint ();
@@ -595,7 +592,8 @@ toplevel_bounds_monitors (void)
               },
               META_SIDE_TOP);
 
-  wayland_test_client = meta_wayland_test_client_new ("xdg-toplevel-bounds");
+  wayland_test_client =
+    meta_wayland_test_client_new (test_context, "xdg-toplevel-bounds");
 
   wait_for_sync_point (1);
   wait_until_after_paint ();
@@ -618,7 +616,8 @@ toplevel_bounds_monitors (void)
                                                        550.0, 100.0);
   wait_for_cursor_position (550.0, 100.0);
 
-  wayland_test_client = meta_wayland_test_client_new ("xdg-toplevel-bounds");
+  wayland_test_client =
+    meta_wayland_test_client_new (test_context, "xdg-toplevel-bounds");
 
   wait_for_sync_point (1);
   wait_until_after_paint ();
@@ -635,6 +634,209 @@ toplevel_bounds_monitors (void)
 
   meta_wayland_test_driver_emit_sync_event (test_driver, 0);
   meta_wayland_test_client_finish (wayland_test_client);
+}
+
+static void
+xdg_foreign_set_parent_of (void)
+{
+  MetaWaylandTestClient *wayland_test_client;
+  MetaWindow *window1;
+  MetaWindow *window2;
+  MetaWindow *window3;
+  MetaWindow *window4;
+
+  wayland_test_client =
+    meta_wayland_test_client_new (test_context, "xdg-foreign");
+
+  wait_for_sync_point (0);
+  wait_until_after_paint ();
+
+  window1 = find_client_window ("xdg-foreign-window1");
+  window2 = find_client_window ("xdg-foreign-window2");
+  window3 = find_client_window ("xdg-foreign-window3");
+  window4 = find_client_window ("xdg-foreign-window4");
+
+  g_assert_true (meta_window_get_transient_for (window4) ==
+                 window3);
+  g_assert_true (meta_window_get_transient_for (window3) ==
+                 window2);
+  g_assert_true (meta_window_get_transient_for (window2) ==
+                 window1);
+  g_assert_null (meta_window_get_transient_for (window1));
+
+  meta_wayland_test_driver_emit_sync_event (test_driver, 0);
+
+  meta_wayland_test_client_finish (wayland_test_client);
+}
+
+static MetaWaylandAccess
+dummy_global_filter (const struct wl_client *client,
+                     const struct wl_global *global,
+                     gpointer                user_data)
+{
+  MetaWaylandClient *allowed_client = META_WAYLAND_CLIENT (user_data);
+
+  if (g_object_get_data (G_OBJECT (allowed_client),
+                         "test-client-destroyed"))
+    return META_WAYLAND_ACCESS_DENIED;
+  else if (meta_wayland_client_matches (allowed_client, client))
+    return META_WAYLAND_ACCESS_ALLOWED;
+  else
+    return META_WAYLAND_ACCESS_DENIED;
+}
+
+static void
+dummy_bind (struct wl_client *client,
+            void             *data,
+            uint32_t          version,
+            uint32_t          id)
+
+{
+  g_assert_not_reached ();
+}
+
+static void
+handle_registry_global (void               *user_data,
+                        struct wl_registry *registry,
+                        uint32_t            id,
+                        const char         *interface,
+                        uint32_t            version)
+{
+  gboolean *global_seen = user_data;
+
+  if (strcmp (interface, dummy_interface.name) == 0)
+    *global_seen = TRUE;
+}
+
+static void
+handle_registry_global_remove (void               *user_data,
+                               struct wl_registry *registry,
+                               uint32_t            name)
+{
+}
+
+static const struct wl_registry_listener registry_listener = {
+  handle_registry_global,
+  handle_registry_global_remove
+};
+
+static gpointer
+test_client_thread_func (gpointer user_data)
+{
+  int fd = GPOINTER_TO_INT (user_data);
+  struct wl_display *wl_display;
+  struct wl_registry *wl_registry;
+  gboolean global_seen = FALSE;
+
+  wl_display = wl_display_connect_to_fd (fd);
+  g_assert_nonnull (wl_display);
+
+  wl_registry = wl_display_get_registry (wl_display);
+  wl_registry_add_listener (wl_registry, &registry_listener, &global_seen);
+  wl_display_roundtrip (wl_display);
+  wl_registry_destroy (wl_registry);
+
+  wl_display_disconnect (wl_display);
+
+  return GINT_TO_POINTER (global_seen);
+}
+
+static void
+on_client_destroyed (MetaWaylandClient *client,
+                     gboolean          *client_destroyed)
+{
+  *client_destroyed = TRUE;
+  g_object_set_data (G_OBJECT (client), "test-client-destroyed",
+                     GINT_TO_POINTER (TRUE));
+}
+
+static void
+wayland_registry_filter (void)
+{
+  g_autoptr (GError) error = NULL;
+  MetaWaylandCompositor *wayland_compositor =
+    meta_context_get_wayland_compositor (test_context);
+  MetaWaylandFilterManager *filter_manager =
+    meta_wayland_compositor_get_filter_manager (wayland_compositor);
+  struct wl_display *wayland_display =
+    meta_wayland_compositor_get_wayland_display (wayland_compositor);
+  struct wl_global *dummy_global;
+  int fd;
+  g_autoptr (MetaWaylandClient) client1 = NULL;
+  g_autoptr (MetaWaylandClient) client2 = NULL;
+  g_autoptr (MetaWaylandClient) client3 = NULL;
+  g_autoptr (GThread) thread1 = NULL;
+  g_autoptr (GThread) thread2 = NULL;
+  g_autoptr (GThread) thread3 = NULL;
+  gboolean client1_destroyed = FALSE;
+  gboolean client2_destroyed = FALSE;
+  gboolean client3_destroyed = FALSE;
+  gboolean client1_saw_global;
+  gboolean client2_saw_global;
+  gboolean client3_saw_global;
+
+  client1 = meta_wayland_client_new_indirect (test_context, &error);
+  g_assert_nonnull (client1);
+  g_assert_null (error);
+  client2 = meta_wayland_client_new_indirect (test_context, &error);
+  g_assert_nonnull (client2);
+  g_assert_null (error);
+  client3 = meta_wayland_client_new_indirect (test_context, &error);
+  g_assert_nonnull (client3);
+  g_assert_null (error);
+
+  g_signal_connect (client1, "client-destroyed",
+                    G_CALLBACK (on_client_destroyed), &client1_destroyed);
+  g_signal_connect (client2, "client-destroyed",
+                    G_CALLBACK (on_client_destroyed), &client2_destroyed);
+  g_signal_connect (client3, "client-destroyed",
+                    G_CALLBACK (on_client_destroyed), &client3_destroyed);
+
+  dummy_global = wl_global_create (wayland_display,
+                                   &dummy_interface,
+                                   1, NULL, dummy_bind);
+  meta_wayland_filter_manager_add_global (filter_manager,
+                                          dummy_global,
+                                          dummy_global_filter,
+                                          client1);
+
+  fd = meta_wayland_client_setup_fd (client1, &error);
+  g_assert_cmpint (fd, >=, 0);
+  g_assert_null (error);
+  thread1 = g_thread_new ("test client thread 1",
+                          test_client_thread_func,
+                          GINT_TO_POINTER (fd));
+
+  fd = meta_wayland_client_setup_fd (client2, &error);
+  g_assert_cmpint (fd, >=, 0);
+  g_assert_null (error);
+  thread2 = g_thread_new ("test client thread 2",
+                          test_client_thread_func,
+                          GINT_TO_POINTER (fd));
+
+  while (!client1_destroyed || !client2_destroyed)
+    g_main_context_iteration (NULL, TRUE);
+
+  client1_saw_global = GPOINTER_TO_INT (g_thread_join (thread1));
+  client2_saw_global = GPOINTER_TO_INT (g_thread_join (thread2));
+
+  g_assert_true (client1_saw_global);
+  g_assert_false (client2_saw_global);
+
+  meta_wayland_filter_manager_remove_global (filter_manager, dummy_global);
+  wl_global_destroy (dummy_global);
+
+  fd = meta_wayland_client_setup_fd (client3, &error);
+  g_assert_cmpint (fd, >=, 0);
+  g_assert_null (error);
+  thread3 = g_thread_new ("test client thread 3",
+                          test_client_thread_func,
+                          GINT_TO_POINTER (fd));
+  while (!client3_destroyed)
+    g_main_context_iteration (NULL, TRUE);
+
+  client3_saw_global = GPOINTER_TO_INT (g_thread_join (thread3));
+  g_assert_false (client3_saw_global);
 }
 
 static void
@@ -680,6 +882,10 @@ init_tests (void)
                    toplevel_bounds_struts);
   g_test_add_func ("/wayland/toplevel/bounds/monitors",
                    toplevel_bounds_monitors);
+  g_test_add_func ("/wayland/xdg-foreign/set-parent-of",
+                   xdg_foreign_set_parent_of);
+  g_test_add_func ("/wayland/registry/filter",
+                   wayland_registry_filter);
 }
 
 int

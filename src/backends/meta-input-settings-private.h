@@ -31,7 +31,6 @@
 #include "backends/meta-backend-types.h"
 #include "clutter/clutter.h"
 #include "meta/display.h"
-#include "meta/meta-enums.h"
 
 #define META_TYPE_INPUT_SETTINGS (meta_input_settings_get_type ())
 G_DECLARE_DERIVABLE_TYPE (MetaInputSettings, meta_input_settings,
@@ -125,6 +124,9 @@ struct _MetaInputSettingsClass
   void (* set_mouse_accel_profile) (MetaInputSettings          *settings,
                                     ClutterInputDevice         *device,
                                     GDesktopPointerAccelProfile profile);
+  void (* set_touchpad_accel_profile) (MetaInputSettings           *settings,
+                                       ClutterInputDevice          *device,
+                                       GDesktopPointerAccelProfile  profile);
   void (* set_trackball_accel_profile) (MetaInputSettings          *settings,
                                         ClutterInputDevice         *device,
                                         GDesktopPointerAccelProfile profile);
@@ -152,8 +154,6 @@ struct _MetaInputSettingsClass
 
   gboolean (* has_two_finger_scroll) (MetaInputSettings  *settings,
                                       ClutterInputDevice *device);
-  gboolean (* is_trackball_device) (MetaInputSettings  *settings,
-                                    ClutterInputDevice *device);
 };
 
 void meta_input_settings_maybe_save_numlock_state (MetaInputSettings *input_settings,
@@ -183,5 +183,7 @@ void meta_input_settings_notify_tool_change (MetaInputSettings      *input_setti
 void meta_input_settings_notify_kbd_a11y_change (MetaInputSettings     *input_settings,
                                                  MetaKeyboardA11yFlags  new_flags,
                                                  MetaKeyboardA11yFlags  what_changed);
+
+MetaBackend * meta_input_settings_get_backend (MetaInputSettings *input_settings);
 
 #endif /* META_INPUT_SETTINGS_PRIVATE_H */

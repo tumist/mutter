@@ -222,7 +222,7 @@ meta_backend_native_post_init (MetaBackend *backend)
   if (meta_settings_is_experimental_feature_enabled (settings,
                                                      META_EXPERIMENTAL_FEATURE_RT_SCHEDULER))
     {
-      g_autoptr (MetaDbusRealtimeKit1) rtkit_proxy = NULL;
+      g_autoptr (MetaDBusRealtimeKit1) rtkit_proxy = NULL;
       g_autoptr (GError) error = NULL;
 
       rtkit_proxy =
@@ -699,12 +699,16 @@ init_gpus (MetaBackendNative  *native,
 {
   MetaBackend *backend = META_BACKEND (native);
   MetaUdev *udev = meta_backend_native_get_udev (native);
+  g_autoptr (GError) local_error = NULL;
   GList *devices;
   GList *l;
 
-  devices = meta_udev_list_drm_devices (udev, error);
-  if (*error)
-    return FALSE;
+  devices = meta_udev_list_drm_devices (udev, &local_error);
+  if (local_error)
+    {
+      g_propagate_error (error, g_steal_pointer (&local_error));
+      return FALSE;
+    }
 
   for (l = devices; l; l = l->next)
     {
@@ -785,12 +789,14 @@ meta_backend_native_initable_init (GInitable     *initable,
           break;
         }
 
-      native->launcher = meta_launcher_new (session_id, seat_id, error);
+      native->launcher = meta_launcher_new (backend,
+                                            session_id, seat_id,
+                                            error);
       if (!native->launcher)
         return FALSE;
     }
 
-  native->device_pool = meta_device_pool_new (native->launcher);
+  native->device_pool = meta_device_pool_new (native);
   native->udev = meta_udev_new (native);
 
   kms_flags = META_KMS_FLAG_NONE;
@@ -912,13 +918,13 @@ meta_backend_native_get_kms (MetaBackendNative *native)
 }
 
 gboolean
-meta_activate_vt (int vt, GError **error)
+meta_backend_native_activate_vt (MetaBackendNative  *backend_native,
+                                 int                 vt,
+                                 GError            **error)
 {
-  MetaBackend *backend = meta_get_backend ();
-  MetaBackendNative *native = META_BACKEND_NATIVE (backend);
-  MetaLauncher *launcher = meta_backend_native_get_launcher (native);
+  MetaLauncher *launcher = meta_backend_native_get_launcher (backend_native);
 
-  switch (native->mode)
+  switch (backend_native->mode)
     {
     case META_BACKEND_NATIVE_MODE_DEFAULT:
       return meta_launcher_activate_vt (launcher, vt, error);

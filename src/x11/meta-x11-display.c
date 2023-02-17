@@ -34,6 +34,8 @@
 #include "x11/meta-x11-display-private.h"
 
 #include <gdk/gdk.h>
+#include <gtk/gtk.h>
+#include <gdk/gdkx.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -67,7 +69,7 @@
 #include "x11/window-props.h"
 #include "x11/xprops.h"
 
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
 #include "wayland/meta-xwayland-private.h"
 #endif
 
@@ -91,6 +93,17 @@ static void unset_wm_check_hint (MetaX11Display *x11_display);
 
 static void prefs_changed_callback (MetaPreference pref,
                                     void          *data);
+
+static void meta_x11_display_init_frames_client (MetaX11Display *x11_display);
+
+static MetaBackend *
+backend_from_x11_display (MetaX11Display *x11_display)
+{
+  MetaDisplay *display = meta_x11_display_get_display (x11_display);
+  MetaContext *context = meta_display_get_context (display);
+
+  return meta_context_get_backend (context);
+}
 
 static void
 meta_x11_display_unmanage_windows (MetaX11Display *x11_display)
@@ -122,6 +135,20 @@ meta_x11_display_dispose (GObject *object)
 
   g_clear_pointer (&x11_display->alarm_filters, g_ptr_array_unref);
 
+  if (x11_display->frames_client_cancellable)
+    {
+      g_cancellable_cancel (x11_display->frames_client_cancellable);
+      g_clear_object (&x11_display->frames_client_cancellable);
+    }
+
+  if (x11_display->frames_client)
+    {
+      g_subprocess_send_signal (x11_display->frames_client, SIGTERM);
+      if (x11_display->display->closing)
+        g_subprocess_wait (x11_display->frames_client, NULL, NULL);
+      g_clear_object (&x11_display->frames_client);
+    }
+
   if (x11_display->empty_region != None)
     {
       XFixesDestroyRegion (x11_display->xdisplay,
@@ -139,12 +166,6 @@ meta_x11_display_dispose (GObject *object)
 
   meta_x11_selection_shutdown (x11_display);
   meta_x11_display_unmanage_windows (x11_display);
-
-  if (x11_display->ui)
-    {
-      meta_ui_free (x11_display->ui);
-      x11_display->ui = NULL;
-    }
 
   if (x11_display->no_focus_window != None)
     {
@@ -207,6 +228,8 @@ meta_x11_display_dispose (GObject *object)
       g_hash_table_destroy (x11_display->xids);
       x11_display->xids = NULL;
     }
+
+  g_clear_pointer (&x11_display->alarms, g_hash_table_unref);
 
   if (x11_display->xroot != None)
     {
@@ -908,7 +931,8 @@ set_workspace_work_area_hint (MetaWorkspace  *workspace,
   g_autofree char *workarea_name = NULL;
   Atom workarea_atom;
 
-  monitor_manager = meta_backend_get_monitor_manager (meta_get_backend ());
+  monitor_manager =
+    meta_backend_get_monitor_manager (backend_from_x11_display (x11_display));
   logical_monitors = meta_monitor_manager_get_logical_monitors (monitor_manager);
   num_monitors = meta_monitor_manager_get_num_logical_monitors (monitor_manager);
 
@@ -988,7 +1012,7 @@ set_work_area_hint (MetaDisplay    *display,
 static const char *
 get_display_name (MetaDisplay *display)
 {
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
   MetaContext *context = meta_display_get_context (display);
   MetaWaylandCompositor *compositor =
     meta_context_get_wayland_compositor (context);
@@ -1087,12 +1111,6 @@ open_gdk_display (MetaDisplay  *display,
   return gdk_display;
 }
 
-gboolean
-meta_x11_init_gdk_display (GError **error)
-{
-  return !!open_gdk_display (meta_get_display (), error);
-}
-
 static void
 on_window_visibility_updated (MetaDisplay    *display,
                               GList          *placed_windows,
@@ -1112,6 +1130,52 @@ on_window_visibility_updated (MetaDisplay    *display,
     meta_x11_display_increment_focus_sentinel (x11_display);
 }
 
+static void
+on_frames_client_died (GObject      *source,
+                       GAsyncResult *result,
+                       gpointer      user_data)
+{
+  MetaX11Display *x11_display = user_data;
+  GSubprocess *proc = G_SUBPROCESS (source);
+  g_autoptr (GError) error = NULL;
+
+  if (!g_subprocess_wait_finish (proc, result, &error))
+    {
+      if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        return;
+
+      g_warning ("Error obtaining frames client exit status: %s\n", error->message);
+    }
+
+  g_clear_object (&x11_display->frames_client_cancellable);
+  g_clear_object (&x11_display->frames_client);
+
+  if (g_subprocess_get_if_signaled (proc))
+    {
+      int signum;
+
+      signum = g_subprocess_get_term_sig (proc);
+
+      /* Bring it up again, unless it was forcibly closed */
+      if (signum != SIGTERM && signum != SIGKILL)
+        meta_x11_display_init_frames_client (x11_display);
+    }
+}
+
+static void
+meta_x11_display_init_frames_client (MetaX11Display *x11_display)
+{
+  const char *display_name;
+
+  display_name = get_display_name (x11_display->display);
+  x11_display->frames_client_cancellable = g_cancellable_new ();
+  x11_display->frames_client = meta_frame_launch_client (x11_display,
+                                                         display_name);
+  g_subprocess_wait_async (x11_display->frames_client,
+                           x11_display->frames_client_cancellable,
+                           on_frames_client_died, x11_display);
+}
+
 /**
  * meta_x11_display_new:
  *
@@ -1127,7 +1191,10 @@ meta_x11_display_new (MetaDisplay  *display,
                       GError      **error)
 {
   MetaContext *context = meta_display_get_context (display);
-  MetaX11Display *x11_display;
+  MetaBackend *backend = meta_context_get_backend (context);
+  MetaMonitorManager *monitor_manager =
+    meta_backend_get_monitor_manager (backend);
+  g_autoptr (MetaX11Display) x11_display = NULL;
   Display *xdisplay;
   Screen *xscreen;
   Window xroot;
@@ -1141,9 +1208,6 @@ meta_x11_display_new (MetaDisplay  *display,
   Window restart_helper_window = None;
   gboolean is_restart = FALSE;
   GdkDisplay *gdk_display;
-  MetaBackend *backend = meta_get_backend ();
-  MetaMonitorManager *monitor_manager =
-    meta_backend_get_monitor_manager (backend);
 
   /* A list of all atom names, so that we can intern them in one go. */
   const char *atom_names[] = {
@@ -1161,7 +1225,7 @@ meta_x11_display_new (MetaDisplay  *display,
 
   XSynchronize (xdisplay, meta_context_is_x11_sync (context));
 
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
   if (meta_is_wayland_compositor ())
     {
       MetaWaylandCompositor *compositor =
@@ -1256,9 +1320,10 @@ meta_x11_display_new (MetaDisplay  *display,
 
   x11_display->xids = g_hash_table_new (meta_unsigned_long_hash,
                                         meta_unsigned_long_equal);
+  x11_display->alarms = g_hash_table_new (meta_unsigned_long_hash,
+                                          meta_unsigned_long_equal);
 
   x11_display->groups_by_leader = NULL;
-  x11_display->ui = NULL;
   x11_display->composite_overlay_window = None;
   x11_display->guard_window = None;
   x11_display->leader_window = None;
@@ -1272,6 +1337,13 @@ meta_x11_display_new (MetaDisplay  *display,
   x11_display->focus_serial = 0;
   x11_display->server_focus_window = None;
   x11_display->server_focus_serial = 0;
+
+  i = 0;
+  while (i < N_IGNORED_CROSSING_SERIALS)
+    {
+      x11_display->ignored_crossing_serials[i] = 0;
+      ++i;
+    }
 
   x11_display->prop_hooks = NULL;
   meta_x11_display_init_window_prop_hooks (x11_display);
@@ -1324,7 +1396,6 @@ meta_x11_display_new (MetaDisplay  *display,
   set_desktop_viewport_hint (x11_display);
   set_desktop_geometry_hint (x11_display);
 
-  x11_display->ui = meta_ui_new (x11_display);
   x11_display->x11_stack = meta_x11_stack_new (x11_display);
 
   x11_display->keys_grabbed = FALSE;
@@ -1399,8 +1470,6 @@ meta_x11_display_new (MetaDisplay  *display,
                    "Failed to acquire window manager ownership");
 
       g_object_run_dispose (G_OBJECT (x11_display));
-      g_clear_object (&x11_display);
-
       return NULL;
     }
 
@@ -1410,7 +1479,9 @@ meta_x11_display_new (MetaDisplay  *display,
 
   init_event_masks (x11_display);
 
-  return x11_display;
+  meta_x11_display_init_frames_client (x11_display);
+
+  return g_steal_pointer (&x11_display);
 }
 
 void
@@ -1592,23 +1663,24 @@ meta_x11_display_reload_cursor (MetaX11Display *x11_display)
 }
 
 static void
-set_cursor_theme (Display *xdisplay)
+set_cursor_theme (Display     *xdisplay,
+                  MetaBackend *backend)
 {
-  MetaBackend *backend = meta_get_backend ();
   MetaSettings *settings = meta_backend_get_settings (backend);
   int scale;
 
   scale = meta_settings_get_ui_scaling_factor (settings);
   XcursorSetTheme (xdisplay, meta_prefs_get_cursor_theme ());
-  XcursorSetDefaultSize (xdisplay, meta_prefs_get_cursor_size () * scale);
+  XcursorSetDefaultSize (xdisplay,
+                         meta_prefs_get_cursor_size () * scale);
 }
 
 static void
 update_cursor_theme (MetaX11Display *x11_display)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_x11_display (x11_display);
 
-  set_cursor_theme (x11_display->xdisplay);
+  set_cursor_theme (x11_display->xdisplay, backend);
   meta_x11_display_reload_cursor (x11_display);
 
   if (META_IS_BACKEND_X11 (backend))
@@ -1616,7 +1688,7 @@ update_cursor_theme (MetaX11Display *x11_display)
       MetaBackendX11 *backend_x11 = META_BACKEND_X11 (backend);
       Display *xdisplay = meta_backend_x11_get_xdisplay (backend_x11);
 
-      set_cursor_theme (xdisplay);
+      set_cursor_theme (xdisplay, backend);
       meta_backend_x11_reload_cursor (backend_x11);
     }
 }
@@ -1647,36 +1719,30 @@ meta_x11_display_unregister_x_window (MetaX11Display *x11_display,
   g_hash_table_remove (x11_display->xids, &xwindow);
 }
 
-
-/* We store sync alarms in the window ID hash table, because they are
- * just more types of XIDs in the same global space, but we have
- * typesafe functions to register/unregister for readability.
- */
-
-MetaWindow *
+MetaSyncCounter *
 meta_x11_display_lookup_sync_alarm (MetaX11Display *x11_display,
                                     XSyncAlarm      alarm)
 {
-  return g_hash_table_lookup (x11_display->xids, &alarm);
+  return g_hash_table_lookup (x11_display->alarms, &alarm);
 }
 
 void
-meta_x11_display_register_sync_alarm (MetaX11Display *x11_display,
-                                      XSyncAlarm     *alarmp,
-                                      MetaWindow     *window)
+meta_x11_display_register_sync_alarm (MetaX11Display  *x11_display,
+                                      XSyncAlarm      *alarmp,
+                                      MetaSyncCounter *sync_counter)
 {
-  g_return_if_fail (g_hash_table_lookup (x11_display->xids, alarmp) == NULL);
+  g_return_if_fail (g_hash_table_lookup (x11_display->alarms, alarmp) == NULL);
 
-  g_hash_table_insert (x11_display->xids, alarmp, window);
+  g_hash_table_insert (x11_display->alarms, alarmp, sync_counter);
 }
 
 void
 meta_x11_display_unregister_sync_alarm (MetaX11Display *x11_display,
                                         XSyncAlarm      alarm)
 {
-  g_return_if_fail (g_hash_table_lookup (x11_display->xids, &alarm) != NULL);
+  g_return_if_fail (g_hash_table_lookup (x11_display->alarms, &alarm) != NULL);
 
-  g_hash_table_remove (x11_display->xids, &alarm);
+  g_hash_table_remove (x11_display->alarms, &alarm);
 }
 
 MetaX11AlarmFilter *
@@ -1749,7 +1815,8 @@ create_guard_window (MetaX11Display *x11_display)
   {
     if (!meta_is_wayland_compositor ())
       {
-        MetaBackendX11 *backend = META_BACKEND_X11 (meta_get_backend ());
+        MetaBackendX11 *backend =
+          META_BACKEND_X11 (backend_from_x11_display (x11_display));
         Display *backend_xdisplay = meta_backend_x11_get_xdisplay (backend);
         unsigned char mask_bits[XIMaskLen (XI_LASTEVENT)] = { 0 };
         XIEventMask mask = { XIAllMasterDevices, sizeof (mask_bits), mask_bits };
@@ -1932,6 +1999,9 @@ meta_x11_display_update_focus_window (MetaX11Display *x11_display,
   if (x11_display->focus_xwindow == xwindow)
     return;
 
+  meta_topic (META_DEBUG_FOCUS, "Updating X11 focus window from 0x%lx to 0x%lx",
+              x11_display->focus_xwindow, xwindow);
+
   x11_display->focus_xwindow = xwindow;
   meta_x11_display_update_active_window_hint (x11_display);
 }
@@ -1941,6 +2011,10 @@ meta_x11_display_set_input_focus_internal (MetaX11Display *x11_display,
                                            Window          xwindow,
                                            uint32_t        timestamp)
 {
+  if (xwindow != None &&
+      !meta_display_windows_are_interactable (x11_display->display))
+    return;
+
   meta_x11_error_trap_push (x11_display);
 
   /* In order for mutter to know that the focus request succeeded, we track
@@ -1983,6 +2057,9 @@ meta_x11_display_set_input_focus (MetaX11Display *x11_display,
   else
     xwindow = x11_display->no_focus_window;
 
+  meta_topic (META_DEBUG_FOCUS, "Setting X11 input focus for window %s to 0x%lx",
+              window ? window->desc : "none", xwindow);
+
   meta_x11_error_trap_push (x11_display);
   meta_x11_display_set_input_focus_internal (x11_display, xwindow, timestamp);
   serial = XNextRequest (x11_display->xdisplay);
@@ -2000,12 +2077,30 @@ meta_x11_display_set_input_focus_xwindow (MetaX11Display *x11_display,
   if (meta_display_timestamp_too_old (x11_display->display, &timestamp))
     return;
 
+  meta_topic (META_DEBUG_FOCUS, "Setting X11 input focus to 0x%lx", window);
+
   meta_x11_display_set_input_focus_internal (x11_display, window, timestamp);
   serial = XNextRequest (x11_display->xdisplay);
   meta_x11_display_update_focus_window (x11_display, window, serial, TRUE);
   meta_display_update_focus_window (x11_display->display, NULL);
   meta_display_remove_autoraise_callback (x11_display->display);
   x11_display->display->last_focus_time = timestamp;
+}
+
+void
+meta_x11_display_sync_input_focus (MetaX11Display *x11_display)
+{
+  guint timestamp;
+
+  if (!meta_display_windows_are_interactable (x11_display->display))
+    return;
+
+  meta_x11_error_trap_push (x11_display);
+  timestamp = meta_display_get_current_time (x11_display->display);
+  meta_x11_display_set_input_focus_internal (x11_display,
+                                             x11_display->focus_xwindow,
+                                             timestamp);
+  meta_x11_error_trap_pop (x11_display);
 }
 
 static MetaX11DisplayLogicalMonitorData *
@@ -2036,7 +2131,7 @@ ensure_x11_display_logical_monitor_data (MetaLogicalMonitor *logical_monitor)
 static void
 meta_x11_display_ensure_xinerama_indices (MetaX11Display *x11_display)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_x11_display (x11_display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   GList *logical_monitors, *l;
@@ -2104,7 +2199,7 @@ MetaLogicalMonitor *
 meta_x11_display_xinerama_index_to_logical_monitor (MetaX11Display *x11_display,
                                                     int             xinerama_index)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_x11_display (x11_display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   GList *logical_monitors, *l;
@@ -2313,12 +2408,36 @@ meta_x11_display_focus_sentinel_clear (MetaX11Display *x11_display)
   return (x11_display->sentinel_counter == 0);
 }
 
+
+static void
+meta_x11_display_add_ignored_crossing_serial (MetaX11Display *x11_display,
+                                              unsigned long   serial)
+{
+  int i;
+
+  /* don't add the same serial more than once */
+  if (serial ==
+      x11_display->ignored_crossing_serials[N_IGNORED_CROSSING_SERIALS - 1])
+    return;
+
+  /* shift serials to the left */
+  i = 0;
+  while (i < (N_IGNORED_CROSSING_SERIALS - 1))
+    {
+      x11_display->ignored_crossing_serials[i] =
+        x11_display->ignored_crossing_serials[i + 1];
+      ++i;
+    }
+  /* put new one on the end */
+  x11_display->ignored_crossing_serials[i] = serial;
+}
+
 void
 meta_x11_display_set_stage_input_region (MetaX11Display *x11_display,
                                          XserverRegion   region)
 {
   Display *xdisplay = x11_display->xdisplay;
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_x11_display (x11_display);
   ClutterStage *stage = CLUTTER_STAGE (meta_backend_get_stage (backend));
   Window stage_xwindow;
 
@@ -2334,8 +2453,8 @@ meta_x11_display_set_stage_input_region (MetaX11Display *x11_display,
    * focus-follows-mouse focus - it's not the user doing something, it's the
    * environment changing under the user.
    */
-  meta_display_add_ignored_crossing_serial (x11_display->display,
-                                            XNextRequest (xdisplay));
+  meta_x11_display_add_ignored_crossing_serial (x11_display,
+                                                XNextRequest (xdisplay));
   XFixesSetWindowShapeRegion (xdisplay,
                               x11_display->composite_overlay_window,
                               ShapeInput, 0, 0, region);

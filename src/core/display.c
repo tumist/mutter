@@ -33,12 +33,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <X11/Xatom.h>
-#include <X11/Xcursor/Xcursor.h>
-#include <X11/extensions/shape.h>
-#include <X11/extensions/Xcomposite.h>
-#include <X11/extensions/Xdamage.h>
-#include <X11/extensions/Xfixes.h>
 
 #include "backends/meta-backend-private.h"
 #include "backends/meta-cursor-sprite-xcursor.h"
@@ -81,9 +75,17 @@
 #ifdef HAVE_WAYLAND
 #include "compositor/meta-compositor-native.h"
 #include "compositor/meta-compositor-server.h"
-#include "wayland/meta-xwayland-private.h"
+#include "wayland/meta-wayland.h"
+#include "wayland/meta-wayland-input-device.h"
+#include "wayland/meta-wayland-private.h"
 #include "wayland/meta-wayland-tablet-seat.h"
 #include "wayland/meta-wayland-tablet-pad.h"
+#include "wayland/meta-wayland-tablet-manager.h"
+#include "wayland/meta-wayland-touch.h"
+#endif
+
+#ifdef HAVE_XWAYLAND
+#include "wayland/meta-xwayland-private.h"
 #endif
 
 #ifdef HAVE_NATIVE_BACKEND
@@ -186,16 +188,6 @@ enum
 
 static guint display_signals [LAST_SIGNAL] = { 0 };
 
-#define META_GRAB_OP_GET_BASE_TYPE(op) (op & 0x00FF)
-
-/*
- * The display we're managing.  This is a singleton object.  (Historically,
- * this was a list of displays, but there was never any way to add more
- * than one element to it.)  The goofy name is because we don't want it
- * to shadow the parameter in its object methods.
- */
-static MetaDisplay *the_display = NULL;
-
 static void on_monitors_changed_internal (MetaMonitorManager *monitor_manager,
                                           MetaDisplay        *display);
 
@@ -210,6 +202,24 @@ meta_display_show_osd (MetaDisplay *display,
                        gint         monitor_idx,
                        const gchar *icon_name,
                        const gchar *message);
+
+static MetaBackend *
+backend_from_display (MetaDisplay *display)
+{
+  MetaContext *context = meta_display_get_context (display);
+
+  return meta_context_get_backend (context);
+}
+
+#ifdef HAVE_WAYLAND
+static MetaWaylandCompositor *
+wayland_compositor_from_display (MetaDisplay *display)
+{
+  MetaContext *context = meta_display_get_context (display);
+
+  return meta_context_get_wayland_compositor (context);
+}
+#endif
 
 static void
 meta_display_get_property(GObject         *object,
@@ -614,7 +624,7 @@ meta_display_remove_pending_pings_for_window (MetaDisplay *display,
 static MetaCompositor *
 create_compositor (MetaDisplay *display)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
 
 #ifdef HAVE_WAYLAND
 #ifdef HAVE_NATIVE_BACKEND
@@ -643,7 +653,7 @@ meta_display_cancel_touch (MetaDisplay *display)
   if (!meta_is_wayland_compositor ())
     return;
 
-  compositor = meta_wayland_compositor_get_default ();
+  compositor = wayland_compositor_from_display (display);
   meta_wayland_touch_cancel (compositor->seat->touch);
 #endif
 }
@@ -667,7 +677,7 @@ gesture_tracker_state_changed (MetaGestureTracker   *tracker,
       {
         MetaBackend *backend;
 
-        backend = meta_get_backend ();
+        backend = backend_from_display (display);
         meta_backend_finish_touch_sequence (backend, sequence, state);
         break;
       }
@@ -760,6 +770,7 @@ meta_display_init_x11_finish (MetaDisplay   *display,
   return TRUE;
 }
 
+#ifdef HAVE_XWAYLAND
 static void
 on_xserver_started (MetaXWaylandManager *manager,
                     GAsyncResult        *result,
@@ -788,6 +799,7 @@ on_xserver_started (MetaXWaylandManager *manager,
       g_task_return_boolean (task, TRUE);
     }
 }
+#endif /* HAVE_XWAYLAND */
 
 void
 meta_display_init_x11 (MetaDisplay         *display,
@@ -795,17 +807,22 @@ meta_display_init_x11 (MetaDisplay         *display,
                        GAsyncReadyCallback  callback,
                        gpointer             user_data)
 {
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
-
   g_autoptr (GTask) task = NULL;
+#ifdef HAVE_XWAYLAND
+  MetaWaylandCompositor *compositor;
+#endif
 
   task = g_task_new (display, cancellable, callback, user_data);
   g_task_set_source_tag (task, meta_display_init_x11);
+
+#ifdef HAVE_XWAYLAND
+  compositor = wayland_compositor_from_display (display);
 
   meta_xwayland_start_xserver (&compositor->xwayland_manager,
                                cancellable,
                                (GAsyncReadyCallback) on_xserver_started,
                                g_steal_pointer (&task));
+#endif
 }
 
 static void
@@ -840,14 +857,12 @@ meta_display_new (MetaContext  *context,
   MetaBackend *backend = meta_context_get_backend (context);
   MetaDisplay *display;
   MetaDisplayPrivate *priv;
-  int i;
   guint32 timestamp;
   Window old_active_xwindow = None;
   MetaMonitorManager *monitor_manager;
   MetaSettings *settings;
 
-  g_assert (the_display == NULL);
-  display = the_display = g_object_new (META_TYPE_DISPLAY, NULL);
+  display = g_object_new (META_TYPE_DISPLAY, NULL);
 
   priv = meta_display_get_instance_private (display);
   priv->context = context;
@@ -863,7 +878,6 @@ meta_display_new (MetaContext  *context,
   display->x11_display = NULL;
 
   display->current_cursor = -1; /* invalid/unset */
-  display->tile_preview_timeout_id = 0;
   display->check_fullscreen_later = 0;
   display->work_area_later = 0;
 
@@ -871,23 +885,7 @@ meta_display_new (MetaContext  *context,
   display->allow_terminal_deactivation = TRUE; /* Only relevant for when a
                                                   terminal has the focus */
 
-  i = 0;
-  while (i < N_IGNORED_CROSSING_SERIALS)
-    {
-      display->ignored_crossing_serials[i] = 0;
-      ++i;
-    }
-
   display->current_time = META_CURRENT_TIME;
-
-  display->grab_have_keyboard = FALSE;
-
-  display->grab_op = META_GRAB_OP_NONE;
-  display->grab_window = NULL;
-  display->grab_tile_mode = META_TILE_NONE;
-  display->grab_tile_monitor_number = -1;
-
-  meta_display_cleanup_edges (display);
 
   meta_display_init_keys (display);
 
@@ -933,7 +931,7 @@ meta_display_new (MetaContext  *context,
   if (meta_is_wayland_compositor ())
     {
       MetaWaylandCompositor *wayland_compositor =
-        meta_wayland_compositor_get_default ();
+        wayland_compositor_from_display (display);
       MetaX11DisplayPolicy x11_display_policy;
 
       meta_wayland_compositor_init_display (wayland_compositor, display);
@@ -1125,15 +1123,14 @@ void
 meta_display_close (MetaDisplay *display,
                     guint32      timestamp)
 {
-  g_assert (display != NULL);
+  MetaCompositor *compositor;
+  MetaLaters *laters;
 
   if (display->closing != 0)
     {
       /* The display's already been closed. */
       return;
     }
-
-  g_assert (display == the_display);
 
   display->closing += 1;
 
@@ -1149,23 +1146,24 @@ meta_display_close (MetaDisplay *display,
   g_clear_object (&display->gesture_tracker);
 
   g_clear_handle_id (&display->focus_timeout_id, g_source_remove);
-  g_clear_handle_id (&display->tile_preview_timeout_id, g_source_remove);
 
+  compositor = meta_display_get_compositor (display);
+  laters = meta_compositor_get_laters (compositor);
   if (display->work_area_later != 0)
-    meta_later_remove (display->work_area_later);
+    meta_laters_remove (laters, display->work_area_later);
   if (display->check_fullscreen_later != 0)
-    meta_later_remove (display->check_fullscreen_later);
+    meta_laters_remove (laters, display->check_fullscreen_later);
 
   /* Stop caring about events */
   meta_display_free_events (display);
-
-  g_clear_pointer (&display->compositor, meta_compositor_destroy);
 
   meta_display_shutdown_x11 (display);
 
   g_clear_object (&display->stack);
   g_clear_pointer (&display->stack_tracker,
                    meta_stack_tracker_free);
+
+  g_clear_pointer (&display->compositor, meta_compositor_destroy);
 
   /* Must be after all calls to meta_window_unmanage() since they
    * unregister windows
@@ -1183,88 +1181,29 @@ meta_display_close (MetaDisplay *display,
   meta_clipboard_manager_shutdown (display);
   g_clear_object (&display->selection);
   g_clear_object (&display->pad_action_mapper);
-
-  the_display = NULL;
-}
-
-/**
- * meta_display_for_x_display:
- * @xdisplay: An X display
- *
- * Returns the singleton MetaDisplay if @xdisplay matches the X display it's
- * managing; otherwise gives a warning and returns %NULL.  When we were claiming
- * to be able to manage multiple displays, this was supposed to find the
- * display out of the list which matched that display.  Now it's merely an
- * extra sanity check.
- *
- * Returns: The singleton X display, or %NULL if @xdisplay isn't the one
- *          we're managing.
- */
-MetaDisplay*
-meta_display_for_x_display (Display *xdisplay)
-{
-  if (the_display->x11_display->xdisplay == xdisplay)
-    return the_display;
-
-  meta_warning ("Could not find display for X display %p, probably going to crash",
-                xdisplay);
-
-  return NULL;
-}
-
-/**
- * meta_get_display:
- *
- * Accessor for the singleton MetaDisplay.
- *
- * Returns: The only #MetaDisplay there is.  This can be %NULL, but only
- *          during startup.
- */
-MetaDisplay*
-meta_get_display (void)
-{
-  return the_display;
-}
-
-static inline gboolean
-grab_op_is_window (MetaGrabOp op)
-{
-  return META_GRAB_OP_GET_BASE_TYPE (op) == META_GRAB_OP_WINDOW_BASE;
 }
 
 gboolean
 meta_grab_op_is_mouse (MetaGrabOp op)
 {
-  if (!grab_op_is_window (op))
-    return FALSE;
-
   return (op & META_GRAB_OP_WINDOW_FLAG_KEYBOARD) == 0;
 }
 
 gboolean
 meta_grab_op_is_keyboard (MetaGrabOp op)
 {
-  if (!grab_op_is_window (op))
-    return FALSE;
-
   return (op & META_GRAB_OP_WINDOW_FLAG_KEYBOARD) != 0;
 }
 
 gboolean
 meta_grab_op_is_resizing (MetaGrabOp op)
 {
-  if (!grab_op_is_window (op))
-    return FALSE;
-
   return (op & META_GRAB_OP_WINDOW_DIR_MASK) != 0 || op == META_GRAB_OP_KEYBOARD_RESIZING_UNKNOWN;
 }
 
 gboolean
 meta_grab_op_is_moving (MetaGrabOp op)
 {
-  if (!grab_op_is_window (op))
-    return FALSE;
-
   return !meta_grab_op_is_resizing (op);
 }
 
@@ -1277,14 +1216,13 @@ meta_grab_op_is_moving (MetaGrabOp op)
 gboolean
 meta_display_windows_are_interactable (MetaDisplay *display)
 {
-  switch (display->event_route)
-    {
-    case META_EVENT_ROUTE_NORMAL:
-    case META_EVENT_ROUTE_WAYLAND_POPUP:
-      return TRUE;
-    default:
-      return FALSE;
-    }
+  MetaBackend *backend = backend_from_display (display);
+  MetaStage *stage = META_STAGE (meta_backend_get_stage (backend));
+
+  if (clutter_stage_get_grab_actor (CLUTTER_STAGE (stage)))
+    return FALSE;
+
+  return TRUE;
 }
 
 /**
@@ -1341,38 +1279,6 @@ meta_display_get_current_time_roundtrip (MetaDisplay *display)
     return meta_x11_display_get_current_time_roundtrip (display->x11_display);
 }
 
-/**
- * meta_display_add_ignored_crossing_serial:
- * @display: a #MetaDisplay
- * @serial: the serial to ignore
- *
- * Save the specified serial and ignore crossing events with that
- * serial for the purpose of focus-follows-mouse. This can be used
- * for certain changes to the window hierarchy that we don't want
- * to change the focus window, even if they cause the pointer to
- * end up in a new window.
- */
-void
-meta_display_add_ignored_crossing_serial (MetaDisplay  *display,
-                                          unsigned long serial)
-{
-  int i;
-
-  /* don't add the same serial more than once */
-  if (display->ignored_crossing_serials[N_IGNORED_CROSSING_SERIALS-1] == serial)
-    return;
-
-  /* shift serials to the left */
-  i = 0;
-  while (i < (N_IGNORED_CROSSING_SERIALS - 1))
-    {
-      display->ignored_crossing_serials[i] = display->ignored_crossing_serials[i+1];
-      ++i;
-    }
-  /* put new one on the end */
-  display->ignored_crossing_serials[i] = serial;
-}
-
 static gboolean
 window_raise_with_delay_callback (void *data)
 {
@@ -1421,9 +1327,9 @@ void
 meta_display_sync_wayland_input_focus (MetaDisplay *display)
 {
 #ifdef HAVE_WAYLAND
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  MetaWaylandCompositor *compositor = wayland_compositor_from_display (display);
   MetaWindow *focus_window = NULL;
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
   ClutterSeat *seat = clutter_backend_get_default_seat (clutter_backend);
   MetaStage *stage = META_STAGE (meta_backend_get_stage (backend));
@@ -1437,9 +1343,8 @@ meta_display_sync_wayland_input_focus (MetaDisplay *display)
     focus_window = NULL;
   else if (is_no_focus_xwindow)
     focus_window = NULL;
-  else if (clutter_stage_get_grab_actor (CLUTTER_STAGE (stage)))
-    focus_window = NULL;
-  else if (display->focus_window && display->focus_window->surface)
+  else if (display->focus_window &&
+           meta_window_get_wayland_surface (display->focus_window))
     focus_window = display->focus_window;
   else
     meta_topic (META_DEBUG_FOCUS, "Focus change has no effect, because there is no matching wayland surface");
@@ -1677,55 +1582,6 @@ meta_display_notify_window_created (MetaDisplay  *display,
   g_signal_emit (display, display_signals[WINDOW_CREATED], 0, window);
 }
 
-static MetaCursor
-meta_cursor_for_grab_op (MetaGrabOp op)
-{
-  switch (op)
-    {
-    case META_GRAB_OP_RESIZING_SE:
-    case META_GRAB_OP_KEYBOARD_RESIZING_SE:
-      return META_CURSOR_SE_RESIZE;
-      break;
-    case META_GRAB_OP_RESIZING_S:
-    case META_GRAB_OP_KEYBOARD_RESIZING_S:
-      return META_CURSOR_SOUTH_RESIZE;
-      break;
-    case META_GRAB_OP_RESIZING_SW:
-    case META_GRAB_OP_KEYBOARD_RESIZING_SW:
-      return META_CURSOR_SW_RESIZE;
-      break;
-    case META_GRAB_OP_RESIZING_N:
-    case META_GRAB_OP_KEYBOARD_RESIZING_N:
-      return META_CURSOR_NORTH_RESIZE;
-      break;
-    case META_GRAB_OP_RESIZING_NE:
-    case META_GRAB_OP_KEYBOARD_RESIZING_NE:
-      return META_CURSOR_NE_RESIZE;
-      break;
-    case META_GRAB_OP_RESIZING_NW:
-    case META_GRAB_OP_KEYBOARD_RESIZING_NW:
-      return META_CURSOR_NW_RESIZE;
-      break;
-    case META_GRAB_OP_RESIZING_W:
-    case META_GRAB_OP_KEYBOARD_RESIZING_W:
-      return META_CURSOR_WEST_RESIZE;
-      break;
-    case META_GRAB_OP_RESIZING_E:
-    case META_GRAB_OP_KEYBOARD_RESIZING_E:
-      return META_CURSOR_EAST_RESIZE;
-      break;
-    case META_GRAB_OP_MOVING:
-    case META_GRAB_OP_KEYBOARD_MOVING:
-    case META_GRAB_OP_KEYBOARD_RESIZING_UNKNOWN:
-      return META_CURSOR_MOVE_OR_RESIZE_WINDOW;
-      break;
-    default:
-      break;
-    }
-
-  return META_CURSOR_DEFAULT;
-}
-
 static void
 root_cursor_prepare_at (MetaCursorSpriteXcursor *sprite_xcursor,
                         float                    best_scale,
@@ -1734,9 +1590,9 @@ root_cursor_prepare_at (MetaCursorSpriteXcursor *sprite_xcursor,
                         MetaDisplay             *display)
 {
   MetaCursorSprite *cursor_sprite = META_CURSOR_SPRITE (sprite_xcursor);
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
 
-  if (meta_is_stage_views_scaled ())
+  if (meta_backend_is_stage_views_scaled (backend))
     {
       if (best_scale != 0.0f)
         {
@@ -1782,7 +1638,7 @@ meta_display_reload_cursor (MetaDisplay *display)
 {
   MetaCursor cursor = display->current_cursor;
   MetaCursorSpriteXcursor *sprite_xcursor;
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaCursorTracker *cursor_tracker = meta_backend_get_cursor_tracker (backend);
 
   sprite_xcursor = meta_cursor_sprite_xcursor_new (cursor, cursor_tracker);
@@ -1808,301 +1664,18 @@ meta_display_set_cursor (MetaDisplay *display,
   meta_display_reload_cursor (display);
 }
 
-void
-meta_display_update_cursor (MetaDisplay *display)
-{
-  meta_display_set_cursor (display, meta_cursor_for_grab_op (display->grab_op));
-}
-
-static MetaWindow *
-get_first_freefloating_window (MetaWindow *window)
-{
-  while (meta_window_is_attached_dialog (window))
-    window = meta_window_get_transient_for (window);
-
-  /* Attached dialogs should always have a non-NULL transient-for */
-  g_assert (window != NULL);
-
-  return window;
-}
-
-static MetaEventRoute
-get_event_route_from_grab_op (MetaGrabOp op)
-{
-  switch (META_GRAB_OP_GET_BASE_TYPE (op))
-    {
-    case META_GRAB_OP_NONE:
-      /* begin_grab_op shouldn't be called with META_GRAB_OP_NONE. */
-      g_assert_not_reached ();
-
-    case META_GRAB_OP_WINDOW_BASE:
-      return META_EVENT_ROUTE_WINDOW_OP;
-
-    case META_GRAB_OP_WAYLAND_POPUP:
-      return META_EVENT_ROUTE_WAYLAND_POPUP;
-
-    case META_GRAB_OP_FRAME_BUTTON:
-      return META_EVENT_ROUTE_FRAME_BUTTON;
-
-    default:
-      g_assert_not_reached ();
-      return 0;
-    }
-}
-
-void
-meta_display_clear_grab_move_resize_later (MetaDisplay *display)
-{
-  if (display->grab_move_resize_later_id)
-    {
-      MetaCompositor *compositor;
-      MetaLaters *laters;
-
-      compositor = meta_display_get_compositor (display);
-      laters = meta_compositor_get_laters (compositor);
-      meta_laters_remove (laters, display->grab_move_resize_later_id);
-      display->grab_move_resize_later_id = 0;
-    }
-}
-
-gboolean
-meta_display_begin_grab_op (MetaDisplay *display,
-                            MetaWindow  *window,
-                            MetaGrabOp   op,
-                            gboolean     pointer_already_grabbed,
-                            gboolean     frame_action,
-                            int          button,
-                            gulong       modmask, /* XXX - ignored */
-                            guint32      timestamp,
-                            int          root_x,
-                            int          root_y)
-{
-  MetaBackend *backend = meta_get_backend ();
-  MetaWindow *grab_window = NULL;
-  MetaEventRoute event_route;
-
-  g_assert (window != NULL);
-
-  meta_topic (META_DEBUG_WINDOW_OPS,
-              "Doing grab op %u on window %s button %d pointer already grabbed: %d pointer pos %d,%d",
-              op, window->desc, button, pointer_already_grabbed,
-              root_x, root_y);
-
-  if (display->grab_op != META_GRAB_OP_NONE)
-    {
-      meta_warning ("Attempt to perform window operation %u on window %s when operation %u on %s already in effect",
-                    op, window->desc, display->grab_op,
-                    display->grab_window ? display->grab_window->desc : "none");
-      return FALSE;
-    }
-
-  event_route = get_event_route_from_grab_op (op);
-
-  if (event_route == META_EVENT_ROUTE_WINDOW_OP)
-    {
-      if (meta_prefs_get_raise_on_click ())
-        meta_window_raise (window);
-      else
-        {
-          display->grab_initial_x = root_x;
-          display->grab_initial_y = root_y;
-          display->grab_threshold_movement_reached = FALSE;
-        }
-    }
-
-  grab_window = window;
-
-  /* If we're trying to move a window, move the first
-   * non-attached dialog instead.
-   */
-  if (meta_grab_op_is_moving (op))
-    grab_window = get_first_freefloating_window (window);
-
-  g_assert (grab_window != NULL);
-  g_assert (op != META_GRAB_OP_NONE);
-
-  display->grab_have_pointer = FALSE;
-
-  if (pointer_already_grabbed)
-    display->grab_have_pointer = TRUE;
-
-  if (META_IS_BACKEND_X11 (meta_get_backend ()) && display->x11_display)
-    {
-      /* Since grab operations often happen as a result of implicit
-       * pointer operations on the display X11 connection, we need
-       * to ungrab here to ensure that the backend's X11 can take
-       * the device grab. */
-      XIUngrabDevice (display->x11_display->xdisplay,
-                      META_VIRTUAL_CORE_POINTER_ID,
-                      timestamp);
-      XSync (display->x11_display->xdisplay, False);
-    }
-
-  if (meta_backend_grab_device (backend, META_VIRTUAL_CORE_POINTER_ID, timestamp))
-    display->grab_have_pointer = TRUE;
-
-  if (!display->grab_have_pointer && !meta_grab_op_is_keyboard (op))
-    {
-      meta_topic (META_DEBUG_WINDOW_OPS, "XIGrabDevice() failed");
-      return FALSE;
-    }
-
-  /* Grab keys when beginning window ops; see #126497 */
-  if (event_route == META_EVENT_ROUTE_WINDOW_OP)
-    {
-      display->grab_have_keyboard = meta_window_grab_all_keys (grab_window, timestamp);
-
-      if (!display->grab_have_keyboard)
-        {
-          meta_topic (META_DEBUG_WINDOW_OPS, "grabbing all keys failed, ungrabbing pointer");
-          meta_backend_ungrab_device (backend, META_VIRTUAL_CORE_POINTER_ID, timestamp);
-          display->grab_have_pointer = FALSE;
-          return FALSE;
-        }
-    }
-
-  display->event_route = event_route;
-  display->grab_op = op;
-  display->grab_window = grab_window;
-  display->grab_button = button;
-  display->grab_tile_mode = grab_window->tile_mode;
-  display->grab_tile_monitor_number = grab_window->tile_monitor_number;
-  display->grab_anchor_root_x = root_x;
-  display->grab_anchor_root_y = root_y;
-  display->grab_latest_motion_x = root_x;
-  display->grab_latest_motion_y = root_y;
-  display->grab_last_edge_resistance_flags = META_EDGE_RESISTANCE_DEFAULT;
-  display->grab_frame_action = frame_action;
-
-  meta_display_update_cursor (display);
-
-  meta_display_clear_grab_move_resize_later (display);
-
-  meta_topic (META_DEBUG_WINDOW_OPS,
-              "Grab op %u on window %s successful",
-              display->grab_op, window ? window->desc : "(null)");
-
-  meta_window_get_frame_rect (display->grab_window,
-                              &display->grab_initial_window_pos);
-  display->grab_anchor_window_pos = display->grab_initial_window_pos;
-
-  if (meta_is_wayland_compositor ())
-    {
-      meta_display_sync_wayland_input_focus (display);
-      meta_display_cancel_touch (display);
-    }
-
-  g_signal_emit (display, display_signals[GRAB_OP_BEGIN], 0,
-                 display->grab_window, display->grab_op);
-
-  if (display->event_route == META_EVENT_ROUTE_WINDOW_OP)
-    meta_window_grab_op_began (display->grab_window, display->grab_op);
-
-  return TRUE;
-}
-
-void
-meta_display_end_grab_op (MetaDisplay *display,
-                          guint32      timestamp)
-{
-  MetaWindow *grab_window = display->grab_window;
-  MetaGrabOp grab_op = display->grab_op;
-
-  meta_topic (META_DEBUG_WINDOW_OPS,
-              "Ending grab op %u at time %u", grab_op, timestamp);
-
-  if (display->event_route == META_EVENT_ROUTE_NORMAL)
-    return;
-
-  g_assert (grab_window != NULL);
-
-  /* We need to reset this early, since the
-   * meta_window_grab_op_ended callback relies on this being
-   * up to date. */
-  display->grab_op = META_GRAB_OP_NONE;
-
-  if (display->event_route == META_EVENT_ROUTE_WINDOW_OP)
-    {
-      /* Clear out the edge cache */
-      meta_display_cleanup_edges (display);
-
-      /* Only raise the window in orthogonal raise
-       * ('do-not-raise-on-click') mode if the user didn't try to move
-       * or resize the given window by at least a threshold amount.
-       * For raise on click mode, the window was raised at the
-       * beginning of the grab_op.
-       */
-      if (!meta_prefs_get_raise_on_click () &&
-          !display->grab_threshold_movement_reached)
-        meta_window_raise (display->grab_window);
-
-      meta_window_grab_op_ended (grab_window, grab_op);
-    }
-
-  if (display->grab_have_pointer)
-    {
-      MetaBackend *backend = meta_get_backend ();
-      meta_backend_ungrab_device (backend, META_VIRTUAL_CORE_POINTER_ID, timestamp);
-    }
-
-  if (display->grab_have_keyboard)
-    {
-      meta_topic (META_DEBUG_WINDOW_OPS,
-                  "Ungrabbing all keys timestamp %u", timestamp);
-      meta_window_ungrab_all_keys (grab_window, timestamp);
-    }
-
-  display->event_route = META_EVENT_ROUTE_NORMAL;
-  display->grab_window = NULL;
-  display->grab_button = 0;
-  display->grab_tile_mode = META_TILE_NONE;
-  display->grab_tile_monitor_number = -1;
-  display->grab_anchor_root_x = 0;
-  display->grab_anchor_root_y = 0;
-  display->grab_latest_motion_x = 0;
-  display->grab_latest_motion_y = 0;
-  display->grab_last_edge_resistance_flags = META_EDGE_RESISTANCE_DEFAULT;
-  display->grab_frame_action = FALSE;
-
-  meta_display_update_cursor (display);
-
-  meta_display_clear_grab_move_resize_later (display);
-
-  if (meta_is_wayland_compositor ())
-    meta_display_sync_wayland_input_focus (display);
-
-  g_signal_emit (display, display_signals[GRAB_OP_END], 0,
-                 grab_window, grab_op);
-}
-
 /**
- * meta_display_get_grab_op:
+ * meta_display_is_grabbed:
  * @display: The #MetaDisplay that the window is on
 
- * Gets the current grab operation, if any.
+ * Returns %TRUE if there is an ongoing grab operation.
  *
- * Return value: the current grab operation, or %META_GRAB_OP_NONE if
- * Mutter doesn't currently have a grab.
+ * Return value: Whether there is an active display grab operation.
  */
-MetaGrabOp
-meta_display_get_grab_op (MetaDisplay *display)
+gboolean
+meta_display_is_grabbed (MetaDisplay *display)
 {
-  return display->grab_op;
-}
-
-void
-meta_display_check_threshold_reached (MetaDisplay *display,
-                                      int          x,
-                                      int          y)
-{
-  /* Don't bother doing the check again if we've already reached the threshold */
-  if (meta_prefs_get_raise_on_click () ||
-      display->grab_threshold_movement_reached)
-    return;
-
-  if (ABS (display->grab_initial_x - x) >= 8 ||
-      ABS (display->grab_initial_y - y) >= 8)
-    display->grab_threshold_movement_reached = TRUE;
+  return meta_compositor_get_current_window_drag (display->compositor) != NULL;
 }
 
 void
@@ -2119,10 +1692,6 @@ meta_display_queue_retheme_all_windows (MetaDisplay *display)
 
       meta_window_queue (window, META_QUEUE_MOVE_RESIZE);
       meta_window_frame_size_changed (window);
-      if (window->frame)
-        {
-          meta_frame_queue_draw (window->frame);
-        }
 
       tmp = tmp->next;
     }
@@ -2584,6 +2153,8 @@ meta_resize_gravity_from_grab_op (MetaGrabOp op)
 {
   MetaGravity gravity;
 
+  op &= ~(META_GRAB_OP_WINDOW_FLAG_UNCONSTRAINED);
+
   gravity = -1;
   switch (op)
     {
@@ -2861,9 +2432,10 @@ meta_display_get_context (MetaDisplay *display)
 }
 
 /**
- * meta_display_get_compositor: (skip)
+ * meta_display_get_compositor:
  * @display: a #MetaDisplay
  *
+ * Returns: (transfer none): the #MetaCompositor
  */
 MetaCompositor *
 meta_display_get_compositor (MetaDisplay *display)
@@ -2895,7 +2467,7 @@ meta_display_get_size (MetaDisplay *display,
                        int         *width,
                        int         *height)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   int display_width, display_height;
@@ -3014,7 +2586,7 @@ meta_display_request_pad_osd (MetaDisplay        *display,
                               ClutterInputDevice *pad,
                               gboolean            edition_mode)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaInputMapper *input_mapper;
   const gchar *layout_path = NULL;
   ClutterActor *osd;
@@ -3031,7 +2603,7 @@ meta_display_request_pad_osd (MetaDisplay        *display,
   if (display->current_pad_osd)
     return;
 
-  input_mapper = meta_backend_get_input_mapper (meta_get_backend ());
+  input_mapper = meta_backend_get_input_mapper (backend_from_display (display));
 
   if (input_mapper)
     {
@@ -3085,7 +2657,7 @@ meta_display_get_pad_action_label (MetaDisplay        *display,
       MetaWaylandTabletSeat *tablet_seat;
       MetaWaylandTabletPad *tablet_pad = NULL;
 
-      compositor = meta_wayland_compositor_get_default ();
+      compositor = wayland_compositor_from_display (display);
       tablet_seat = meta_wayland_tablet_manager_ensure_seat (compositor->tablet_manager,
                                                              compositor->seat);
       if (tablet_seat)
@@ -3123,7 +2695,7 @@ lookup_tablet_monitor (MetaDisplay        *display,
   MetaLogicalMonitor *monitor;
   gint monitor_idx = -1;
 
-  input_mapper = meta_backend_get_input_mapper (meta_get_backend ());
+  input_mapper = meta_backend_get_input_mapper (backend_from_display (display));
   if (!input_mapper)
     return -1;
 
@@ -3235,88 +2807,6 @@ void
 meta_display_restacked (MetaDisplay *display)
 {
   g_signal_emit (display, display_signals[RESTACKED], 0);
-}
-
-static gboolean
-meta_display_update_tile_preview_timeout (gpointer data)
-{
-  MetaDisplay *display = data;
-  MetaWindow *window = display->grab_window;
-  gboolean needs_preview = FALSE;
-
-  display->tile_preview_timeout_id = 0;
-
-  if (window)
-    {
-      switch (display->preview_tile_mode)
-        {
-        case META_TILE_LEFT:
-        case META_TILE_RIGHT:
-          if (!META_WINDOW_TILED_SIDE_BY_SIDE (window))
-            needs_preview = TRUE;
-          break;
-
-        case META_TILE_MAXIMIZED:
-          if (!META_WINDOW_MAXIMIZED (window))
-            needs_preview = TRUE;
-          break;
-
-        default:
-          needs_preview = FALSE;
-          break;
-        }
-    }
-
-  if (needs_preview)
-    {
-      MetaRectangle tile_rect;
-      int monitor;
-
-      monitor = meta_window_get_current_tile_monitor_number (window);
-      meta_window_get_tile_area (window, display->preview_tile_mode,
-                                 &tile_rect);
-      meta_compositor_show_tile_preview (display->compositor,
-                                         window, &tile_rect, monitor);
-    }
-  else
-    meta_compositor_hide_tile_preview (display->compositor);
-
-  return FALSE;
-}
-
-#define TILE_PREVIEW_TIMEOUT_MS 200
-
-void
-meta_display_update_tile_preview (MetaDisplay *display,
-                                  gboolean     delay)
-{
-  if (delay)
-    {
-      if (display->tile_preview_timeout_id > 0)
-        return;
-
-      display->tile_preview_timeout_id =
-        g_timeout_add (TILE_PREVIEW_TIMEOUT_MS,
-                       meta_display_update_tile_preview_timeout,
-                       display);
-      g_source_set_name_by_id (display->tile_preview_timeout_id,
-                               "[mutter] meta_display_update_tile_preview_timeout");
-    }
-  else
-    {
-      g_clear_handle_id (&display->tile_preview_timeout_id, g_source_remove);
-
-      meta_display_update_tile_preview_timeout ((gpointer)display);
-    }
-}
-
-void
-meta_display_hide_tile_preview (MetaDisplay *display)
-{
-  g_clear_handle_id (&display->tile_preview_timeout_id, g_source_remove);
-
-  display->preview_tile_mode = META_TILE_NONE;
-  meta_compositor_hide_tile_preview (display->compositor);
 }
 
 static MetaStartupSequence *
@@ -3473,13 +2963,15 @@ meta_display_queue_workarea_recalc (MetaDisplay *display)
   /* Recompute work area later before redrawing */
   if (display->work_area_later == 0)
     {
+      MetaLaters *laters = meta_compositor_get_laters (display->compositor);
+
       meta_topic (META_DEBUG_WORKAREA,
                   "Adding work area hint computation function");
       display->work_area_later =
-        meta_later_add (META_LATER_BEFORE_REDRAW,
-                        (GSourceFunc) set_work_area_later_func,
-                        display,
-                        NULL);
+        meta_laters_add (laters, META_LATER_BEFORE_REDRAW,
+                         (GSourceFunc) set_work_area_later_func,
+                         display,
+                         NULL);
     }
 }
 
@@ -3487,7 +2979,7 @@ static gboolean
 check_fullscreen_func (gpointer data)
 {
   MetaDisplay *display = data;
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   GList *logical_monitors, *l;
@@ -3594,17 +3086,23 @@ check_fullscreen_func (gpointer data)
 void
 meta_display_queue_check_fullscreen (MetaDisplay *display)
 {
-  if (!display->check_fullscreen_later)
-    display->check_fullscreen_later = meta_later_add (META_LATER_CHECK_FULLSCREEN,
-                                                      check_fullscreen_func,
-                                                      display, NULL);
+  MetaLaters *laters;
+
+  if (display->check_fullscreen_later)
+    return;
+
+  laters = meta_compositor_get_laters (display->compositor);
+  display->check_fullscreen_later = meta_laters_add (laters,
+                                                     META_LATER_CHECK_FULLSCREEN,
+                                                     check_fullscreen_func,
+                                                     display, NULL);
 }
 
 int
 meta_display_get_monitor_index_for_rect (MetaDisplay   *display,
                                          MetaRectangle *rect)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;
@@ -3622,7 +3120,7 @@ meta_display_get_monitor_neighbor_index (MetaDisplay         *display,
                                          int                  which_monitor,
                                          MetaDisplayDirection direction)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;
@@ -3648,7 +3146,7 @@ meta_display_get_monitor_neighbor_index (MetaDisplay         *display,
 int
 meta_display_get_current_monitor (MetaDisplay *display)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaLogicalMonitor *logical_monitor;
 
   logical_monitor = meta_backend_get_current_logical_monitor (backend);
@@ -3671,7 +3169,7 @@ meta_display_get_current_monitor (MetaDisplay *display)
 int
 meta_display_get_n_monitors (MetaDisplay *display)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
 
@@ -3691,7 +3189,7 @@ meta_display_get_n_monitors (MetaDisplay *display)
 int
 meta_display_get_primary_monitor (MetaDisplay *display)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;
@@ -3719,7 +3217,7 @@ meta_display_get_monitor_geometry (MetaDisplay   *display,
                                    int            monitor,
                                    MetaRectangle *geometry)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;
@@ -3751,7 +3249,7 @@ float
 meta_display_get_monitor_scale (MetaDisplay *display,
                                 int          monitor)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;
@@ -3787,7 +3285,7 @@ gboolean
 meta_display_get_monitor_in_fullscreen (MetaDisplay *display,
                                         int          monitor)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaBackend *backend = backend_from_display (display);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;

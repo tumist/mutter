@@ -17,7 +17,6 @@ mutter_pkg_deps = [
   gio_unix_dep,
   glib_dep,
   gsettings_desktop_schemas_dep,
-  gtk3_dep,
   pango_dep,
 ]
 
@@ -88,6 +87,12 @@ endif
 if have_introspection
   mutter_pkg_private_deps += [
     gobject_introspection_dep,
+  ]
+endif
+
+if have_x11_client
+  mutter_pkg_deps += [
+    gtk3_dep,
   ]
 endif
 
@@ -274,6 +279,8 @@ mutter_sources = [
   'compositor/cogl-utils.h',
   'compositor/compositor.c',
   'compositor/compositor-private.h',
+  'compositor/edge-resistance.c',
+  'compositor/edge-resistance.h',
   'compositor/meta-background-actor.c',
   'compositor/meta-background-actor-private.h',
   'compositor/meta-background-content.c',
@@ -308,6 +315,8 @@ mutter_sources = [
   'compositor/meta-texture-mipmap.h',
   'compositor/meta-window-actor.c',
   'compositor/meta-window-actor-private.h',
+  'compositor/meta-window-drag.c',
+  'compositor/meta-window-drag.h',
   'compositor/meta-window-group.c',
   'compositor/meta-window-group-private.h',
   'compositor/meta-window-shape.c',
@@ -322,8 +331,6 @@ mutter_sources = [
   'core/delete.c',
   'core/display.c',
   'core/display-private.h',
-  'core/edge-resistance.c',
-  'core/edge-resistance.h',
   'core/events.c',
   'core/events.h',
   'core/frame.c',
@@ -447,12 +454,6 @@ if have_x11_client
     'compositor/meta-sync-ring.h',
     'compositor/meta-window-actor-x11.c',
     'compositor/meta-window-actor-x11.h',
-    'ui/frames.c',
-    'ui/frames.h',
-    'ui/theme.c',
-    'ui/theme-private.h',
-    'ui/ui.c',
-    'ui/ui.h',
     'x11/atomnames.h',
     'x11/events.c',
     'x11/events.h',
@@ -466,6 +467,8 @@ if have_x11_client
     'x11/meta-selection-source-x11-private.h',
     'x11/meta-startup-notification-x11.c',
     'x11/meta-startup-notification-x11.h',
+    'x11/meta-sync-counter.c',
+    'x11/meta-sync-counter.h',
     'x11/meta-x11-display.c',
     'x11/meta-x11-display-private.h',
     'x11/meta-x11-errors.c',
@@ -477,8 +480,6 @@ if have_x11_client
     'x11/meta-x11-selection-output-stream-private.h',
     'x11/meta-x11-stack.c',
     'x11/meta-x11-stack-private.h',
-    'x11/meta-x11-window-control.c',
-    'x11/meta-x11-window-control.h',
     'x11/mutter-Xatomtype.h',
     'x11/session.c',
     'x11/session.h',
@@ -559,6 +560,8 @@ if have_wayland
     'compositor/meta-surface-actor-wayland.h',
     'compositor/meta-window-actor-wayland.c',
     'compositor/meta-window-actor-wayland.h',
+    'core/meta-service-channel.c',
+    'core/meta-service-channel.h',
     'wayland/meta-cursor-sprite-wayland.c',
     'wayland/meta-cursor-sprite-wayland.h',
     'wayland/meta-pointer-confinement-wayland.c',
@@ -575,6 +578,7 @@ if have_wayland
     'wayland/meta-wayland-buffer.h',
     'wayland/meta-wayland.c',
     'wayland/meta-wayland-client.c',
+    'wayland/meta-wayland-client-private.h',
     'wayland/meta-wayland-cursor-surface.c',
     'wayland/meta-wayland-cursor-surface.h',
     'wayland/meta-wayland-data-device.c',
@@ -593,6 +597,8 @@ if have_wayland
     'wayland/meta-wayland-dma-buf.h',
     'wayland/meta-wayland-dnd-surface.c',
     'wayland/meta-wayland-dnd-surface.h',
+    'wayland/meta-wayland-filter-manager.c',
+    'wayland/meta-wayland-filter-manager.h',
     'wayland/meta-wayland-gtk-shell.c',
     'wayland/meta-wayland-gtk-shell.h',
     'wayland/meta-wayland.h',
@@ -604,6 +610,8 @@ if have_wayland
     'wayland/meta-wayland-input-device.h',
     'wayland/meta-wayland-keyboard.c',
     'wayland/meta-wayland-keyboard.h',
+    'wayland/meta-wayland-legacy-xdg-foreign.c',
+    'wayland/meta-wayland-legacy-xdg-foreign.h',
     'wayland/meta-wayland-outputs.c',
     'wayland/meta-wayland-outputs.h',
     'wayland/meta-wayland-pointer.c',
@@ -657,6 +665,8 @@ if have_wayland
     'wayland/meta-wayland-text-input.h',
     'wayland/meta-wayland-touch.c',
     'wayland/meta-wayland-touch.h',
+    'wayland/meta-wayland-transaction.c',
+    'wayland/meta-wayland-transaction.h',
     'wayland/meta-wayland-types.h',
     'wayland/meta-wayland-versions.h',
     'wayland/meta-wayland-viewporter.c',
@@ -665,6 +675,7 @@ if have_wayland
     'wayland/meta-wayland-window-configuration.h',
     'wayland/meta-wayland-xdg-foreign.c',
     'wayland/meta-wayland-xdg-foreign.h',
+    'wayland/meta-wayland-xdg-foreign-private.h',
     'wayland/meta-wayland-xdg-shell.c',
     'wayland/meta-wayland-xdg-shell.h',
     'wayland/meta-window-wayland.c',
@@ -673,6 +684,8 @@ if have_wayland
 
   if have_xwayland
     mutter_sources += [
+      'wayland/meta-wayland-x11-interop.c',
+      'wayland/meta-wayland-x11-interop.h',
       'wayland/meta-window-xwayland.c',
       'wayland/meta-window-xwayland.h',
       'wayland/meta-xwayland.c',
@@ -853,27 +866,29 @@ if mutter_private_enum_sources.length() > 0
   mutter_built_sources += mutter_private_enum_types
 endif
 
-dbus_display_config_built_sources = gnome.gdbus_codegen('meta-dbus-display-config',
-    join_paths(dbus_interfaces_dir, 'org.gnome.Mutter.DisplayConfig.xml'),
-    interface_prefix: 'org.gnome.Mutter.',
-    namespace: 'MetaDBus',
-  )
-mutter_built_sources += dbus_display_config_built_sources
-
-dbus_idle_monitor_built_sources = gnome.gdbus_codegen('meta-dbus-idle-monitor',
-    join_paths(dbus_interfaces_dir, 'org.gnome.Mutter.IdleMonitor.xml'),
-    interface_prefix: 'org.gnome.Mutter.',
-    namespace: 'MetaDBus',
-    object_manager: true,
-  )
-mutter_built_sources += dbus_idle_monitor_built_sources
-
-dbus_input_mapping_built_sources = gnome.gdbus_codegen('meta-dbus-input-mapping',
-    join_paths(dbus_interfaces_dir, 'org.gnome.Mutter.InputMapping.xml'),
-    interface_prefix: 'org.gnome.Mutter.',
-    namespace: 'MetaDBus',
-  )
-mutter_built_sources += dbus_input_mapping_built_sources
+dbus_interfaces = [
+  {
+    'name': 'meta-dbus-display-config',
+    'interface': 'org.gnome.Mutter.DisplayConfig.xml',
+    'prefix': 'org.gnome.Mutter.',
+  },
+  {
+    'name': 'meta-dbus-idle-monitor',
+    'interface': 'org.gnome.Mutter.IdleMonitor.xml',
+    'prefix': 'org.gnome.Mutter.',
+    'object_manager': true,
+  },
+  {
+    'name': 'meta-dbus-input-mapping',
+    'interface': 'org.gnome.Mutter.InputMapping.xml',
+    'prefix': 'org.gnome.Mutter.',
+  },
+  {
+    'name': 'meta-dbus-service-channel',
+    'interface': 'org.gnome.Mutter.ServiceChannel.xml',
+    'prefix': 'org.gnome.Mutter.',
+  },
+]
 
 if have_profiler
   mutter_sources += [
@@ -881,19 +896,14 @@ if have_profiler
     'core/meta-profiler.h',
   ]
 
-  if sysprof_dep.type_name() == 'pkgconfig'
-    sysprof_dbus_interfaces_dir = join_paths(sysprof_dep.get_pkgconfig_variable('datadir'), 'dbus-1', 'interfaces')
-  else
-    sysprof_dbus_interfaces_dir = join_paths(mutter_srcdir, 'subprojects', 'sysprof', 'src')
-  endif
-
-  sysprof3_dbus_file = join_paths(sysprof_dbus_interfaces_dir, 'org.gnome.Sysprof3.Profiler.xml')
-  dbus_sysprof3_profiler_built_sources = gnome.gdbus_codegen('meta-dbus-sysprof3-profiler',
-      sysprof3_dbus_file,
-      interface_prefix: 'org.gnome.',
-      namespace: 'MetaDBus',
-    )
-  mutter_built_sources += dbus_sysprof3_profiler_built_sources
+  dbus_interfaces += [
+    {
+      'name': 'meta-dbus-sysprof3-profiler',
+      'interface': 'org.gnome.Sysprof3.Profiler.xml',
+      'prefix': 'org.gnome.',
+      'directory': sysprof_dbus_interfaces_dir,
+    },
+  ]
 endif
 
 if have_native_backend
@@ -906,54 +916,85 @@ if have_native_backend
   )
   mutter_built_sources += default_modes_h
 
-  dbus_login1_built_sources = gnome.gdbus_codegen('meta-dbus-login1',
-    join_paths(dbus_interfaces_dir, 'org.freedesktop.login1.xml'),
-    interface_prefix: 'org.freedesktop.login1.',
-    namespace: 'MetaDbusLogin1',
-  )
-  mutter_built_sources += dbus_login1_built_sources
+  dbus_interfaces += [
+    {
+      'name': 'meta-dbus-login1',
+      'interface': 'org.freedesktop.login1.xml',
+      'prefix': 'org.freedesktop.',
+    },
+  ]
 endif
 
 if have_remote_desktop
-  dbus_remote_desktop_built_sources = gnome.gdbus_codegen('meta-dbus-remote-desktop',
-      join_paths(dbus_interfaces_dir, 'org.gnome.Mutter.RemoteDesktop.xml'),
-      interface_prefix: 'org.gnome.Mutter.',
-      namespace: 'MetaDBus',
-    )
-  mutter_built_sources += dbus_remote_desktop_built_sources
-
-  dbus_screen_cast_built_sources = gnome.gdbus_codegen('meta-dbus-screen-cast',
-      join_paths(dbus_interfaces_dir, 'org.gnome.Mutter.ScreenCast.xml'),
-      interface_prefix: 'org.gnome.Mutter.',
-      namespace: 'MetaDBus',
-    )
-  mutter_built_sources += dbus_screen_cast_built_sources
+  dbus_interfaces += [
+    {
+      'name': 'meta-dbus-remote-desktop',
+      'interface': 'org.gnome.Mutter.RemoteDesktop.xml',
+      'prefix': 'org.gnome.Mutter.',
+    },
+    {
+      'name': 'meta-dbus-screen-cast',
+      'interface': 'org.gnome.Mutter.ScreenCast.xml',
+      'prefix': 'org.gnome.Mutter.',
+    },
+  ]
 endif
 
-dbus_rtkit_built_sources = gnome.gdbus_codegen('meta-dbus-rtkit1',
-    join_paths(dbus_interfaces_dir, 'org.freedesktop.RealtimeKit1.xml'),
-    interface_prefix: 'org.freedesktop.',
-    namespace: 'MetaDbus',
-)
-mutter_built_sources += dbus_rtkit_built_sources
+dbus_interfaces += [
+  {
+    'name': 'meta-dbus-rtkit1',
+    'interface': 'org.freedesktop.RealtimeKit1.xml',
+    'prefix': 'org.freedesktop.',
+  },
+  {
+    'name': 'meta-dbus-gsd-color',
+    'interface': 'org.gnome.SettingsDaemon.Color.xml',
+    'prefix': 'org.gnome.',
+  },
+  {
+    'name': 'meta-dbus-gsd-power-screen',
+    'interface': 'org.gnome.SettingsDaemon.Power.Screen.xml',
+    'prefix': 'org.gnome.',
+  },
+]
 
-dbus_gsd_color_built_sources = gnome.gdbus_codegen('meta-dbus-gsd-color',
-    join_paths(dbus_interfaces_dir, 'org.gnome.SettingsDaemon.Color.xml'),
-    interface_prefix: 'org.gnome.',
-    namespace: 'MetaDbus',
-)
-mutter_built_sources += dbus_gsd_color_built_sources
+built_dbus_sources = {}
 
-dbus_gsd_power_screen_built_sources = gnome.gdbus_codegen('meta-dbus-gsd-power-screen',
-    join_paths(dbus_interfaces_dir, 'org.gnome.SettingsDaemon.Power.Screen.xml'),
-    interface_prefix: 'org.gnome.',
-    namespace: 'MetaDbus',
-)
-mutter_built_sources += dbus_gsd_power_screen_built_sources
+foreach dbus_interface: dbus_interfaces
+  name = dbus_interface['name']
+
+  interface = dbus_interface['interface']
+  if dbus_interface.has_key('directory')
+    directory = dbus_interface['directory']
+  else
+    directory = dbus_interfaces_dir
+  endif
+  interface_file = join_paths(directory, interface)
+
+  prefix = dbus_interface['prefix']
+
+  if dbus_interface.has_key('object_manager')
+    object_manager = dbus_interface['object_manager']
+  else
+    object_manager = false
+  endif
+
+  dbus_sources = gnome.gdbus_codegen(name, interface_file,
+    interface_prefix: prefix,
+    namespace: 'MetaDBus',
+    object_manager: object_manager,
+  )
+  built_dbus_sources += {
+    name: dbus_sources,
+  }
+  mutter_built_sources += dbus_sources
+endforeach
 
 wayland_protocol_server_headers = []
 wayland_protocol_client_headers = []
 wayland_protocol_sources = []
+
+wayland_protocol_files = {}
 
 if have_wayland
   # Format:
@@ -975,19 +1016,25 @@ if have_wayland
     ['viewporter', 'stable', ],
     ['xdg-activation', 'staging', 'v1', ],
     ['xdg-foreign', 'unstable', 'v1', ],
+    ['xdg-foreign', 'unstable', 'v2', ],
     ['xdg-output', 'unstable', 'v1', ],
     ['xdg-shell', 'stable', ],
     ['xwayland-keyboard-grab', 'unstable', 'v1', ],
   ]
   if have_wayland_eglstream
-    wayland_eglstream_protocols_dir = wayland_eglstream_protocols_dep.get_pkgconfig_variable('pkgdatadir')
+    wayland_eglstream_protocols_dir = wayland_eglstream_protocols_dep.get_variable('pkgdatadir')
     wayland_protocols += [
       ['wayland-eglstream-controller', 'third-party', wayland_eglstream_protocols_dir],
     ]
   endif
+  if have_xwayland
+    wayland_protocols += [
+      ['mutter-x11-interop', 'private', ],
+    ]
+  endif
 
   wayland_scanner = find_program('wayland-scanner')
-  protocols_dir = wayland_protocols_dep.get_pkgconfig_variable('pkgdatadir')
+  protocols_dir = wayland_protocols_dep.get_variable('pkgdatadir')
   assert(protocols_dir != '', 'Could not get pkgdatadir from wayland-protocols.pc')
 
   foreach p: wayland_protocols
@@ -1025,7 +1072,7 @@ if have_wayland
                                                   output_base))
     endif
 
-    wayland_protocol_server_headers += custom_target('@0@ server header'.format(output_base),
+    server_header = custom_target('@0@ server header'.format(output_base),
       input: input,
       output: '@0@-server-protocol.h'.format(output_base),
       command: [
@@ -1034,9 +1081,7 @@ if have_wayland
         '@INPUT@', '@OUTPUT@',
       ]
     )
-
-    # used by tests
-    wayland_protocol_client_headers += custom_target('@0@ client header'.format(output_base),
+    client_header = custom_target('@0@ client header'.format(output_base),
       input: input,
       output: '@0@-client-protocol.h'.format(output_base),
       command: [
@@ -1045,8 +1090,7 @@ if have_wayland
         '@INPUT@', '@OUTPUT@',
       ]
     )
-
-    wayland_protocol_sources += custom_target('@0@ source'.format(output_base),
+    protocol_code = custom_target('@0@ source'.format(output_base),
       input: input,
       output: '@0@-protocol.c'.format(output_base),
       command: [
@@ -1055,6 +1099,18 @@ if have_wayland
         '@INPUT@', '@OUTPUT@',
       ]
     )
+
+    wayland_protocol_files += {
+      protocol_name: {
+        'server-header': server_header,
+        'client-header': client_header,
+        'protocol-code': protocol_code,
+      },
+    }
+
+    wayland_protocol_server_headers += server_header
+    wayland_protocol_client_headers += client_header
+    wayland_protocol_sources += protocol_code
   endforeach
 endif
 
@@ -1150,8 +1206,6 @@ if have_introspection
     includes: [
       'GObject-2.0',
       'GDesktopEnums-3.0',
-      'Gdk-3.0',
-      'Gtk-3.0',
       'xlib-2.0',
       'xfixes-4.0',
       libmutter_cogl_gir[0],
@@ -1159,8 +1213,8 @@ if have_introspection
       libmutter_clutter_gir[0],
     ],
     dependencies: [
-      mutter_deps,
       libmutter_dep,
+      mutter_deps,
     ],
     extra_args: mutter_c_args + introspection_args,
     install_dir_gir: pkglibdir,
@@ -1185,6 +1239,9 @@ pkg.generate(libmutter,
 )
 
 subdir('compositor/plugins')
+if have_x11_client
+  subdir('frames')
+endif
 
 if have_core_tests
   subdir('tests')

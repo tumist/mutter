@@ -98,8 +98,13 @@ meta_selection_init (MetaSelection *selection)
 MetaSelection *
 meta_selection_new (MetaDisplay *display)
 {
-  return g_object_new (META_TYPE_SELECTION,
-                       NULL);
+  MetaSelection *selection;
+
+  selection = g_object_new (META_TYPE_SELECTION,
+                            NULL);
+  selection->display = display;
+
+  return selection;
 }
 
 /**
@@ -487,4 +492,10 @@ meta_selection_get_current_owner (MetaSelection     *selection,
   g_return_val_if_fail (selection_type < META_N_SELECTION_TYPES, NULL);
 
   return selection->owners[selection_type];
+}
+
+MetaDisplay *
+meta_selection_get_display (MetaSelection *selection)
+{
+  return selection->display;
 }

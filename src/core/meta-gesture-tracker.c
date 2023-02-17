@@ -227,17 +227,30 @@ static gboolean
 state_is_applicable (MetaSequenceState prev_state,
                      MetaSequenceState state)
 {
+
+  if (meta_is_wayland_compositor ())
+    {
+      /* Never reject sequences on Wayland, on Wayland we deliver touch events
+       * to clients right away and can cancel them later when accepting a
+       * sequence.
+       */
+      if (state == META_SEQUENCE_REJECTED)
+        return FALSE;
+    }
+  else
+    {
+      /* Sequences must be accepted/denied before PENDING_END */
+      if (prev_state == META_SEQUENCE_NONE &&
+          state == META_SEQUENCE_PENDING_END)
+        return FALSE;
+    }
+
   /* PENDING_END state is final */
   if (prev_state == META_SEQUENCE_PENDING_END)
     return FALSE;
 
   /* Don't allow reverting to none */
   if (state == META_SEQUENCE_NONE)
-    return FALSE;
-
-  /* Sequences must be accepted/denied before PENDING_END */
-  if (prev_state == META_SEQUENCE_NONE &&
-      state == META_SEQUENCE_PENDING_END)
     return FALSE;
 
   /* Make sequences stick to their accepted/denied state */
@@ -370,7 +383,8 @@ meta_gesture_tracker_track_stage (MetaGestureTracker *tracker,
     {
       GestureActionData data;
 
-      if (!CLUTTER_IS_GESTURE_ACTION (l->data))
+      if (!clutter_actor_meta_get_enabled (l->data) ||
+          !CLUTTER_IS_GESTURE_ACTION (l->data))
         continue;
 
       data.gesture = g_object_ref (l->data);
@@ -488,25 +502,8 @@ meta_gesture_tracker_handle_event (MetaGestureTracker *tracker,
       break;
     }
 
-  /* As soon as a sequence is accepted, we replay it to
-   * the stage as a captured event, and make sure it's never
-   * propagated anywhere else. Since ClutterGestureAction does
-   * all its event handling from a captured-event handler on
-   * the stage, this effectively acts as a "sequence grab" on
-   * gesture actions.
-   *
-   * Sequences that aren't (yet or never) in an accepted state
-   * will go through, these events will get processed through
-   * the compositor, and eventually through clutter, still
-   * triggering the gestures capturing events on the stage, and
-   * possibly resulting in MetaSequenceState changes.
-   */
   if (state == META_SEQUENCE_ACCEPTED)
-    {
-      clutter_actor_event (CLUTTER_ACTOR (clutter_event_get_stage (event)),
-                           event, TRUE);
-      return TRUE;
-    }
+    return TRUE;
 
   return FALSE;
 }

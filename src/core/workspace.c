@@ -35,17 +35,16 @@
 
 #include "meta/workspace.h"
 
-#include <X11/Xatom.h>
 #include <string.h>
 
 #include "backends/meta-backend-private.h"
 #include "backends/meta-cursor-tracker-private.h"
 #include "backends/meta-logical-monitor.h"
 #include "cogl/cogl.h"
+#include "compositor/compositor-private.h"
 #include "core/boxes-private.h"
 #include "core/meta-workspace-manager-private.h"
 #include "core/workspace-private.h"
-#include "meta/compositor.h"
 #include "meta/meta-x11-errors.h"
 #include "meta/prefs.h"
 #include "x11/meta-x11-display-private.h"
@@ -481,30 +480,35 @@ meta_workspace_queue_calc_showing  (MetaWorkspace *workspace)
 }
 
 static void
-workspace_switch_sound(MetaWorkspace *from,
-                       MetaWorkspace *to)
+workspace_switch_sound (MetaWorkspace *from,
+                        MetaWorkspace *to)
 {
   MetaSoundPlayer *player;
   MetaWorkspaceLayout layout;
-  int i, nw, x, y, fi, ti;
-  const char *e;
+  int n_workspaces;
+  int from_idx, to_idx;
+  int i;
+  int x, y;
+  const char *sound_name;
 
-  nw = meta_workspace_manager_get_n_workspaces (from->manager);
-  fi = meta_workspace_index(from);
-  ti = meta_workspace_index(to);
+  n_workspaces = meta_workspace_manager_get_n_workspaces (from->manager);
+  from_idx = meta_workspace_index(from);
+  to_idx = meta_workspace_index(to);
 
   meta_workspace_manager_calc_workspace_layout (from->manager,
-                                                nw,
-                                                fi,
+                                                n_workspaces,
+                                                from_idx,
                                                 &layout);
 
-  for (i = 0; i < nw; i++)
-    if (layout.grid[i] == ti)
-      break;
-
-  if (i >= nw)
+  for (i = 0; i < n_workspaces; i++)
     {
-      meta_bug("Failed to find destination workspace in layout");
+      if (layout.grid[i] == to_idx)
+        break;
+    }
+
+  if (i >= n_workspaces)
+    {
+      g_warning ("Failed to find destination workspace in layout");
       goto finish;
     }
 
@@ -519,21 +523,23 @@ workspace_switch_sound(MetaWorkspace *from,
      movement but not such much vertical movement. */
 
   if (x < layout.current_col)
-    e = "desktop-switch-left";
+    sound_name = "desktop-switch-left";
   else if (x > layout.current_col)
-    e = "desktop-switch-right";
+    sound_name = "desktop-switch-right";
   else if (y < layout.current_row)
-    e = "desktop-switch-up";
+    sound_name = "desktop-switch-up";
   else if (y > layout.current_row)
-    e = "desktop-switch-down";
+    sound_name = "desktop-switch-down";
   else
     {
-      meta_bug("Uh, origin and destination workspace at same logic position!");
+      g_warn_if_reached ();
       goto finish;
     }
 
   player = meta_display_get_sound_player (from->display);
-  meta_sound_player_play_from_theme (player, e, _("Workspace switched"), NULL);
+  meta_sound_player_play_from_theme (player,
+                                     sound_name, _("Workspace switched"),
+                                     NULL);
 
  finish:
   meta_workspace_manager_free_workspace_layout (&layout);
@@ -569,6 +575,10 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
   MetaWorkspaceLayout layout1, layout2;
   gint num_workspaces, current_space, new_space;
   MetaMotionDirection direction;
+  MetaWindowDrag *window_drag;
+
+  g_return_if_fail (META_IS_WORKSPACE (workspace));
+  g_return_if_fail (meta_workspace_index (workspace) != -1);
 
   meta_verbose ("Activating workspace %d",
                 meta_workspace_index (workspace));
@@ -580,9 +590,13 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
       return;
     }
 
+  window_drag =
+    meta_compositor_get_current_window_drag (workspace->display->compositor);
+
   /* Free any cached pointers to the workspaces's edges from
    * a current resize or move operation */
-  meta_display_cleanup_edges (workspace->display);
+  if (window_drag)
+    meta_window_drag_update_edges (window_drag);
 
   if (workspace->manager->active_workspace)
     workspace_switch_sound (workspace->manager->active_workspace, workspace);
@@ -609,8 +623,9 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
     g_signal_emit_by_name (workspace->manager, "showing-desktop-changed");
 
   move_window = NULL;
-  if (meta_grab_op_is_moving (workspace->display->grab_op))
-    move_window = workspace->display->grab_window;
+  if (window_drag &&
+      meta_grab_op_is_moving (meta_window_drag_get_grab_op (window_drag)))
+    move_window = meta_window_drag_get_window (window_drag);
 
   if (move_window != NULL)
     {
@@ -774,6 +789,7 @@ meta_workspace_list_windows (MetaWorkspace *workspace)
 void
 meta_workspace_invalidate_work_area (MetaWorkspace *workspace)
 {
+  MetaWindowDrag *window_drag;
   GList *windows, *l;
 
   if (workspace->work_areas_invalid)
@@ -788,10 +804,14 @@ meta_workspace_invalidate_work_area (MetaWorkspace *workspace)
               "Invalidating work area for workspace %d",
               meta_workspace_index (workspace));
 
+  window_drag =
+    meta_compositor_get_current_window_drag (workspace->display->compositor);
+
   /* If we are in the middle of a resize or move operation, we
    * might have cached pointers to the workspace's edges */
-  if (workspace == workspace->manager->active_workspace)
-    meta_display_cleanup_edges (workspace->display);
+  if (window_drag &&
+      workspace == workspace->manager->active_workspace)
+    meta_window_drag_update_edges (window_drag);
 
   meta_workspace_clear_logical_monitor_data (workspace);
 
@@ -840,7 +860,8 @@ copy_strut_list(GSList *original)
 static void
 ensure_work_areas_validated (MetaWorkspace *workspace)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (workspace->display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   GList *windows;
@@ -1060,7 +1081,8 @@ void
 meta_workspace_set_builtin_struts (MetaWorkspace *workspace,
                                    GSList        *struts)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (workspace->display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaDisplay *display = workspace->display;
@@ -1153,7 +1175,8 @@ meta_workspace_get_work_area_for_monitor (MetaWorkspace *workspace,
                                           int            which_monitor,
                                           MetaRectangle *area)
 {
-  MetaBackend *backend = meta_get_backend();
+  MetaContext *context = meta_display_get_context (workspace->display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;
@@ -1316,14 +1339,39 @@ meta_workspace_get_name (MetaWorkspace *workspace)
   return meta_prefs_get_workspace_name (meta_workspace_index (workspace));
 }
 
+static MetaWindow *
+get_focused_workspace_window (MetaWorkspace *workspace)
+{
+  g_autoptr (GList) windows = NULL;
+  GList *l;
+
+  windows = meta_workspace_list_windows (workspace);
+
+  for (l = windows; l != NULL; l = l->next)
+    {
+      MetaWindow *window = l->data;
+
+      if (meta_window_has_focus (window))
+        return window;
+    }
+
+  return NULL;
+}
+
 void
 meta_workspace_focus_default_window (MetaWorkspace *workspace,
                                      MetaWindow    *not_this_one,
                                      guint32        timestamp)
 {
+  MetaWindow *focus;
+
   if (timestamp == META_CURRENT_TIME)
     meta_warning ("META_CURRENT_TIME used to choose focus window; "
                   "focus window may not be correct.");
+
+  focus = get_focused_workspace_window (workspace);
+  if (focus != NULL && focus != not_this_one)
+    return;
 
   if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK ||
       !workspace->display->mouse_mode)
@@ -1515,7 +1563,8 @@ static MetaWindow *
 get_pointer_window (MetaWorkspace *workspace,
                     MetaWindow    *not_this_one)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = meta_display_get_context (workspace->display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaCursorTracker *cursor_tracker = meta_backend_get_cursor_tracker (backend);
   graphene_point_t point;
 
@@ -1598,7 +1647,8 @@ focus_ancestor_or_mru_window (MetaWorkspace *workspace,
           if (try_to_set_focus_and_check (ancestor, not_this_one, timestamp))
             {
               /* Also raise the window if in click-to-focus */
-              if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK)
+              if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK &&
+                  meta_prefs_get_raise_on_click ())
                 meta_window_raise (ancestor);
 
               return;
@@ -1615,7 +1665,8 @@ focus_ancestor_or_mru_window (MetaWorkspace *workspace,
       if (try_to_set_focus_and_check (window, not_this_one, timestamp))
         {
           /* Also raise the window if in click-to-focus */
-          if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK)
+          if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK &&
+              meta_prefs_get_raise_on_click ())
             meta_window_raise (window);
 
           return;

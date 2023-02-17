@@ -4,12 +4,23 @@
 #include <glib-object.h>
 #include <clutter/clutter.h>
 
+#include "backends/meta-monitor-manager-private.h"
+#include "backends/meta-virtual-monitor.h"
 #include "compositor/meta-plugin-manager.h"
 #include "core/meta-context-private.h"
+#include "tests/meta-test-utils.h"
 
-typedef struct {
-  gpointer dummy_field;
+typedef struct
+{
+  MetaContext *context;
 } ClutterTestEnvironment;
+
+struct _ClutterTestActor
+{
+  ClutterActor parent;
+};
+
+G_DEFINE_TYPE (ClutterTestActor, clutter_test_actor, CLUTTER_TYPE_ACTOR)
 
 static ClutterTestEnvironment *test_environ = NULL;
 
@@ -37,8 +48,6 @@ log_func (const gchar    *log_domain,
  * @argv: (inout) (array length=argc) (nullable): array of arguments
  *
  * Initializes the Clutter test environment.
- *
- * Since: 1.18
  */
 void
 clutter_test_init (int    *argc,
@@ -46,12 +55,13 @@ clutter_test_init (int    *argc,
 {
   MetaContext *context;
 
-  context = meta_create_test_context (META_CONTEXT_TEST_TYPE_NESTED,
+  context = meta_create_test_context (META_CONTEXT_TEST_TYPE_HEADLESS,
                                       META_CONTEXT_TEST_FLAG_NO_X11);
   g_assert (meta_context_configure (context, argc, argv, NULL));
   g_assert (meta_context_setup (context, NULL));
 
   test_environ = g_new0 (ClutterTestEnvironment, 1);
+  test_environ->context = context;
 
   g_assert (meta_context_start (context, NULL));
 
@@ -64,15 +74,20 @@ clutter_test_init (int    *argc,
  * Retrieves the #ClutterStage used for testing.
  *
  * Return value: (transfer none): the stage used for testing
- *
- * Since: 1.18
  */
 ClutterActor *
 clutter_test_get_stage (void)
 {
-  MetaBackend *backend = meta_get_backend ();
+  MetaContext *context = test_environ->context;
+  MetaBackend *backend = meta_context_get_backend (context);
 
   return meta_backend_get_stage (backend);
+}
+
+void
+clutter_test_flush_input (void)
+{
+  meta_flush_input (test_environ->context);
 }
 
 typedef struct {
@@ -149,8 +164,6 @@ clutter_test_func_wrapper (gconstpointer data_)
  * Adds a test unit to the Clutter test environment.
  *
  * See also: g_test_add()
- *
- * Since: 1.18
  */
 void
 clutter_test_add (const char *test_path,
@@ -168,8 +181,6 @@ clutter_test_add (const char *test_path,
  * Adds a test unit to the Clutter test environment.
  *
  * See also: g_test_add_data_func()
- *
- * Since: 1.18
  */
 void
 clutter_test_add_data (const char    *test_path,
@@ -189,8 +200,6 @@ clutter_test_add_data (const char    *test_path,
  * Adds a test unit to the Clutter test environment.
  *
  * See also: g_test_add_data_func_full()
- *
- * Since: 1.18
  */
 void
 clutter_test_add_data_full (const char     *test_path,
@@ -245,18 +254,34 @@ clutter_test_add_data_full (const char     *test_path,
  * ]|
  *
  * Return value: the exit code for the test suite
- *
- * Since: 1.18
  */
 int
 clutter_test_run (void)
 {
+  MetaBackend *backend = meta_context_get_backend (test_environ->context);
+  MetaMonitorManager *monitor_manager = meta_backend_get_monitor_manager (backend);
+  MetaVirtualMonitor *virtual_monitor;
+  g_autoptr (MetaVirtualMonitorInfo) monitor_info = NULL;
+  g_autoptr (GError) error = NULL;
   int res;
 
-  g_assert (test_environ != NULL);
-  
+  monitor_info = meta_virtual_monitor_info_new (800, 600, 10.0,
+                                                "MetaTestVendor",
+                                                "ClutterTestMonitor",
+                                                "0x123");
+  virtual_monitor = meta_monitor_manager_create_virtual_monitor (monitor_manager,
+                                                                 monitor_info,
+                                                                 &error);
+  if (!virtual_monitor)
+    g_error ("Failed to create virtual monitor: %s", error->message);
+
+  meta_monitor_manager_reload (monitor_manager);
+
   res = g_test_run ();
 
+  g_object_unref (virtual_monitor);
+
+  g_clear_object (&test_environ->context);
   g_free (test_environ);
 
   return res;
@@ -352,8 +377,6 @@ on_key_press_event (ClutterActor *stage,
  * actor found there with the given @actor.
  *
  * Returns: %TRUE if the actor at the given coordinates matches
- *
- * Since: 1.18
  */
 gboolean
 clutter_test_check_actor_at_point (ClutterActor            *stage,
@@ -413,8 +436,6 @@ clutter_test_check_actor_at_point (ClutterActor            *stage,
  * component of @color and @result is ignored.
  *
  * Returns: %TRUE if the colors match
- *
- * Since: 1.18
  */
 gboolean
 clutter_test_check_color_at_point (ClutterActor           *stage,
@@ -470,4 +491,32 @@ clutter_test_check_color_at_point (ClutterActor           *stage,
   g_free (data);
 
   return retval;
+}
+
+static void
+test_actor_paint (ClutterActor        *actor,
+                  ClutterPaintContext *paint_context)
+{
+  g_signal_emit_by_name (actor, "paint", paint_context);
+}
+
+static void
+clutter_test_actor_class_init (ClutterTestActorClass *klass)
+{
+  ClutterActorClass *actor_class = CLUTTER_ACTOR_CLASS (klass);
+
+  actor_class->paint = test_actor_paint;
+
+  g_signal_new ("paint",
+                G_TYPE_FROM_CLASS (klass),
+                G_SIGNAL_RUN_LAST,
+                0,
+                NULL, NULL, NULL,
+                G_TYPE_NONE, 1,
+                CLUTTER_TYPE_PAINT_CONTEXT);
+}
+
+static void
+clutter_test_actor_init (ClutterTestActor *test_actor)
+{
 }

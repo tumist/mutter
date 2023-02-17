@@ -36,6 +36,22 @@ typedef struct _WaylandDisplay
   GHashTable *properties;
 } WaylandDisplay;
 
+typedef struct _WaylandSurface
+{
+  WaylandDisplay *display;
+
+  struct wl_surface *wl_surface;
+  struct xdg_surface *xdg_surface;
+  struct xdg_toplevel *xdg_toplevel;
+
+  int default_width;
+  int default_height;
+  int width;
+  int height;
+
+  uint32_t color;
+} WaylandSurface;
+
 G_DECLARE_FINAL_TYPE (WaylandDisplay, wayland_display,
                       WAYLAND, DISPLAY,
                       GObject)
@@ -43,6 +59,17 @@ G_DECLARE_FINAL_TYPE (WaylandDisplay, wayland_display,
 int create_anonymous_file (off_t size);
 
 WaylandDisplay * wayland_display_new (WaylandDisplayCapabilities capabilities);
+
+WaylandDisplay * wayland_display_new_full (WaylandDisplayCapabilities  capabilities,
+                                           struct wl_display          *wayland_display);
+
+WaylandSurface * wayland_surface_new (WaylandDisplay *display,
+                                      const char     *title,
+                                      int             default_width,
+                                      int             default_height,
+                                      uint32_t        color);
+
+void wayland_surface_free (WaylandSurface *surface);
 
 gboolean create_shm_buffer (WaylandDisplay    *display,
                             int                width,
@@ -65,5 +92,8 @@ void wait_for_effects_completed (WaylandDisplay    *display,
 
 void wait_for_view_verified (WaylandDisplay *display,
                              int             sequence);
+
+void wait_for_sync_event (WaylandDisplay *display,
+                          uint32_t        serial);
 
 #endif /* WAYLAND_TEST_CLIENT_UTILS_H */

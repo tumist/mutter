@@ -21,7 +21,6 @@
 
 #include "config.h"
 
-#include <gdk/gdk.h>
 #include <math.h>
 #include <string.h>
 
@@ -375,16 +374,19 @@ init_surface_actor (MetaWindowActor *self)
   MetaWindowActorPrivate *priv =
     meta_window_actor_get_instance_private (self);
   MetaWindow *window = priv->window;
-  MetaSurfaceActor *surface_actor;
+  MetaSurfaceActor *surface_actor = NULL;
 
   if (!meta_is_wayland_compositor ())
-    surface_actor = meta_surface_actor_x11_new (window);
+    {
+      surface_actor = meta_surface_actor_x11_new (window);
+    }
 #ifdef HAVE_WAYLAND
-  else if (window->surface)
-    surface_actor = meta_wayland_surface_get_actor (window->surface);
-#endif
   else
-    surface_actor = NULL;
+    {
+      MetaWaylandSurface *surface = meta_window_get_wayland_surface (window);
+      surface_actor = surface ? meta_wayland_surface_get_actor (surface) : NULL;
+    }
+#endif
 
   if (surface_actor)
     meta_window_actor_assign_surface_actor (self, surface_actor);
@@ -509,7 +511,7 @@ meta_window_actor_get_property (GObject      *object,
  *
  * Gets the #MetaWindow object that the the #MetaWindowActor is displaying
  *
- * Return value: (transfer none): the displayed #MetaWindow
+ * Return value: (transfer none) (nullable): the displayed #MetaWindow
  */
 MetaWindow *
 meta_window_actor_get_meta_window (MetaWindowActor *self)
@@ -527,7 +529,7 @@ meta_window_actor_get_meta_window (MetaWindowActor *self)
  * Gets the ClutterActor that is used to display the contents of the window,
  * or NULL if no texture is shown yet, because the window is not mapped.
  *
- * Return value: (transfer none): the #ClutterActor for the contents
+ * Return value: (transfer none) (nullable): the #ClutterActor for the contents
  */
 MetaShapedTexture *
 meta_window_actor_get_texture (MetaWindowActor *self)
@@ -548,7 +550,8 @@ meta_window_actor_get_texture (MetaWindowActor *self)
  * Gets the MetaSurfaceActor that draws the content of this window,
  * or NULL if there is no surface yet associated with this window.
  *
- * Return value: (transfer none): the #MetaSurfaceActor for the contents
+ * Return value: (transfer none) (nullable): the #MetaSurfaceActor for the
+ * contents
  */
 MetaSurfaceActor *
 meta_window_actor_get_surface (MetaWindowActor *self)
@@ -977,47 +980,6 @@ meta_window_actor_size_change (MetaWindowActor    *self,
     priv->size_change_in_progress--;
 }
 
-#if 0
-/* Print out a region; useful for debugging */
-static void
-print_region (cairo_region_t *region)
-{
-  int n_rects;
-  int i;
-
-  n_rects = cairo_region_num_rectangles (region);
-  g_print ("[");
-  for (i = 0; i < n_rects; i++)
-    {
-      cairo_rectangle_int_t rect;
-      cairo_region_get_rectangle (region, i, &rect);
-      g_print ("+%d+%dx%dx%d ",
-               rect.x, rect.y, rect.width, rect.height);
-    }
-  g_print ("]\n");
-}
-#endif
-
-#if 0
-/* Dump a region to a PNG file; useful for debugging */
-static void
-see_region (cairo_region_t *region,
-            int             width,
-            int             height,
-            char           *filename)
-{
-  cairo_surface_t *surface = cairo_image_surface_create (CAIRO_FORMAT_A8, width, height);
-  cairo_t *cr = cairo_create (surface);
-
-  gdk_cairo_region (cr, region);
-  cairo_fill (cr);
-
-  cairo_surface_write_to_png (surface, filename);
-  cairo_destroy (cr);
-  cairo_surface_destroy (surface);
-}
-#endif
-
 void
 meta_window_actor_sync_visibility (MetaWindowActor *self)
 {
@@ -1218,15 +1180,23 @@ meta_window_actor_transform_cursor_position (MetaScreenCastWindow *screen_cast_w
       meta_cursor_sprite_get_cogl_texture (cursor_sprite) &&
       out_cursor_scale)
     {
-      MetaShapedTexture *stex;
-      double texture_scale;
+      MetaDisplay *display = meta_compositor_get_display (priv->compositor);
+      MetaContext *context = meta_display_get_context (display);
+      MetaBackend *backend = meta_context_get_backend (context);
+      MetaLogicalMonitor *logical_monitor;
+      float view_scale;
       float cursor_texture_scale;
 
-      stex = meta_surface_actor_get_texture (priv->surface);
-      texture_scale = meta_shaped_texture_get_buffer_scale (stex);
+      logical_monitor = meta_window_get_main_logical_monitor (window);
+
+      if (meta_backend_is_stage_views_scaled (backend))
+        view_scale = meta_logical_monitor_get_scale (logical_monitor);
+      else
+        view_scale = 1.0;
+
       cursor_texture_scale = meta_cursor_sprite_get_texture_scale (cursor_sprite);
 
-      *out_cursor_scale = texture_scale / cursor_texture_scale;
+      *out_cursor_scale = view_scale * cursor_texture_scale;
     }
 
   if (cursor_sprite &&
@@ -1239,11 +1209,18 @@ meta_window_actor_transform_cursor_position (MetaScreenCastWindow *screen_cast_w
 
   if (out_relative_cursor_position)
     {
+      float resource_scale;
+
       clutter_actor_transform_stage_point (CLUTTER_ACTOR (priv->surface),
                                            cursor_position->x,
                                            cursor_position->y,
                                            &out_relative_cursor_position->x,
                                            &out_relative_cursor_position->y);
+
+      resource_scale =
+        clutter_actor_get_resource_scale (CLUTTER_ACTOR (window_actor));
+      out_relative_cursor_position->x *= resource_scale;
+      out_relative_cursor_position->y *= resource_scale;
     }
 
   return TRUE;
@@ -1420,8 +1397,11 @@ create_framebuffer_from_window_actor (MetaWindowActor  *self,
                                       MetaRectangle    *clip,
                                       GError          **error)
 {
+  MetaWindowActorPrivate *priv = meta_window_actor_get_instance_private (self);
   ClutterActor *actor = CLUTTER_ACTOR (self);
-  MetaBackend *backend = meta_get_backend ();
+  MetaDisplay *display = meta_compositor_get_display (priv->compositor);
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
   CoglContext *cogl_context =
     clutter_backend_get_cogl_context (clutter_backend);

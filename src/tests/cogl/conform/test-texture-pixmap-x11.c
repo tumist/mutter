@@ -140,9 +140,10 @@ check_paint (TestState *state, int x, int y, int scale)
 #define FRAME_COUNT_UPDATED 8
 
 static void
-on_after_paint (ClutterActor        *actor,
-                ClutterPaintContext *paint_context,
-                TestState           *state)
+on_after_paint (ClutterActor     *actor,
+                ClutterStageView *view,
+                ClutterFrame     *frame,
+                TestState        *state)
 {
   CoglPipeline *pipeline;
 
@@ -151,7 +152,7 @@ on_after_paint (ClutterActor        *actor,
   if (state->frame_count == FRAME_COUNT_MIPMAP)
     {
       const CoglPipelineFilter min_filter =
-        COGL_PIPELINE_FILTER_NEAREST_MIPMAP_NEAREST;;
+        COGL_PIPELINE_FILTER_NEAREST_MIPMAP_NEAREST;
       cogl_pipeline_set_layer_filters (pipeline, 0,
                                        min_filter,
                                        COGL_PIPELINE_FILTER_NEAREST);

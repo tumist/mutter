@@ -21,6 +21,7 @@
 
 #include <gio/gio.h>
 
+#include "core/display-private.h"
 #include "wayland/meta-wayland.h"
 
 struct _MetaWaylandTestClient
@@ -42,7 +43,8 @@ get_test_client_path (const char *test_client_name)
 }
 
 MetaWaylandTestClient *
-meta_wayland_test_client_new (const char *test_client_name)
+meta_wayland_test_client_new (MetaContext *context,
+                              const char  *test_client_name)
 {
   MetaWaylandCompositor *compositor;
   const char *wayland_display_name;
@@ -52,7 +54,7 @@ meta_wayland_test_client_new (const char *test_client_name)
   GError *error = NULL;
   MetaWaylandTestClient *wayland_test_client;
 
-  compositor = meta_wayland_compositor_get_default ();
+  compositor = meta_context_get_wayland_compositor (context);
   wayland_display_name = meta_wayland_get_wayland_display_name (compositor);
   test_client_path = get_test_client_path (test_client_name);
 
@@ -112,4 +114,40 @@ meta_wayland_test_client_finish (MetaWaylandTestClient *wayland_test_client)
   g_free (wayland_test_client->path);
   g_object_unref (wayland_test_client->subprocess);
   g_free (wayland_test_client);
+}
+
+MetaWindow *
+meta_find_client_window (MetaContext *context,
+                         const char  *title)
+{
+  MetaDisplay *display = meta_context_get_display (context);
+  g_autoptr (GSList) windows = NULL;
+  GSList *l;
+
+  windows = meta_display_list_windows (display, META_LIST_DEFAULT);
+  for (l = windows; l; l = l->next)
+    {
+      MetaWindow *window = l->data;
+
+      if (g_strcmp0 (meta_window_get_title (window), title) == 0)
+        return window;
+    }
+
+  return NULL;
+}
+
+MetaWindow *
+meta_wait_for_client_window (MetaContext *context,
+                             const char  *title)
+{
+  while (TRUE)
+    {
+      MetaWindow *window;
+
+      window = meta_find_client_window (context, title);
+      if (window)
+        return window;
+
+      g_main_context_iteration (NULL, TRUE);
+    }
 }

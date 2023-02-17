@@ -7,7 +7,6 @@ missing
 50-mutter-navigation.xml
 50-mutter-system.xml
 50-mutter-windows.xml
-mutter.desktop
 mutter-wayland.desktop
 *.o
 *.a
@@ -100,3 +99,4 @@ doc/reference/meta.types
 **/tags.*
 build/
 subprojects/sysprof/
+__pycache__/

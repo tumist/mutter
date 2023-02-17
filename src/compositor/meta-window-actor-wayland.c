@@ -197,7 +197,7 @@ meta_window_actor_wayland_rebuild_surface_tree (MetaWindowActor *actor)
     meta_window_actor_get_surface (actor);
   MetaWaylandSurface *surface = meta_surface_actor_wayland_get_surface (
     META_SURFACE_ACTOR_WAYLAND (surface_actor));
-  GNode *root_node = surface->subsurface_branch_node;
+  GNode *root_node = surface->output_state.subsurface_branch_node;
   g_autoptr (GList) surface_actors = NULL;
   g_autoptr (GList) children = NULL;
   GList *l;
@@ -298,23 +298,43 @@ meta_window_actor_wayland_get_scanout_candidate (MetaWindowActor *actor)
   MetaWindowActorWayland *self = META_WINDOW_ACTOR_WAYLAND (actor);
   ClutterActor *surface_container = CLUTTER_ACTOR (self->surface_container);
   ClutterActor *child_actor;
-  MetaSurfaceActor *topmost_surface_actor;
+  ClutterActorIter iter;
+  MetaSurfaceActor *topmost_surface_actor = NULL;
   MetaWindow *window;
+  int n_mapped_surfaces = 0;
 
   if (clutter_actor_get_last_child (CLUTTER_ACTOR (self)) != surface_container)
-    return NULL;
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "Top child of window-actor not a surface");
+      return NULL;
+    }
 
-  child_actor = clutter_actor_get_last_child (surface_container);
-  if (!child_actor)
-    return NULL;
+  clutter_actor_iter_init (&iter, surface_container);
+  while (clutter_actor_iter_next (&iter, &child_actor))
+    {
+      if (!clutter_actor_is_mapped (child_actor))
+        continue;
 
-  topmost_surface_actor = META_SURFACE_ACTOR (child_actor);
+      topmost_surface_actor = META_SURFACE_ACTOR (child_actor);
+      n_mapped_surfaces++;
+    }
+
+  if (!topmost_surface_actor)
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "No surface-actor for window-actor");
+      return NULL;
+    }
 
   window = meta_window_actor_get_meta_window (actor);
   if (!meta_surface_actor_is_opaque (topmost_surface_actor) &&
-      !(meta_window_is_fullscreen (window) &&
-        clutter_actor_get_n_children (surface_container) == 1))
-    return NULL;
+      !(meta_window_is_fullscreen (window) && n_mapped_surfaces == 1))
+    {
+      meta_topic (META_DEBUG_RENDER,
+                  "Window-actor is not opaque");
+      return NULL;
+    }
 
   return topmost_surface_actor;
 }

@@ -28,10 +28,12 @@
 #include "core/window-private.h"
 #include "meta/compositor.h"
 #include "meta/window.h"
+#include "x11/meta-sync-counter.h"
 
 G_BEGIN_DECLS
 
 #define META_TYPE_WINDOW_X11 (meta_window_x11_get_type())
+META_EXPORT_TEST
 G_DECLARE_DERIVABLE_TYPE (MetaWindowX11, meta_window_x11,
                           META, WINDOW_X11, MetaWindow)
 
@@ -61,8 +63,6 @@ void meta_window_x11_set_allowed_actions_hint    (MetaWindow *window);
 
 void meta_window_x11_create_sync_request_alarm   (MetaWindow *window);
 void meta_window_x11_destroy_sync_request_alarm  (MetaWindow *window);
-void meta_window_x11_update_sync_request_counter (MetaWindow *window,
-                                                  gint64      new_counter_value);
 
 void meta_window_x11_update_input_region         (MetaWindow *window);
 void meta_window_x11_update_shape_region         (MetaWindow *window);
@@ -79,6 +79,7 @@ gboolean meta_window_x11_client_message          (MetaWindow *window,
 void     meta_window_x11_configure_notify        (MetaWindow      *window,
                                                   XConfigureEvent *event);
 
+META_EXPORT_TEST
 Window   meta_window_x11_get_toplevel_xwindow    (MetaWindow *window);
 
 void     meta_window_x11_freeze_commits          (MetaWindow *window);
@@ -99,5 +100,15 @@ void meta_window_x11_surface_rect_to_client_rect (MetaWindow    *window,
 MetaRectangle meta_window_x11_get_client_rect    (MetaWindowX11 *window_x11);
 
 gboolean meta_window_x11_can_unredirect          (MetaWindowX11 *window_x11);
+
+MetaSyncCounter * meta_window_x11_get_sync_counter (MetaWindow *window);
+
+gboolean meta_window_x11_has_active_sync_alarms (MetaWindow *window);
+
+gboolean meta_window_x11_is_awaiting_sync_response (MetaWindow *window);
+
+void meta_window_x11_check_update_resize (MetaWindow *window);
+
+gboolean meta_window_x11_has_alpha_channel (MetaWindow *window);
 
 #endif
