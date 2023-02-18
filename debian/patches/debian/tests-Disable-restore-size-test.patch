@@ -12,10 +12,10 @@ Forwarded: not-needed
  1 file changed, 1 deletion(-)
 
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index 6978a02..53401d4 100644
+index d414f10..a4bb2e7 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
-@@ -427,7 +427,6 @@ stacking_tests = [
+@@ -505,7 +505,6 @@ stacking_tests = [
    'override-redirect',
    'set-override-redirect-parent',
    'set-parent-exported',
