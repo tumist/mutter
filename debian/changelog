@@ -1,3 +1,12 @@
+mutter (44~beta-2) experimental; urgency=medium
+
+  * Add patch to keep using glib 2.74 for now
+  * debian/control.in: Build-Depend on glib 2.74.0
+  * Have libmutter-12-0 depend on the required mutter-common-bin
+    (Closes: #1031688)
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 20 Feb 2023 11:33:16 -0500
+
 mutter (44~beta-1) experimental; urgency=medium
 
   * New upstream release
