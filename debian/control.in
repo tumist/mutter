@@ -91,7 +91,6 @@ Depends: adwaita-icon-theme,
          gnome-settings-daemon-common,
          gsettings-desktop-schemas (>= 40~alpha),
          mutter-common (>= ${source:Version}),
-         mutter-common-bin (= ${binary:Version}),
          zenity,
          ${misc:Depends},
          ${shlibs:Depends}
@@ -169,6 +168,7 @@ Pre-Depends: ${misc:Pre-Depends}
 Depends: adwaita-icon-theme,
          gsettings-desktop-schemas (>= 40~alpha),
          mutter-common (>= ${source:Version}),
+         mutter-common-bin (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Breaks: apparmor (<< 2.13.3-5~),
