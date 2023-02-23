@@ -1,3 +1,12 @@
+mutter (44~beta-3) experimental; urgency=medium
+
+  * debian/control.in: Fix misspelling Replaces
+  * Mark 2 more tests as flaky for now
+  * Ignore test failures on s390x for now
+  * Cherry-pick a focus fix
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Wed, 22 Feb 2023 20:34:02 -0500
+
 mutter (44~beta-2) experimental; urgency=medium
 
   * Add patch to keep using glib 2.74 for now
