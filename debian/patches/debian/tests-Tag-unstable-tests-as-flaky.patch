@@ -8,9 +8,9 @@ This is Debian-only: for upstream these tests should be fixed.
 
 Forwarded: not-needed
 ---
- src/tests/clutter/conform/meson.build | 6 +++++-
- src/tests/meson.build                 | 4 +++-
- 2 files changed, 8 insertions(+), 2 deletions(-)
+ src/tests/clutter/conform/meson.build |  6 +++++-
+ src/tests/meson.build                 | 23 ++++++++++++++++++++---
+ 2 files changed, 25 insertions(+), 4 deletions(-)
 
 diff --git a/src/tests/clutter/conform/meson.build b/src/tests/clutter/conform/meson.build
 index b10299e..b2e4ef2 100644
@@ -31,7 +31,7 @@ index b10299e..b2e4ef2 100644
      is_parallel: false,
    )
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index d0a2b1f..d414f10 100644
+index d0a2b1f..5ee9924 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
 @@ -253,6 +253,7 @@ test_cases += [
@@ -52,3 +52,43 @@ index d0a2b1f..d414f10 100644
        env: test_env,
        is_parallel: false,
        timeout: 60,
+@@ -485,7 +487,6 @@ if have_native_tests
+ endif
+ 
+ stacking_tests = [
+-  'basic-x11',
+   'basic-wayland',
+   'client-side-decorated',
+   'closed-transient',
+@@ -497,7 +498,6 @@ stacking_tests = [
+   'closed-transient-no-input-parents',
+   'closed-transient-no-input-parents-queued-default-focus-destroyed',
+   'closed-transient-only-take-focus-parents',
+-  'minimized',
+   'mixed-windows',
+   'set-parent',
+   'override-redirect',
+@@ -522,6 +522,23 @@ stacking_tests = [
+   'workspace-only-on-primary-focus',
+ ]
+ 
++flaky_stacking_tests = [
++  'basic-x11',
++  'minimized',
++]
++
++foreach flaky_stacking_test: flaky_stacking_tests
++  test(flaky_stacking_test, test_runner,
++    suite: ['core', 'mutter/stacking', 'flaky'],
++    env: test_env,
++    args: [
++      files(join_paths('stacking', flaky_stacking_test + '.metatest')),
++    ],
++    is_parallel: false,
++    timeout: 60,
++  )
++endforeach
++
+ foreach stacking_test: stacking_tests
+   test(stacking_test, test_runner,
+     suite: ['core', 'mutter/stacking'],
