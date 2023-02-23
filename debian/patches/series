@@ -14,3 +14,4 @@ debian/Revert-build-Depend-on-glib-2.75.patch
 workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch
 debian/Mark-xwayland-test-case-as-known-to-be-flaky-on-32-bit-AR.patch
 cursor-renderer-native-Workaround-broken-arm64-drivers.patch
+x11-Avoid-updating-focus-on-wayland-compositor.patch
