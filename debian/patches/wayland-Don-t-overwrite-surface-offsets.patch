@@ -19,10 +19,10 @@ Origin: upstream, 43.4, commit:a8a348185b2237443c8125f9d19ef59507640160
  1 file changed, 13 insertions(+), 8 deletions(-)
 
 diff --git a/src/wayland/meta-wayland-surface.c b/src/wayland/meta-wayland-surface.c
-index 351bc58..ce43840 100644
+index 624c86a..199b652 100644
 --- a/src/wayland/meta-wayland-surface.c
 +++ b/src/wayland/meta-wayland-surface.c
-@@ -1071,19 +1071,24 @@ wl_surface_attach (struct wl_client   *client,
+@@ -1044,19 +1044,24 @@ wl_surface_attach (struct wl_client   *client,
      }
  
    if (wl_resource_get_version (surface_resource) >=
