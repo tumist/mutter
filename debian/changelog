@@ -1,3 +1,10 @@
+mutter (44~beta-3ubuntu2) lunar; urgency=medium
+
+  * debian/patches: Update code to get backend on X11-fractional scaling
+  * debian/control: Do not depend on legacy EGL package name
+
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Thu, 23 Feb 2023 20:03:24 +0100
+
 mutter (44~beta-3ubuntu1) lunar; urgency=medium
 
   [ Jeremy Bicha
