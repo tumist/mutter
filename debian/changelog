@@ -1,3 +1,14 @@
+mutter (44~beta-3ubuntu1) lunar; urgency=medium
+
+  [ Jeremy Bicha
+  * Merge with Debian. Remaining change:
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
+
+  [ Marco Trevisan (Treviño) ]
+  * Update the fractional scaling patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Thu, 23 Feb 2023 07:11:52 -0500
+
 mutter (44~beta-3) experimental; urgency=medium
 
   * debian/control.in: Fix misspelling Replaces
