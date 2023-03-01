@@ -1,0 +1,38 @@
+From: Simon McVittie <smcv@debian.org>
+Date: Wed, 1 Mar 2023 10:12:03 +0000
+Subject: color-device: Make sure lcms_context is not NULL
+
+lcms interprets a NULL context as using a default, non-thread-safe
+context, which is unsuitable for mutter's use. Make sure we're always
+using a non-trivial context.
+
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2659
+Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1031847
+Signed-off-by: Simon McVittie <smcv@debian.org>
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2877
+---
+ src/backends/meta-color-device.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/backends/meta-color-device.c b/src/backends/meta-color-device.c
+index c0a98a4..01d48f8 100644
+--- a/src/backends/meta-color-device.c
++++ b/src/backends/meta-color-device.c
+@@ -846,6 +846,9 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
+       return NULL;
+     }
+ 
++  lcms_context = meta_color_manager_get_lcms_context (color_manager);
++  g_return_val_if_fail (lcms_context != NULL, NULL);
++
+   cd_icc = cd_icc_new ();
+ 
+   chroma.Red.x = edid_info->red_x;
+@@ -863,7 +866,6 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
+   transfer_curve[1] = transfer_curve[0];
+   transfer_curve[2] = transfer_curve[0];
+ 
+-  lcms_context = meta_color_manager_get_lcms_context (color_manager);
+   lcms_profile = cmsCreateRGBProfileTHR (lcms_context,
+                                          &white_point,
+                                          &chroma,
