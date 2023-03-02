@@ -23,21 +23,18 @@ Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1031847
 Signed-off-by: Simon McVittie <smcv@debian.org>
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2877
 ---
- src/backends/meta-color-device.c | 10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
+ src/backends/meta-color-device.c | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
 
 diff --git a/src/backends/meta-color-device.c b/src/backends/meta-color-device.c
-index 01d48f8..c7979cd 100644
+index ea3b9de..bb87f48 100644
 --- a/src/backends/meta-color-device.c
 +++ b/src/backends/meta-color-device.c
-@@ -884,12 +884,12 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
+@@ -890,12 +890,9 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
    cmsSetHeaderRenderingIntent (lcms_profile, INTENT_PERCEPTUAL);
    cmsSetDeviceClass (lcms_profile, cmsSigDisplayClass);
  
 -  if (!cd_icc_load_handle (cd_icc, lcms_profile,
-+  /* cd_icc_load_handle takes ownership of the profile, even on error
-+   * (unless the profile was created with a NULL context, but we made sure
-+   * not to do that) */
 +  if (!cd_icc_load_handle (cd_icc, g_steal_pointer (&lcms_profile),
                             CD_ICC_LOAD_FLAGS_PRIMARIES, error))
 -    {
