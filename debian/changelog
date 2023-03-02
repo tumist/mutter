@@ -1,3 +1,13 @@
+mutter (43.3-4) unstable; urgency=medium
+
+  * Team upload
+  * d/p/color-device-Make-sure-lcms_context-is-not-NULL.patch,
+    d/p/color-device-Don-t-close-lcms-profile-on-error-from-cd_ic.patch:
+    Fix a double-free when loading the ICC profile from a device's EDID
+    fails (Closes: #1031847)
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 02 Mar 2023 08:50:50 +0000
+
 mutter (43.3-3) unstable; urgency=medium
 
   * Team upload
