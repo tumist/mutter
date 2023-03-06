@@ -1,5 +1,6 @@
-mutter (43.3-5) UNRELEASED; urgency=medium
+mutter (43.3-5) unstable; urgency=medium
 
+  * Team upload
   * d/patches: Use the same order in which patches were applied upstream
   * d/p/color-device-Make-sure-lcms_context-is-not-NULL.patch,
     d/p/color-device-Don-t-close-lcms-profile-on-error-from-cd_ic.patch:
@@ -14,7 +15,7 @@ mutter (43.3-5) UNRELEASED; urgency=medium
     Fix path to interpreter in x11-test.sh instead of disabling it
     - d/p/tests-Disable-broken-test.patch: Drop patch, no longer needed
 
- -- Simon McVittie <smcv@debian.org>  Mon, 06 Mar 2023 11:27:22 +0000
+ -- Simon McVittie <smcv@debian.org>  Mon, 06 Mar 2023 11:35:23 +0000
 
 mutter (43.3-4) unstable; urgency=medium
 
