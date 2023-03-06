@@ -1,0 +1,45 @@
+From: Carlos Garnacho <carlosg@gnome.org>
+Date: Tue, 28 Feb 2023 22:02:05 +0100
+Subject: x11: Ignore _NET_ACTIVE_WINDOW client messages while grabbed
+
+When a X11 application is started, typically what happens is:
+
+- A startup notification token is created, with a _TIME%d suffix
+- The application being spawned receives it through the environment
+- (dbus piping, maybe)
+- The application replies the startup notification token, and
+  fetches the timestamp from it
+- The application makes a _NET_ACTIVE_WINDOW client message request
+  with this timestamp
+- Mutter handles this client request and activates/focuses the window
+
+Prevent this last step if windows are not interactable (e.g. there is
+a compositor grab) and ignore the focus request. This specifically
+applies to X11 clients requesting focus themselves, and unlike previous
+approaches, doesn't try to prevent focus changes that do come through
+interaction with Mutter/GNOME Shell.
+
+This should only break if applications do not observe _NET_ACTIVE_WINDOW
+and perform XSetInputFocus on themselves, but in that case the X11
+keyboard focus is stolen from our hands already.
+
+Part-of: <https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2878>
+Origin: upstream, 44.rc, commit:608d3019b6c8288fbfc7a916efcb8f55d5db040c
+---
+ src/x11/window-x11.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/x11/window-x11.c b/src/x11/window-x11.c
+index 93511e9..167b1b5 100644
+--- a/src/x11/window-x11.c
++++ b/src/x11/window-x11.c
+@@ -3382,7 +3382,8 @@ meta_window_x11_client_message (MetaWindow *window,
+                                       event->xclient.data.l[4]); /* height */
+     }
+   else if (event->xclient.message_type ==
+-           x11_display->atom__NET_ACTIVE_WINDOW)
++           x11_display->atom__NET_ACTIVE_WINDOW &&
++           meta_display_windows_are_interactable (window->display))
+     {
+       MetaClientType source_indication;
+       guint32        timestamp;
