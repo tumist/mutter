@@ -12,7 +12,7 @@ Forwarded: not-needed
  1 file changed, 1 deletion(-)
 
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index 6978a02..53401d4 100644
+index 4c617cb..e082f5f 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
 @@ -427,7 +427,6 @@ stacking_tests = [

@@ -9,7 +9,7 @@ Forwarded: no
  1 file changed, 1 insertion(+)
 
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index 53401d4..5d7bfb5 100644
+index e082f5f..6fee5ea 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
 @@ -370,6 +370,7 @@ if have_native_tests
