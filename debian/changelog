@@ -1,3 +1,9 @@
+mutter (44~rc-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 06 Mar 2023 15:55:39 -0500
+
 mutter (44~beta-3) experimental; urgency=medium
 
   * debian/control.in: Fix misspelling Replaces
