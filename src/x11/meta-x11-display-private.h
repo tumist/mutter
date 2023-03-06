@@ -26,7 +26,6 @@
 #define META_X11_DISPLAY_PRIVATE_H
 
 #include <glib.h>
-#include <gdk/gdk.h>
 #include <X11/Xlib.h>
 
 #include "backends/meta-monitor-manager-private.h"
@@ -66,7 +65,6 @@ struct _MetaX11Display
   GObject parent;
 
   MetaDisplay *display;
-  GdkDisplay *gdk_display;
 
   char *name;
   char *screen_name;
@@ -121,6 +119,8 @@ struct _MetaX11Display
   GHashTable *xids;
   GHashTable *alarms;
 
+  GList *event_funcs;
+
   gboolean has_xinerama_indices;
 
   /* Managed by group.c */
@@ -141,6 +141,9 @@ struct _MetaX11Display
 
   GSubprocess *frames_client;
   GCancellable *frames_client_cancellable;
+
+  GList *error_traps;
+  GSource *event_source;
 
   struct {
     Window xwindow;
@@ -203,6 +206,8 @@ struct _MetaX11Display
   MetaX11Stack *x11_stack;
 
   XserverRegion empty_region;
+
+  unsigned int reload_x11_cursor_later;
 };
 
 MetaX11Display *meta_x11_display_new (MetaDisplay *display, GError **error);
@@ -278,8 +283,22 @@ void meta_x11_display_set_input_focus (MetaX11Display *x11_display,
                                        gboolean        focus_frame,
                                        uint32_t        timestamp);
 
-void meta_x11_display_sync_input_focus (MetaX11Display *x11_display);
-
 MetaDisplay * meta_x11_display_get_display (MetaX11Display *x11_display);
+
+void meta_x11_display_run_event_funcs (MetaX11Display *x11_display,
+                                       XEvent         *xevent);
+
+int meta_x11_display_get_screen_number (MetaX11Display *x11_display);
+
+int meta_x11_display_get_damage_event_base (MetaX11Display *x11_display);
+
+void meta_x11_display_set_cm_selection (MetaX11Display *x11_display);
+
+gboolean meta_x11_display_xwindow_is_a_no_focus_window (MetaX11Display *x11_display,
+                                                        Window xwindow);
+
+void meta_x11_display_clear_stage_input_region (MetaX11Display *x11_display);
+
+void meta_x11_display_init_error_traps (MetaX11Display *x11_display);
 
 #endif /* META_X11_DISPLAY_PRIVATE_H */

@@ -467,6 +467,11 @@ setup_constraint_info (MetaBackend         *backend,
       meta_rectangle_union (&info->entire_monitor,
                             &window->fullscreen_monitors.right->rect,
                             &info->entire_monitor);
+      if (window->fullscreen_monitors.top == logical_monitor &&
+          window->fullscreen_monitors.bottom == logical_monitor &&
+          window->fullscreen_monitors.left == logical_monitor &&
+          window->fullscreen_monitors.right == logical_monitor)
+        meta_window_adjust_fullscreen_monitor_rect (window, &info->entire_monitor);
     }
   else
     {
@@ -621,13 +626,12 @@ place_window_if_needed(MetaWindow     *window,
            */
           window->unconstrained_rect = info->current;
 
-          if (window->maximize_horizontally_after_placement ||
-              window->maximize_vertically_after_placement)
-            meta_window_maximize_internal (window,
-                (window->maximize_horizontally_after_placement ?
-                 META_MAXIMIZE_HORIZONTAL : 0 ) |
-                (window->maximize_vertically_after_placement ?
-                 META_MAXIMIZE_VERTICAL : 0), &info->current);
+          meta_window_maximize_internal (window,
+            (window->maximize_horizontally_after_placement ?
+             META_MAXIMIZE_HORIZONTAL : 0) |
+            (window->maximize_vertically_after_placement ?
+             META_MAXIMIZE_VERTICAL : 0),
+            &info->current);
 
           window->maximize_horizontally_after_placement = FALSE;
           window->maximize_vertically_after_placement = FALSE;
@@ -1774,9 +1778,9 @@ constrain_titlebar_visible (MetaWindow         *window,
    */
   unconstrained_user_action =
     info->is_user_action &&
-    window_drag &&
-    (meta_window_drag_get_grab_op (window_drag) &
-     META_GRAB_OP_WINDOW_FLAG_UNCONSTRAINED) != 0;
+    (!window_drag ||
+     (meta_window_drag_get_grab_op (window_drag) &
+      META_GRAB_OP_WINDOW_FLAG_UNCONSTRAINED) != 0);
 
   /* Exit early if we know the constraint won't apply--note that this constraint
    * is only meant for normal windows (e.g. we don't want docks to be shoved

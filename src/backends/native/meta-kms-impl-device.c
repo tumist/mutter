@@ -426,9 +426,9 @@ update_connectors (MetaKmsImplDevice *impl_device,
           if (updated_connector_id == 0 ||
               meta_kms_connector_get_id (connector) == updated_connector_id)
             {
-              changes |= meta_kms_connector_update_state (connector,
-                                                          drm_resources,
-                                                          drm_connector);
+              changes |= meta_kms_connector_update_state_in_impl (connector,
+                                                                  drm_resources,
+                                                                  drm_connector);
             }
         }
       else
@@ -551,24 +551,31 @@ update_prop_value (MetaKmsProp *prop,
     case DRM_MODE_PROP_ENUM:
       {
         int i;
+        uint64_t result = prop->default_value;
+        uint64_t supported = 0;
 
         for (i = 0; i < prop->num_enum_values; i++)
           {
-            if (prop->enum_values[i].valid &&
-                prop->enum_values[i].value == drm_value)
+            if (!prop->enum_values[i].valid)
+              continue;
+
+            if (prop->enum_values[i].value == drm_value)
               {
-                prop->value = i;
-                return;
+                result = i;
               }
+
+            supported |= (1 << i);
           }
 
-        prop->value = prop->default_value;
+        prop->value = result;
+        prop->supported_variants = supported;
         return;
       }
     case DRM_MODE_PROP_BITMASK:
       {
         int i;
         uint64_t result = 0;
+        uint64_t supported = 0;
 
         for (i = 0; i < prop->num_enum_values; i++)
           {
@@ -580,11 +587,15 @@ update_prop_value (MetaKmsProp *prop,
                 result |= prop->enum_values[i].bitmask;
                 drm_value &= ~(1 << prop->enum_values[i].value);
               }
+
+            supported |= prop->enum_values[i].bitmask;
           }
-        if (drm_value  != 0)
+
+        if (drm_value != 0)
           result |= prop->default_value;
 
         prop->value = result;
+        prop->supported_variants = supported;
         return;
       }
     default:
@@ -709,6 +720,20 @@ meta_kms_impl_device_update_prop_table (MetaKmsImplDevice *impl_device,
           else
             {
               g_warning ("DRM property '%s' is a range with %d values, ignoring",
+                         drm_prop->name, drm_prop->count_values);
+            }
+        }
+
+      if (prop->type == DRM_MODE_PROP_SIGNED_RANGE)
+        {
+          if (drm_prop->count_values == 2)
+            {
+              prop->range_min_signed = (int64_t) drm_prop->values[0];
+              prop->range_max_signed = (int64_t) drm_prop->values[1];
+            }
+          else
+            {
+              g_warning ("DRM property '%s' is a signed range with %d values, ignoring",
                          drm_prop->name, drm_prop->count_values);
             }
         }
@@ -911,7 +936,7 @@ meta_kms_impl_device_update_states (MetaKmsImplDevice *impl_device,
           meta_kms_crtc_get_id (crtc) != crtc_id)
         continue;
 
-      changes |= meta_kms_crtc_update_state (crtc);
+      changes |= meta_kms_crtc_update_state_in_impl (crtc);
     }
 
   drmModeFreeResources (drm_resources);
@@ -935,13 +960,15 @@ meta_kms_impl_device_predict_states (MetaKmsImplDevice *impl_device,
   MetaKmsResourceChanges changes = META_KMS_RESOURCE_CHANGE_NONE;
   GList *l;
 
-  g_list_foreach (priv->crtcs, (GFunc) meta_kms_crtc_predict_state, update);
+  g_list_foreach (priv->crtcs,
+                  (GFunc) meta_kms_crtc_predict_state_in_impl,
+                  update);
 
   for (l = priv->connectors; l; l = l->next)
     {
       MetaKmsConnector *connector = l->data;
 
-      changes |= meta_kms_connector_predict_state (connector, update);
+      changes |= meta_kms_connector_predict_state_in_impl (connector, update);
     }
 
   return changes;
@@ -973,6 +1000,28 @@ emit_resources_changed_callback (MetaKms  *kms,
   meta_kms_emit_resources_changed (kms, changes);
 }
 
+static void
+queue_result_feedback (MetaKmsImplDevice *impl_device,
+                       MetaKmsUpdate     *update,
+                       MetaKmsFeedback   *feedback)
+{
+  MetaKmsImplDevicePrivate *priv =
+    meta_kms_impl_device_get_instance_private (impl_device);
+  MetaKms *kms = meta_kms_device_get_kms (priv->device);
+  GList *result_listeners;
+  GList *l;
+
+  result_listeners = meta_kms_update_take_result_listeners (update);
+  for (l = result_listeners; l; l = l->next)
+    {
+      MetaKmsResultListener *listener = l->data;
+
+      meta_kms_result_listener_set_feedback (listener, feedback);
+      meta_kms_queue_result_callback (kms, listener);
+    }
+}
+
+
 MetaKmsFeedback *
 meta_kms_impl_device_process_update (MetaKmsImplDevice *impl_device,
                                      MetaKmsUpdate     *update,
@@ -986,13 +1035,20 @@ meta_kms_impl_device_process_update (MetaKmsImplDevice *impl_device,
   MetaKmsResourceChanges changes = META_KMS_RESOURCE_CHANGE_NONE;
 
   if (!ensure_device_file (impl_device, &error))
-    return meta_kms_feedback_new_failed (NULL, g_steal_pointer (&error));
+    {
+      meta_kms_update_free (update);
+      return meta_kms_feedback_new_failed (NULL, g_steal_pointer (&error));
+    }
 
-  meta_kms_impl_device_hold_fd (impl_device);
+  meta_kms_update_realize (update, impl_device);
+
   feedback = klass->process_update (impl_device, update, flags);
   if (!(flags & META_KMS_UPDATE_FLAG_TEST_ONLY))
     changes = meta_kms_impl_device_predict_states (impl_device, update);
-  meta_kms_impl_device_unhold_fd (impl_device);
+
+  queue_result_feedback (impl_device, update, feedback);
+
+  meta_kms_update_free (update);
 
   if (changes != META_KMS_RESOURCE_CHANGE_NONE)
     {
@@ -1017,8 +1073,10 @@ meta_kms_impl_device_disable (MetaKmsImplDevice *impl_device)
 
   meta_kms_impl_device_hold_fd (impl_device);
   klass->disable (impl_device);
-  g_list_foreach (priv->crtcs, (GFunc) meta_kms_crtc_disable, NULL);
-  g_list_foreach (priv->connectors, (GFunc) meta_kms_connector_disable, NULL);
+  g_list_foreach (priv->crtcs,
+                  (GFunc) meta_kms_crtc_disable_in_impl, NULL);
+  g_list_foreach (priv->connectors,
+                  (GFunc) meta_kms_connector_disable_in_impl, NULL);
   meta_kms_impl_device_unhold_fd (impl_device);
 }
 

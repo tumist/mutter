@@ -378,9 +378,6 @@ struct _MetaWindow
    * that to toggle between normal/tiled or maximized/tiled states. */
   guint saved_maximize : 1;
 
-  /* Whether we're shaded */
-  guint shaded : 1;
-
   /* Whether we're fullscreen */
   guint fullscreen : 1;
 
@@ -478,7 +475,6 @@ struct _MetaWindow
   guint has_close_func : 1;
   guint has_minimize_func : 1;
   guint has_maximize_func : 1;
-  guint has_shade_func : 1;
   guint has_move_func : 1;
   guint has_resize_func : 1;
   guint has_fullscreen_func : 1;
@@ -628,7 +624,7 @@ struct _MetaWindowClass
 #define META_WINDOW_TILED_MAXIMIZED(w)(META_WINDOW_MAXIMIZED(w) && \
                                        (w)->tile_mode == META_TILE_MAXIMIZED)
 #define META_WINDOW_ALLOWS_MOVE(w)     ((w)->has_move_func && !(w)->fullscreen)
-#define META_WINDOW_ALLOWS_RESIZE_EXCEPT_HINTS(w)   ((w)->has_resize_func && !META_WINDOW_MAXIMIZED (w) && !(w)->fullscreen && !(w)->shaded)
+#define META_WINDOW_ALLOWS_RESIZE_EXCEPT_HINTS(w)   ((w)->has_resize_func && !META_WINDOW_MAXIMIZED (w) && !(w)->fullscreen)
 #define META_WINDOW_ALLOWS_RESIZE(w)   (META_WINDOW_ALLOWS_RESIZE_EXCEPT_HINTS (w) &&                \
                                         (((w)->size_hints.min_width < (w)->size_hints.max_width) ||  \
                                          ((w)->size_hints.min_height < (w)->size_hints.max_height)))
@@ -639,7 +635,7 @@ void        meta_window_unmanage           (MetaWindow  *window,
                                             guint32      timestamp);
 void        meta_window_unmanage_on_idle   (MetaWindow *window);
 void        meta_window_queue              (MetaWindow  *window,
-                                            guint queuebits);
+                                            MetaQueueType queue_types);
 META_EXPORT_TEST
 void        meta_window_untile             (MetaWindow        *window);
 

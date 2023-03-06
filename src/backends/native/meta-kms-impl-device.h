@@ -67,6 +67,11 @@ struct _MetaKmsProp
   uint64_t range_min;
   uint64_t range_max;
 
+  int64_t range_min_signed;
+  int64_t range_max_signed;
+
+  uint64_t supported_variants;
+
   uint32_t prop_id;
   uint64_t value;
 };
@@ -177,7 +182,8 @@ void meta_kms_impl_device_reload_prop_values (MetaKmsImplDevice *impl_device,
 
 MetaKmsFeedback * meta_kms_impl_device_process_update (MetaKmsImplDevice *impl_device,
                                                        MetaKmsUpdate     *update,
-                                                       MetaKmsUpdateFlag  flags);
+                                                       MetaKmsUpdateFlag  flags)
+  G_GNUC_WARN_UNUSED_RESULT;
 
 void meta_kms_impl_device_handle_page_flip_callback (MetaKmsImplDevice   *impl_device,
                                                      MetaKmsPageFlipData *page_flip_data);

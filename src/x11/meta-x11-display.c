@@ -33,9 +33,6 @@
 #include "core/display-private.h"
 #include "x11/meta-x11-display-private.h"
 
-#include <gdk/gdk.h>
-#include <gtk/gtk.h>
-#include <gdk/gdkx.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -77,6 +74,16 @@ G_DEFINE_TYPE (MetaX11Display, meta_x11_display, G_TYPE_OBJECT)
 
 static GQuark quark_x11_display_logical_monitor_data = 0;
 
+typedef struct _MetaX11EventFilter MetaX11EventFilter;
+
+struct _MetaX11EventFilter
+{
+  unsigned int id;
+  MetaX11DisplayEventFunc func;
+  gpointer user_data;
+  GDestroyNotify destroy_notify;
+};
+
 typedef struct _MetaX11DisplayLogicalMonitorData
 {
   int xinerama_index;
@@ -95,6 +102,8 @@ static void prefs_changed_callback (MetaPreference pref,
                                     void          *data);
 
 static void meta_x11_display_init_frames_client (MetaX11Display *x11_display);
+
+static void meta_x11_display_remove_cursor_later (MetaX11Display *x11_display);
 
 static MetaBackend *
 backend_from_x11_display (MetaX11Display *x11_display)
@@ -127,6 +136,14 @@ meta_x11_display_unmanage_windows (MetaX11Display *x11_display)
 }
 
 static void
+meta_x11_event_filter_free (MetaX11EventFilter *filter)
+{
+  if (filter->destroy_notify && filter->user_data)
+    filter->destroy_notify (filter->user_data);
+  g_free (filter);
+}
+
+static void
 meta_x11_display_dispose (GObject *object)
 {
   MetaX11Display *x11_display = META_X11_DISPLAY (object);
@@ -134,6 +151,9 @@ meta_x11_display_dispose (GObject *object)
   x11_display->closing = TRUE;
 
   g_clear_pointer (&x11_display->alarm_filters, g_ptr_array_unref);
+
+  g_clear_list (&x11_display->event_funcs,
+                (GDestroyNotify) meta_x11_event_filter_free);
 
   if (x11_display->frames_client_cancellable)
     {
@@ -250,22 +270,21 @@ meta_x11_display_dispose (GObject *object)
     {
       meta_x11_display_free_events (x11_display);
 
+      XCloseDisplay (x11_display->xdisplay);
       x11_display->xdisplay = NULL;
     }
 
-  if (x11_display->gdk_display)
-    {
-      gdk_display_close (x11_display->gdk_display);
-      x11_display->gdk_display = NULL;
-    }
-
   g_clear_handle_id (&x11_display->display_close_idle, g_source_remove);
+
+  meta_x11_display_remove_cursor_later (x11_display);
 
   g_free (x11_display->name);
   x11_display->name = NULL;
 
   g_free (x11_display->screen_name);
   x11_display->screen_name = NULL;
+
+  g_clear_list (&x11_display->error_traps, g_free);
 
   G_OBJECT_CLASS (meta_x11_display_parent_class)->dispose (object);
 }
@@ -741,11 +760,6 @@ init_leader_window (MetaX11Display *x11_display,
   gulong data[1];
   XEvent event;
 
-  /* We only care about the PropertyChangeMask in the next 30 or so lines of
-   * code.  Note that gdk will at some point unset the PropertyChangeMask for
-   * this window, so we can't rely on it still being set later.  See bug
-   * 354213 for details.
-   */
   x11_display->leader_window =
     meta_x11_display_create_offscreen_window (x11_display,
                                               x11_display->xroot,
@@ -1024,15 +1038,11 @@ get_display_name (MetaDisplay *display)
     return g_getenv ("DISPLAY");
 }
 
-static GdkDisplay *
-open_gdk_display (MetaDisplay  *display,
-                  GError      **error)
+static Display *
+open_x_display (MetaDisplay  *display,
+                GError      **error)
 {
   const char *xdisplay_name;
-  GdkDisplay *gdk_display;
-  const char *gdk_backend_env = NULL;
-  const char *gdk_gl_env = NULL;
-  const char *old_no_at_bridge;
   Display *xdisplay;
 
   xdisplay_name = get_display_name (display);
@@ -1043,72 +1053,22 @@ open_gdk_display (MetaDisplay  *display,
       return NULL;
     }
 
-  gdk_set_allowed_backends ("x11");
+  meta_verbose ("Opening display '%s'", xdisplay_name);
 
-  gdk_backend_env = g_getenv ("GDK_BACKEND");
-  /* GDK would fail to initialize with e.g. GDK_BACKEND=wayland */
-  g_unsetenv ("GDK_BACKEND");
-
-  gdk_gl_env = g_getenv ("GDK_GL");
-  g_setenv ("GDK_GL", "disable", TRUE);
-
-  gdk_parse_args (NULL, NULL);
-  if (!gtk_parse_args (NULL, NULL))
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "Failed to initialize gtk");
-      return NULL;
-    }
-
-  old_no_at_bridge = g_getenv ("NO_AT_BRIDGE");
-  g_setenv ("NO_AT_BRIDGE", "1", TRUE);
-  gdk_display = gdk_display_open (xdisplay_name);
-
-  if (old_no_at_bridge)
-    g_setenv ("NO_AT_BRIDGE", old_no_at_bridge, TRUE);
-  else
-    g_unsetenv ("NO_AT_BRIDGE");
-
-  if (!gdk_display)
-    {
-      meta_warning (_("Failed to initialize GDK"));
-
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "Failed to initialize GDK");
-      return NULL;
-    }
-
-  if (gdk_backend_env)
-    g_setenv("GDK_BACKEND", gdk_backend_env, TRUE);
-
-  if (gdk_gl_env)
-    g_setenv("GDK_GL", gdk_gl_env, TRUE);
-  else
-    unsetenv("GDK_GL");
-
-  /* We need to be able to fully trust that the window and monitor sizes
-     that Gdk reports corresponds to the X ones, so we disable the automatic
-     scale handling */
-  gdk_x11_display_set_window_scale (gdk_display, 1);
-
-  meta_verbose ("Opening display '%s'", XDisplayName (NULL));
-
-  xdisplay = GDK_DISPLAY_XDISPLAY (gdk_display);
+  xdisplay = XOpenDisplay (xdisplay_name);
 
   if (xdisplay == NULL)
     {
       meta_warning (_("Failed to open X Window System display “%s”"),
-                    XDisplayName (NULL));
+                    xdisplay_name);
 
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
                    "Failed to open X11 display");
 
-      gdk_display_close (gdk_display);
-
       return NULL;
     }
 
-  return gdk_display;
+  return xdisplay;
 }
 
 static void
@@ -1207,7 +1167,6 @@ meta_x11_display_new (MetaDisplay  *display,
   Atom atom_restart_helper;
   Window restart_helper_window = None;
   gboolean is_restart = FALSE;
-  GdkDisplay *gdk_display;
 
   /* A list of all atom names, so that we can intern them in one go. */
   const char *atom_names[] = {
@@ -1217,11 +1176,9 @@ meta_x11_display_new (MetaDisplay  *display,
   };
   Atom atoms[G_N_ELEMENTS(atom_names)];
 
-  gdk_display = open_gdk_display (display, error);
-  if (!gdk_display)
+  xdisplay = open_x_display (display, error);
+  if (!xdisplay)
     return NULL;
-
-  xdisplay = GDK_DISPLAY_XDISPLAY (gdk_display);
 
   XSynchronize (xdisplay, meta_context_is_x11_sync (context));
 
@@ -1238,9 +1195,6 @@ meta_x11_display_new (MetaDisplay  *display,
   replace_current_wm =
     meta_context_is_replacing (meta_backend_get_context (backend));
 
-  /* According to _gdk_x11_display_open (), this will be returned
-   * by gdk_display_get_default_screen ()
-   */
   number = DefaultScreen (xdisplay);
 
   xroot = RootWindow (xdisplay, number);
@@ -1259,8 +1213,6 @@ meta_x11_display_new (MetaDisplay  *display,
       XFlush (xdisplay);
       XCloseDisplay (xdisplay);
 
-      gdk_display_close (gdk_display);
-
       return NULL;
     }
 
@@ -1275,7 +1227,6 @@ meta_x11_display_new (MetaDisplay  *display,
     }
 
   x11_display = g_object_new (META_TYPE_X11_DISPLAY, NULL);
-  x11_display->gdk_display = gdk_display;
   x11_display->display = display;
 
   /* here we use XDisplayName which is what the user
@@ -1298,6 +1249,8 @@ meta_x11_display_new (MetaDisplay  *display,
 #define item(x) x11_display->atom_##x = atoms[i++];
 #include "x11/atomnames.h"
 #undef item
+
+  meta_x11_display_init_error_traps (x11_display);
 
   query_xsync_extension (x11_display);
   query_xshape_extension (x11_display);
@@ -1555,33 +1508,10 @@ meta_x11_display_get_xroot (MetaX11Display *x11_display)
   return x11_display->xroot;
 }
 
-/**
- * meta_x11_display_get_xinput_opcode: (skip)
- * @x11_display: a #MetaX11Display
- *
- */
-int
-meta_x11_display_get_xinput_opcode (MetaX11Display *x11_display)
-{
-  return x11_display->xinput_opcode;
-}
-
 int
 meta_x11_display_get_damage_event_base (MetaX11Display *x11_display)
 {
   return x11_display->damage_event_base;
-}
-
-int
-meta_x11_display_get_shape_event_base (MetaX11Display *x11_display)
-{
-  return x11_display->shape_event_base;
-}
-
-gboolean
-meta_x11_display_has_shape (MetaX11Display *x11_display)
-{
-  return META_X11_DISPLAY_HAS_SHAPE (x11_display);
 }
 
 Window
@@ -1676,12 +1606,52 @@ set_cursor_theme (Display     *xdisplay,
 }
 
 static void
+meta_x11_display_remove_cursor_later (MetaX11Display *x11_display)
+{
+  if (x11_display->reload_x11_cursor_later)
+    {
+      MetaDisplay *display = x11_display->display;
+      MetaLaters *laters = meta_compositor_get_laters (display->compositor);
+
+      meta_laters_remove (laters, x11_display->reload_x11_cursor_later);
+      x11_display->reload_x11_cursor_later = 0;
+    }
+}
+
+static gboolean
+reload_x11_cursor_later (gpointer user_data)
+{
+  MetaX11Display *x11_display = user_data;
+
+  x11_display->reload_x11_cursor_later = 0;
+  meta_x11_display_reload_cursor (x11_display);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+schedule_reload_x11_cursor (MetaX11Display *x11_display)
+{
+  MetaDisplay *display = x11_display->display;
+  MetaLaters *laters = meta_compositor_get_laters (display->compositor);
+
+  if (x11_display->reload_x11_cursor_later)
+    return;
+
+  x11_display->reload_x11_cursor_later =
+    meta_laters_add (laters, META_LATER_BEFORE_REDRAW,
+                     reload_x11_cursor_later,
+                     x11_display,
+                     NULL);
+}
+
+static void
 update_cursor_theme (MetaX11Display *x11_display)
 {
   MetaBackend *backend = backend_from_x11_display (x11_display);
 
   set_cursor_theme (x11_display->xdisplay, backend);
-  meta_x11_display_reload_cursor (x11_display);
+  schedule_reload_x11_cursor (x11_display);
 
   if (META_IS_BACKEND_X11 (backend))
     {
@@ -2011,10 +1981,6 @@ meta_x11_display_set_input_focus_internal (MetaX11Display *x11_display,
                                            Window          xwindow,
                                            uint32_t        timestamp)
 {
-  if (xwindow != None &&
-      !meta_display_windows_are_interactable (x11_display->display))
-    return;
-
   meta_x11_error_trap_push (x11_display);
 
   /* In order for mutter to know that the focus request succeeded, we track
@@ -2085,22 +2051,6 @@ meta_x11_display_set_input_focus_xwindow (MetaX11Display *x11_display,
   meta_display_update_focus_window (x11_display->display, NULL);
   meta_display_remove_autoraise_callback (x11_display->display);
   x11_display->display->last_focus_time = timestamp;
-}
-
-void
-meta_x11_display_sync_input_focus (MetaX11Display *x11_display)
-{
-  guint timestamp;
-
-  if (!meta_display_windows_are_interactable (x11_display->display))
-    return;
-
-  meta_x11_error_trap_push (x11_display);
-  timestamp = meta_display_get_current_time (x11_display->display);
-  meta_x11_display_set_input_focus_internal (x11_display,
-                                             x11_display->focus_xwindow,
-                                             timestamp);
-  meta_x11_error_trap_pop (x11_display);
 }
 
 static MetaX11DisplayLogicalMonitorData *
@@ -2471,4 +2421,68 @@ meta_x11_display_clear_stage_input_region (MetaX11Display *x11_display)
 
   meta_x11_display_set_stage_input_region (x11_display,
                                            x11_display->empty_region);
+}
+
+/**
+ * meta_x11_display_add_event_func: (skip):
+ **/
+unsigned int
+meta_x11_display_add_event_func (MetaX11Display          *x11_display,
+                                 MetaX11DisplayEventFunc  event_func,
+                                 gpointer                 user_data,
+                                 GDestroyNotify           destroy_notify)
+{
+  MetaX11EventFilter *filter;
+  static unsigned int id = 0;
+
+  filter = g_new0 (MetaX11EventFilter, 1);
+  filter->func = event_func;
+  filter->user_data = user_data;
+  filter->destroy_notify = destroy_notify;
+  filter->id = ++id;
+
+  x11_display->event_funcs = g_list_prepend (x11_display->event_funcs, filter);
+
+  return filter->id;
+}
+
+/**
+ * meta_x11_display_remove_event_func: (skip):
+ **/
+void
+meta_x11_display_remove_event_func (MetaX11Display *x11_display,
+                                    unsigned int    id)
+{
+  MetaX11EventFilter *filter;
+  GList *l;
+
+  for (l = x11_display->event_funcs; l; l = l->next)
+    {
+      filter = l->data;
+
+      if (filter->id != id)
+        continue;
+
+      x11_display->event_funcs =
+        g_list_delete_link (x11_display->event_funcs, l);
+      meta_x11_event_filter_free (filter);
+      break;
+    }
+}
+
+void
+meta_x11_display_run_event_funcs (MetaX11Display *x11_display,
+                                  XEvent         *xevent)
+{
+  MetaX11EventFilter *filter;
+  GList *next, *l = x11_display->event_funcs;
+
+  while (l)
+    {
+      filter = l->data;
+      next = l->next;
+
+      filter->func (x11_display, xevent, filter->user_data);
+      l = next;
+    }
 }

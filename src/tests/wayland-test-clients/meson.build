@@ -21,6 +21,9 @@ wayland_test_clients = [
     'name': 'buffer-transform',
   },
   {
+    'name': 'fractional-scale',
+  },
+  {
     'name': 'single-pixel-buffer',
   },
   {
@@ -77,6 +80,7 @@ foreach test : wayland_test_clients
     glib_dep,
     gobject_dep,
     wayland_client_dep,
+    m_dep,
   ]
   if test.has_key('extra_deps')
     deps += test['extra_deps']

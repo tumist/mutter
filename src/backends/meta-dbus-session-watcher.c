@@ -26,6 +26,8 @@
 
 #include <gio/gio.h>
 
+#include "backends/meta-dbus-session-manager.h"
+
 enum
 {
   SESSION_SIGNAL_SESSION_CLOSED,
@@ -58,12 +60,6 @@ typedef struct _MetaDbusSessionClient
 } MetaDbusSessionClient;
 
 static void
-meta_dbus_session_client_vanished (MetaDbusSession *session)
-{
-  META_DBUS_SESSION_GET_IFACE (session)->client_vanished (session);
-}
-
-static void
 meta_dbus_session_client_destroy (MetaDbusSessionClient *client)
 {
   while (TRUE)
@@ -77,11 +73,7 @@ meta_dbus_session_client_destroy (MetaDbusSessionClient *client)
 
       session = l->data;
 
-      /*
-       * This will invoke on_session_closed which removes the session from the
-       * list.
-       */
-      meta_dbus_session_client_vanished (session);
+      meta_dbus_session_close (session);
     }
 
   if (client->name_watcher_id)
@@ -196,9 +188,52 @@ meta_dbus_session_notify_closed (MetaDbusSession *session)
   g_signal_emit (session, session_signals[SESSION_SIGNAL_SESSION_CLOSED], 0);
 }
 
+void
+meta_dbus_session_install_properties (GObjectClass *object_class,
+                                      unsigned int  first_prop)
+{
+  g_object_class_override_property (object_class,
+                                    first_prop + META_DBUS_SESSION_PROP_SESSION_MANAGER,
+                                    "session-manager");
+  g_object_class_override_property (object_class,
+                                    first_prop + META_DBUS_SESSION_PROP_PEER_NAME,
+                                    "peer-name");
+  g_object_class_override_property (object_class,
+                                    first_prop + META_DBUS_SESSION_PROP_ID,
+                                    "id");
+}
+
 static void
 meta_dbus_session_default_init (MetaDbusSessionInterface *iface)
 {
+  g_object_interface_install_property (
+    iface,
+    g_param_spec_object ("session-manager",
+                         "session manager",
+                         "D-Bus session manager",
+                         META_TYPE_DBUS_SESSION_MANAGER,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS));
+  g_object_interface_install_property (
+    iface,
+    g_param_spec_string ("peer-name",
+                         "peer name",
+                         "D-Bus peer name",
+                         NULL,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS));
+  g_object_interface_install_property (
+    iface,
+    g_param_spec_string ("id",
+                         "session id",
+                         "Unique ID of the session",
+                         NULL,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS));
+
   session_signals[SESSION_SIGNAL_SESSION_CLOSED] =
     g_signal_new ("session-closed",
                   G_TYPE_FROM_INTERFACE (iface),
@@ -234,4 +269,40 @@ meta_dbus_session_watcher_class_init (MetaDbusSessionWatcherClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = meta_dbus_session_watcher_finalize;
+}
+
+void
+meta_dbus_session_close (MetaDbusSession *session)
+{
+  META_DBUS_SESSION_GET_IFACE (session)->close (session);
+}
+
+MetaDbusSessionManager *
+meta_dbus_session_manager (MetaDbusSessionManager *session)
+{
+  MetaDbusSessionManager *manager;
+
+  g_object_get (session, "session-manager", &manager, NULL);
+
+  return manager;
+}
+
+char *
+meta_dbus_session_get_peer_name (MetaDbusSession *session)
+{
+  char *peer_name;
+
+  g_object_get (session, "peer-name", &peer_name, NULL);
+
+  return peer_name;
+}
+
+char *
+meta_dbus_session_get_id (MetaDbusSession *session)
+{
+  char *id;
+
+  g_object_get (session, "id", &id, NULL);
+
+  return id;
 }
