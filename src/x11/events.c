@@ -44,6 +44,7 @@
 #include "meta/meta-x11-errors.h"
 #include "x11/meta-startup-notification-x11.h"
 #include "x11/meta-x11-display-private.h"
+#include "x11/meta-x11-event-source.h"
 #include "x11/meta-x11-selection-private.h"
 #include "x11/meta-x11-selection-input-stream-private.h"
 #include "x11/meta-x11-selection-output-stream-private.h"
@@ -802,7 +803,7 @@ handle_window_focus_event (MetaX11Display *x11_display,
   const char *window_type;
 
   /* Note the event can be on either the window or the frame,
-   * we focus the frame for shaded windows
+   * we focus the frame for output-only windows
    */
   if (window)
     {
@@ -1021,9 +1022,6 @@ handle_input_xevent (MetaX11Display *x11_display,
       break;
     case XI_FocusIn:
     case XI_FocusOut:
-      if (clutter_stage_get_grab_actor (stage) != NULL)
-        break;
-
       if (handle_window_focus_event (x11_display, window, enter_event, serial) &&
           enter_event->event == enter_event->root)
         {
@@ -1266,7 +1264,7 @@ process_selection_clear (MetaX11Display *x11_display,
   meta_verbose ("Got selection clear for on display %s",
                 x11_display->name);
 
-  /* We can't close a GdkDisplay in an even handler. */
+  /* We can't close a Display in an event handler. */
   if (!x11_display->display_close_idle)
     {
       x11_display->xselectionclear_timestamp = event->xselectionclear.time;
@@ -1302,7 +1300,7 @@ notify_bell (MetaX11Display *x11_display,
     }
 }
 
-static gboolean
+static void
 handle_other_xevent (MetaX11Display *x11_display,
                      XEvent         *event)
 {
@@ -1312,7 +1310,6 @@ handle_other_xevent (MetaX11Display *x11_display,
   MetaWindow *window;
   MetaWindow *property_for_window;
   gboolean frame_was_receiver;
-  gboolean bypass_gtk = FALSE;
 
   modified = event_get_modified_window (x11_display, event);
   window = modified != None ? meta_x11_display_lookup_x_window (x11_display, modified) : NULL;
@@ -1343,7 +1340,6 @@ handle_other_xevent (MetaX11Display *x11_display,
           gint64 new_counter_value;
           new_counter_value = XSyncValueLow32 (value) + ((gint64)XSyncValueHigh32 (value) << 32);
           meta_sync_counter_update (sync_counter, new_counter_value);
-          bypass_gtk = TRUE; /* GTK doesn't want to see this really */
         }
       else if (x11_display->alarm_filters)
         {
@@ -1357,21 +1353,16 @@ handle_other_xevent (MetaX11Display *x11_display,
               if (alarm_filter->filter (x11_display,
                                         (XSyncAlarmNotifyEvent *) event,
                                         alarm_filter->user_data))
-                {
-                  bypass_gtk = TRUE;
-                  break;
-                }
+                break;
             }
         }
 
-      goto out;
+      return;
     }
 
   if (META_X11_DISPLAY_HAS_SHAPE (x11_display) &&
       event->type == (x11_display->shape_event_base + ShapeNotify))
     {
-      bypass_gtk = TRUE; /* GTK doesn't want to see this really */
-
       if (window)
         {
           XShapeEvent *sev = (XShapeEvent*) event;
@@ -1388,7 +1379,7 @@ handle_other_xevent (MetaX11Display *x11_display,
                       modified);
         }
 
-      goto out;
+      return;
     }
 
   switch (event->type)
@@ -1770,12 +1761,6 @@ handle_other_xevent (MetaX11Display *x11_display,
                       guint32 timestamp = event->xclient.data.l[1];
 
                       meta_display_pong_for_serial (display, timestamp);
-
-                      /* We don't want ping reply events going into
-                       * the GTK+ event loop because gtk+ will treat
-                       * them as ping requests and send more replies.
-                       */
-                      bypass_gtk = TRUE;
                     }
                 }
             }
@@ -1835,16 +1820,9 @@ handle_other_xevent (MetaX11Display *x11_display,
               break;
             }
         }
-      else if (event->type == (x11_display->xfixes_event_base + XFixesSelectionNotify))
-        {
-          bypass_gtk = TRUE; /* GTK doesn't want to see this really */
-        }
 
       break;
     }
-
- out:
-  return bypass_gtk;
 }
 
 static gboolean
@@ -1901,7 +1879,7 @@ process_selection_event (MetaX11Display *x11_display,
  * busy around here. Most of this function is a ginormous switch statement
  * dealing with all the kinds of events that might turn up.
  */
-static gboolean
+static void
 meta_x11_display_handle_xevent (MetaX11Display *x11_display,
                                 XEvent         *event)
 {
@@ -1909,7 +1887,7 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
   MetaContext *context = meta_display_get_context (display);
   MetaBackend *backend = meta_context_get_backend (context);
   Window modified;
-  gboolean bypass_compositor = FALSE, bypass_gtk = FALSE;
+  gboolean bypass_compositor = FALSE;
   XIEvent *input_event;
   MetaCursorTracker *cursor_tracker;
 #ifdef HAVE_XWAYLAND
@@ -1919,13 +1897,18 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
   COGL_TRACE_BEGIN (MetaX11DisplayHandleXevent,
                     "X11Display (handle X11 event)");
 
+  if (event->type == GenericEvent)
+    XGetEventData (x11_display->xdisplay, &event->xcookie);
+
 #if 0
   meta_spew_event_print (x11_display, event);
 #endif
 
+  meta_x11_display_run_event_funcs (x11_display, event);
+
   if (meta_x11_startup_notification_handle_xevent (x11_display, event))
     {
-      bypass_gtk = bypass_compositor = TRUE;
+      bypass_compositor = TRUE;
       goto out;
     }
 
@@ -1936,14 +1919,14 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
       meta_xwayland_manager_handle_xevent (&wayland_compositor->xwayland_manager,
                                            event))
     {
-      bypass_gtk = bypass_compositor = TRUE;
+      bypass_compositor = TRUE;
       goto out;
     }
 #endif
 
   if (process_selection_event (x11_display, event))
     {
-      bypass_gtk = bypass_compositor = TRUE;
+      bypass_compositor = TRUE;
       goto out;
     }
 
@@ -1955,8 +1938,8 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
   if (x11_display->focused_by_us &&
       event->xany.serial > x11_display->focus_serial &&
       display->focus_window &&
-      !window_has_xwindow (display->focus_window, x11_display->server_focus_window) &&
-      meta_display_windows_are_interactable (display))
+      display->focus_window->client_type == META_WINDOW_CLIENT_TYPE_X11 &&
+      !window_has_xwindow (display->focus_window, x11_display->server_focus_window))
     {
       meta_topic (META_DEBUG_FOCUS, "Earlier attempt to focus %s failed",
                   display->focus_window->desc);
@@ -1979,7 +1962,7 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
 
           if (meta_cursor_tracker_x11_handle_xevent (cursor_tracker_x11, event))
             {
-              bypass_gtk = bypass_compositor = TRUE;
+              bypass_compositor = TRUE;
               goto out;
             }
         }
@@ -1991,23 +1974,16 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
 
   if (handle_input_xevent (x11_display, input_event, event->xany.serial))
     {
-      bypass_gtk = bypass_compositor = TRUE;
+      bypass_compositor = TRUE;
       goto out;
     }
 
-  if (handle_other_xevent (x11_display, event))
-    {
-      bypass_gtk = TRUE;
-      goto out;
-    }
+  handle_other_xevent (x11_display, event);
 
   if (event->type == SelectionClear)
     {
       if (process_selection_clear (x11_display, event))
-        {
-          bypass_gtk = TRUE;
-          goto out;
-        }
+        goto out;
     }
 
  out:
@@ -2027,35 +2003,39 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
 
   display->current_time = META_CURRENT_TIME;
 
+  if (event->type == GenericEvent)
+    XFreeEventData (x11_display->xdisplay, &event->xcookie);
+
   COGL_TRACE_DESCRIBE (MetaX11DisplayHandleXevent,
                        get_event_name (x11_display, event));
   COGL_TRACE_END (MetaX11DisplayHandleXevent);
-
-  return bypass_gtk;
 }
 
 
-static GdkFilterReturn
-xevent_filter (GdkXEvent *xevent,
-               GdkEvent  *event,
-               gpointer   data)
+static gboolean
+xevent_func (XEvent   *xevent,
+             gpointer  data)
 {
   MetaX11Display *x11_display = data;
 
-  if (meta_x11_display_handle_xevent (x11_display, xevent))
-    return GDK_FILTER_REMOVE;
-  else
-    return GDK_FILTER_CONTINUE;
+  meta_x11_display_handle_xevent (x11_display, xevent);
+
+  return G_SOURCE_CONTINUE;
 }
 
 void
 meta_x11_display_init_events (MetaX11Display *x11_display)
 {
-  gdk_window_add_filter (NULL, xevent_filter, x11_display);
+  x11_display->event_source = meta_x11_event_source_new (x11_display->xdisplay);
+  g_source_set_callback (x11_display->event_source,
+                         (GSourceFunc) xevent_func,
+                         x11_display, NULL);
+  g_source_attach (x11_display->event_source, NULL);
 }
 
 void
 meta_x11_display_free_events (MetaX11Display *x11_display)
 {
-  gdk_window_remove_filter (NULL, xevent_filter, x11_display);
+  g_source_destroy (x11_display->event_source);
+  g_clear_pointer (&x11_display->event_source, g_source_unref);
 }

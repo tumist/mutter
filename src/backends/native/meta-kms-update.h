@@ -26,6 +26,7 @@
 #include <xf86drmMode.h>
 
 #include "backends/meta-monitor-transform.h"
+#include "backends/meta-output.h"
 #include "backends/native/meta-drm-buffer.h"
 #include "backends/native/meta-kms-types.h"
 #include "meta/boxes.h"
@@ -46,7 +47,6 @@ typedef enum _MetaKmsAssignPlaneFlag
 enum _MetaKmsPageFlipListenerFlag
 {
   META_KMS_PAGE_FLIP_LISTENER_FLAG_NONE = 0,
-  META_KMS_PAGE_FLIP_LISTENER_FLAG_DROP_ON_ERROR = 1 << 0,
 };
 
 struct _MetaKmsPageFlipListenerVtable
@@ -81,7 +81,10 @@ typedef struct _MetaKmsPlaneFeedback
 typedef void (* MetaKmsResultListenerFunc) (const MetaKmsFeedback *feedback,
                                             gpointer               user_data);
 
-void meta_kms_feedback_free (MetaKmsFeedback *feedback);
+MetaKmsFeedback * meta_kms_feedback_ref (MetaKmsFeedback *feedback);
+
+META_EXPORT_TEST
+void meta_kms_feedback_unref (MetaKmsFeedback *feedback);
 
 MetaKmsFeedbackResult meta_kms_feedback_get_result (const MetaKmsFeedback *feedback);
 
@@ -89,12 +92,20 @@ GList * meta_kms_feedback_get_failed_planes (const MetaKmsFeedback *feedback);
 
 const GError * meta_kms_feedback_get_error (const MetaKmsFeedback *feedback);
 
+void meta_kms_feedback_dispatch_result (MetaKmsFeedback *feedback,
+                                        MetaKms         *kms,
+                                        GList           *result_listeners);
+
 META_EXPORT_TEST
 MetaKmsUpdate * meta_kms_update_new (MetaKmsDevice *device);
 
 META_EXPORT_TEST
 void meta_kms_update_free (MetaKmsUpdate *update);
 
+META_EXPORT_TEST
+MetaKmsDevice * meta_kms_update_get_device (MetaKmsUpdate *update);
+
+META_EXPORT_TEST
 void meta_kms_update_set_underscanning (MetaKmsUpdate    *update,
                                         MetaKmsConnector *connector,
                                         uint64_t          hborder,
@@ -103,13 +114,23 @@ void meta_kms_update_set_underscanning (MetaKmsUpdate    *update,
 void meta_kms_update_unset_underscanning (MetaKmsUpdate    *update,
                                           MetaKmsConnector *connector);
 
+META_EXPORT_TEST
 void meta_kms_update_set_privacy_screen (MetaKmsUpdate    *update,
                                          MetaKmsConnector *connector,
                                          gboolean          enabled);
 
+META_EXPORT_TEST
 void meta_kms_update_set_max_bpc (MetaKmsUpdate    *update,
                                   MetaKmsConnector *connector,
                                   uint64_t          max_bpc);
+
+void meta_kms_update_set_color_space (MetaKmsUpdate        *update,
+                                      MetaKmsConnector     *connector,
+                                      MetaOutputColorspace  color_space);
+
+void meta_kms_update_set_hdr_metadata (MetaKmsUpdate         *update,
+                                       MetaKmsConnector      *connector,
+                                       MetaOutputHdrMetadata *metadata);
 
 META_EXPORT_TEST
 void meta_kms_update_set_power_save (MetaKmsUpdate *update);
@@ -120,12 +141,10 @@ void meta_kms_update_mode_set (MetaKmsUpdate *update,
                                GList         *connectors,
                                MetaKmsMode   *mode);
 
-void meta_kms_update_set_crtc_gamma (MetaKmsUpdate  *update,
-                                     MetaKmsCrtc    *crtc,
-                                     int             size,
-                                     const uint16_t *red,
-                                     const uint16_t *green,
-                                     const uint16_t *blue);
+META_EXPORT_TEST
+void meta_kms_update_set_crtc_gamma (MetaKmsUpdate      *update,
+                                     MetaKmsCrtc        *crtc,
+                                     const MetaGammaLut *gamma);
 
 void meta_kms_plane_assignment_set_fb_damage (MetaKmsPlaneAssignment *plane_assignment,
                                               const int              *rectangles,
@@ -144,6 +163,7 @@ MetaKmsPlaneAssignment * meta_kms_update_unassign_plane (MetaKmsUpdate *update,
                                                          MetaKmsCrtc   *crtc,
                                                          MetaKmsPlane  *plane);
 
+META_EXPORT_TEST
 void meta_kms_update_add_page_flip_listener (MetaKmsUpdate                       *update,
                                              MetaKmsCrtc                         *crtc,
                                              const MetaKmsPageFlipListenerVtable *vtable,
@@ -160,9 +180,14 @@ void meta_kms_plane_assignment_set_cursor_hotspot (MetaKmsPlaneAssignment *plane
                                                    int                     x,
                                                    int                     y);
 
+META_EXPORT_TEST
 void meta_kms_update_add_result_listener (MetaKmsUpdate             *update,
                                           MetaKmsResultListenerFunc  func,
                                           gpointer                   user_data);
+
+META_EXPORT_TEST
+void meta_kms_update_merge_from (MetaKmsUpdate *update,
+                                 MetaKmsUpdate *other_update);
 
 static inline MetaFixed16
 meta_fixed_16_from_int (int16_t d)
@@ -202,7 +227,7 @@ meta_fixed_16_rectangle_to_rectangle (MetaFixed16Rectangle fixed_rect)
                                 meta_fixed_16_from_int (_w), \
                                 meta_fixed_16_from_int (_h))
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (MetaKmsFeedback, meta_kms_feedback_free)
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (MetaKmsFeedback, meta_kms_feedback_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (MetaKmsUpdate, meta_kms_update_free)
 
 #endif /* META_KMS_UPDATE_H */

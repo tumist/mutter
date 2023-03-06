@@ -181,145 +181,23 @@ struct _MetaKms
 
 G_DEFINE_TYPE (MetaKms, meta_kms, G_TYPE_OBJECT)
 
-void
-meta_kms_discard_pending_updates (MetaKms *kms)
-{
-  g_clear_list (&kms->pending_updates, (GDestroyNotify) meta_kms_update_free);
-}
-
 static void
-meta_kms_add_pending_update (MetaKms       *kms,
-                             MetaKmsUpdate *update)
+invoke_result_listener (MetaKms  *kms,
+                        gpointer  user_data)
 {
-  kms->pending_updates = g_list_prepend (kms->pending_updates, update);
+  MetaKmsResultListener *listener = user_data;
+
+  meta_kms_result_listener_notify (listener);
 }
 
-MetaKmsUpdate *
-meta_kms_ensure_pending_update (MetaKms       *kms,
-                                MetaKmsDevice *device)
+void
+meta_kms_queue_result_callback (MetaKms               *kms,
+                                MetaKmsResultListener *listener)
 {
-  MetaKmsUpdate *update;
-
-  update = meta_kms_get_pending_update (kms, device);
-  if (update)
-    return update;
-
-  update = meta_kms_update_new (device);
-  meta_kms_add_pending_update (kms, update);
-
-  return update;
-}
-
-MetaKmsUpdate *
-meta_kms_get_pending_update (MetaKms       *kms,
-                             MetaKmsDevice *device)
-{
-  GList *l;
-
-  for (l = kms->pending_updates; l; l = l->next)
-    {
-      MetaKmsUpdate *update = l->data;
-
-      if (meta_kms_update_get_device (update) == device)
-        return update;
-    }
-
-  return NULL;
-}
-
-static MetaKmsUpdate *
-meta_kms_take_pending_update (MetaKms       *kms,
-                              MetaKmsDevice *device)
-{
-  GList *l;
-
-  for (l = kms->pending_updates; l; l = l->next)
-    {
-      MetaKmsUpdate *update = l->data;
-
-      if (meta_kms_update_get_device (update) == device)
-        {
-          kms->pending_updates = g_list_delete_link (kms->pending_updates, l);
-          return update;
-        }
-    }
-
-  return NULL;
-}
-
-MetaKmsFeedback *
-meta_kms_post_pending_update_sync (MetaKms           *kms,
-                                   MetaKmsDevice     *device,
-                                   MetaKmsUpdateFlag  flags)
-{
-  MetaKmsUpdate *update;
-  MetaKmsFeedback *feedback;
-  GList *result_listeners;
-  GList *l;
-
-  COGL_TRACE_BEGIN_SCOPED (MetaKmsPostUpdateSync,
-                           "KMS (post update)");
-
-  update = meta_kms_take_pending_update (kms, device);
-  if (!update)
-    return NULL;
-
-  meta_kms_update_lock (update);
-
-  feedback = meta_kms_device_process_update_sync (device, update, flags);
-
-  result_listeners = meta_kms_update_take_result_listeners (update);
-
-  if (feedback->error &&
-      flags & META_KMS_UPDATE_FLAG_PRESERVE_ON_ERROR)
-    {
-      GList *l;
-
-      meta_kms_update_unlock (update);
-
-      for (l = feedback->failed_planes; l; l = l->next)
-        {
-          MetaKmsPlane *plane = l->data;
-
-          meta_kms_update_drop_plane_assignment (update, plane);
-        }
-
-      meta_kms_update_drop_defunct_page_flip_listeners (update);
-
-      meta_kms_add_pending_update (kms, update);
-    }
-  else
-    {
-      meta_kms_update_free (update);
-    }
-
-  for (l = result_listeners; l; l = l->next)
-    {
-      MetaKmsResultListener *listener = l->data;
-
-      meta_kms_result_listener_notify (listener, feedback);
-      meta_kms_result_listener_free (listener);
-    }
-  g_list_free (result_listeners);
-
-  return feedback;
-}
-
-MetaKmsFeedback *
-meta_kms_post_test_update_sync (MetaKms       *kms,
-                                MetaKmsUpdate *update)
-{
-  MetaKmsDevice *device = meta_kms_update_get_device (update);
-  MetaKmsUpdateFlag flags;
-
-  g_assert (!meta_kms_update_get_page_flip_listeners (update));
-  g_assert (!meta_kms_update_get_mode_sets (update));
-  g_assert (!meta_kms_update_get_connector_updates (update));
-
-  meta_kms_update_lock (update);
-
-  flags = META_KMS_UPDATE_FLAG_TEST_ONLY;
-  return meta_kms_device_process_update_sync (device, update, flags);
+  meta_kms_queue_callback  (kms,
+                            invoke_result_listener,
+                            listener,
+                            (GDestroyNotify) meta_kms_result_listener_free);
 }
 
 static gpointer
@@ -708,6 +586,23 @@ meta_kms_create_device (MetaKms            *kms,
   return device;
 }
 
+static gpointer
+prepare_shutdown_in_impl (MetaKmsImpl  *impl,
+                          gpointer      user_data,
+                          GError      **error)
+{
+  meta_kms_impl_prepare_shutdown (impl);
+  return GINT_TO_POINTER (TRUE);
+}
+
+static void
+on_prepare_shutdown (MetaBackend *backend,
+                     MetaKms     *kms)
+{
+  meta_kms_run_impl_task_sync (kms, prepare_shutdown_in_impl, NULL, NULL);
+  flush_callbacks (kms);
+}
+
 MetaKms *
 meta_kms_new (MetaBackend   *backend,
               MetaKmsFlags   flags,
@@ -737,23 +632,11 @@ meta_kms_new (MetaBackend   *backend,
     g_signal_connect (udev, "device-removed",
                       G_CALLBACK (on_udev_device_removed), kms);
 
+  g_signal_connect (backend, "prepare-shutdown",
+                    G_CALLBACK (on_prepare_shutdown),
+                    kms);
+
   return kms;
-}
-
-static gpointer
-prepare_shutdown_in_impl (MetaKmsImpl  *impl,
-                          gpointer      user_data,
-                          GError      **error)
-{
-  meta_kms_impl_prepare_shutdown (impl);
-  return GINT_TO_POINTER (TRUE);
-}
-
-void
-meta_kms_prepare_shutdown (MetaKms *kms)
-{
-  meta_kms_run_impl_task_sync (kms, prepare_shutdown_in_impl, NULL, NULL);
-  flush_callbacks (kms);
 }
 
 static void
@@ -779,6 +662,11 @@ meta_kms_finalize (GObject *object)
 }
 
 static void
+meta_kms_constructed (GObject *object)
+{
+}
+
+static void
 meta_kms_init (MetaKms *kms)
 {
 }
@@ -789,6 +677,7 @@ meta_kms_class_init (MetaKmsClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = meta_kms_finalize;
+  object_class->constructed = meta_kms_constructed;
 
   signals[RESOURCES_CHANGED] =
     g_signal_new ("resources-changed",

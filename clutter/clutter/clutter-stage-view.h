@@ -50,6 +50,8 @@ struct _ClutterStageViewClass
                                        int                          dst_width,
                                        int                          dst_height,
                                        cairo_rectangle_int_t       *dst_rect);
+
+  ClutterFrame * (* new_frame) (ClutterStageView *view);
 };
 
 CLUTTER_EXPORT
@@ -84,5 +86,8 @@ float clutter_stage_view_get_refresh_rate (ClutterStageView *view);
 
 CLUTTER_EXPORT
 gboolean clutter_stage_view_has_shadowfb (ClutterStageView *view);
+
+CLUTTER_EXPORT
+void clutter_stage_view_schedule_update_now (ClutterStageView *view);
 
 #endif /* __CLUTTER_STAGE_VIEW_H__ */

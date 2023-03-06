@@ -11,12 +11,14 @@ export GSETTINGS_SCHEMA_DIR="$PWD/build/data"
 export G_SLICE="always-malloc"
 export MALLOC_CHECK_="3"
 export NO_AT_BRIDGE="1"
+export GTK_A11Y="none"
 export MALLOC_PERTURB_="123"
 
 mkdir -p -m 700 $XDG_RUNTIME_DIR
 
 glib-compile-schemas $GSETTINGS_SCHEMA_DIR
 
-"$WRAPPER" $WRAPPER_ARGS "${@:4}"
+status=0
+"$WRAPPER" $WRAPPER_ARGS "${@:4}" || status=$?
 
-echo $? > $TEST_RESULT
+echo $status > $TEST_RESULT

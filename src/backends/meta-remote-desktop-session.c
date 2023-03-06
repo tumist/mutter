@@ -34,6 +34,7 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include "backends/meta-dbus-session-watcher.h"
+#include "backends/meta-dbus-session-manager.h"
 #include "backends/meta-screen-cast-session.h"
 #include "backends/meta-remote-access-controller-private.h"
 #include "backends/x11/meta-backend-x11.h"
@@ -48,6 +49,13 @@
 #define META_REMOTE_DESKTOP_SESSION_DBUS_PATH "/org/gnome/Mutter/RemoteDesktop/Session"
 
 #define TRANSFER_REQUEST_CLEANUP_TIMEOUT_MS (s2ms (15))
+
+enum
+{
+  PROP_0,
+
+  N_PROPS
+};
 
 typedef enum _MetaRemoteDesktopNotifyAxisFlags
 {
@@ -69,7 +77,7 @@ struct _MetaRemoteDesktopSession
 {
   MetaDBusRemoteDesktopSessionSkeleton parent;
 
-  MetaRemoteDesktop *remote_desktop;
+  MetaDbusSessionManager *session_manager;
 
   GDBusConnection *connection;
   char *peer_name;
@@ -96,6 +104,8 @@ struct _MetaRemoteDesktopSession
   guint transfer_request_timeout_id;
 };
 
+static void initable_init_iface (GInitableIface *iface);
+
 static void
 meta_remote_desktop_session_init_iface (MetaDBusRemoteDesktopSessionIface *iface);
 
@@ -105,6 +115,8 @@ meta_dbus_session_init_iface (MetaDbusSessionInterface *iface);
 G_DEFINE_TYPE_WITH_CODE (MetaRemoteDesktopSession,
                          meta_remote_desktop_session,
                          META_DBUS_TYPE_REMOTE_DESKTOP_SESSION_SKELETON,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
+                                                initable_init_iface)
                          G_IMPLEMENT_INTERFACE (META_DBUS_TYPE_REMOTE_DESKTOP_SESSION,
                                                 meta_remote_desktop_session_init_iface)
                          G_IMPLEMENT_INTERFACE (META_TYPE_DBUS_SESSION,
@@ -127,8 +139,8 @@ meta_remote_desktop_session_handle_new (MetaRemoteDesktopSession *session);
 static MetaDisplay *
 display_from_session (MetaRemoteDesktopSession *session)
 {
-  MetaRemoteDesktop *remote_desktop = session->remote_desktop;
-  MetaBackend *backend = meta_remote_desktop_get_backend (remote_desktop);
+  MetaBackend *backend =
+    meta_dbus_session_manager_get_backend (session->session_manager);
   MetaContext *context = meta_backend_get_context (backend);
 
   return meta_context_get_display (context);
@@ -143,8 +155,8 @@ meta_remote_desktop_session_is_running (MetaRemoteDesktopSession *session)
 static void
 init_remote_access_handle (MetaRemoteDesktopSession *session)
 {
-  MetaRemoteDesktop *remote_desktop = session->remote_desktop;
-  MetaBackend *backend = meta_remote_desktop_get_backend (remote_desktop);
+  MetaBackend *backend =
+    meta_dbus_session_manager_get_backend (session->session_manager);
   MetaRemoteAccessController *remote_access_controller;
   MetaRemoteAccessHandle *remote_access_handle;
 
@@ -160,8 +172,8 @@ static void
 ensure_virtual_device (MetaRemoteDesktopSession *session,
                        ClutterInputDeviceType    device_type)
 {
-  MetaRemoteDesktop *remote_desktop = session->remote_desktop;
-  MetaBackend *backend = meta_remote_desktop_get_backend (remote_desktop);
+  MetaBackend *backend =
+    meta_dbus_session_manager_get_backend (session->session_manager);
   ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
   ClutterSeat *seat = clutter_backend_get_default_seat (clutter_backend);
   ClutterVirtualInputDevice **virtual_device_ptr = NULL;
@@ -207,9 +219,11 @@ meta_remote_desktop_session_start (MetaRemoteDesktopSession *session,
   return TRUE;
 }
 
-void
-meta_remote_desktop_session_close (MetaRemoteDesktopSession *session)
+static void
+meta_remote_desktop_session_close (MetaDbusSession *dbus_session)
 {
+  MetaRemoteDesktopSession *session =
+    META_REMOTE_DESKTOP_SESSION (dbus_session);
   MetaDBusRemoteDesktopSession *skeleton =
     META_DBUS_REMOTE_DESKTOP_SESSION (session);
 
@@ -217,9 +231,12 @@ meta_remote_desktop_session_close (MetaRemoteDesktopSession *session)
 
   if (session->screen_cast_session)
     {
+      MetaDbusSession *screen_cast_session =
+        META_DBUS_SESSION (session->screen_cast_session);
+
       g_clear_signal_handler (&session->screen_cast_session_closed_handler_id,
                               session->screen_cast_session);
-      meta_screen_cast_session_close (session->screen_cast_session);
+      meta_dbus_session_close (screen_cast_session);
       session->screen_cast_session = NULL;
     }
 
@@ -248,18 +265,12 @@ meta_remote_desktop_session_get_object_path (MetaRemoteDesktopSession *session)
   return session->object_path;
 }
 
-char *
-meta_remote_desktop_session_get_session_id (MetaRemoteDesktopSession *session)
-{
-  return session->session_id;
-}
-
 static void
 on_screen_cast_session_closed (MetaScreenCastSession    *screen_cast_session,
                                MetaRemoteDesktopSession *session)
 {
   session->screen_cast_session = NULL;
-  meta_remote_desktop_session_close (session);
+  meta_dbus_session_close (META_DBUS_SESSION (session));
 }
 
 gboolean
@@ -282,44 +293,6 @@ meta_remote_desktop_session_register_screen_cast (MetaRemoteDesktopSession  *ses
                       session);
 
   return TRUE;
-}
-
-MetaRemoteDesktopSession *
-meta_remote_desktop_session_new (MetaRemoteDesktop  *remote_desktop,
-                                 const char         *peer_name,
-                                 GError            **error)
-{
-  MetaBackend *backend = meta_remote_desktop_get_backend (remote_desktop);
-  ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
-  ClutterSeat *seat = clutter_backend_get_default_seat (clutter_backend);
-  ClutterKeymap *keymap = clutter_seat_get_keymap (seat);
-  GDBusInterfaceSkeleton *interface_skeleton;
-  MetaRemoteDesktopSession *session;
-
-  session = g_object_new (META_TYPE_REMOTE_DESKTOP_SESSION, NULL);
-
-  session->remote_desktop = remote_desktop;
-  session->peer_name = g_strdup (peer_name);
-
-  interface_skeleton = G_DBUS_INTERFACE_SKELETON (session);
-  session->connection = meta_remote_desktop_get_connection (remote_desktop);
-  if (!g_dbus_interface_skeleton_export (interface_skeleton,
-                                         session->connection,
-                                         session->object_path,
-                                         error))
-    {
-      g_object_unref (session);
-      return NULL;
-    }
-
-  g_object_bind_property (keymap, "caps-lock-state",
-                          session, "caps-lock-state",
-                          G_BINDING_DEFAULT | G_BINDING_SYNC_CREATE);
-  g_object_bind_property (keymap, "num-lock-state",
-                          session, "num-lock-state",
-                          G_BINDING_DEFAULT | G_BINDING_SYNC_CREATE);
-
-  return session;
 }
 
 static gboolean
@@ -384,7 +357,7 @@ handle_start (MetaDBusRemoteDesktopSession *skeleton,
                                              error->message);
       g_error_free (error);
 
-      meta_remote_desktop_session_close (session);
+      meta_dbus_session_close (META_DBUS_SESSION (session));
 
       return TRUE;
     }
@@ -416,7 +389,7 @@ handle_stop (MetaDBusRemoteDesktopSession *skeleton,
       return TRUE;
     }
 
-  meta_remote_desktop_session_close (session);
+  meta_dbus_session_close (META_DBUS_SESSION (session));
 
   meta_dbus_remote_desktop_session_complete_stop (skeleton, invocation);
 
@@ -1652,6 +1625,46 @@ handle_selection_read (MetaDBusRemoteDesktopSession *skeleton,
   return TRUE;
 }
 
+static gboolean
+meta_remote_desktop_session_initable_init (GInitable     *initable,
+                                           GCancellable  *cancellable,
+                                           GError       **error)
+{
+  MetaRemoteDesktopSession *session = META_REMOTE_DESKTOP_SESSION (initable);
+  MetaBackend *backend =
+    meta_dbus_session_manager_get_backend (session->session_manager);
+  ClutterSeat *seat = meta_backend_get_default_seat (backend);
+  ClutterKeymap *keymap = clutter_seat_get_keymap (seat);
+  GDBusInterfaceSkeleton *interface_skeleton = G_DBUS_INTERFACE_SKELETON (session);
+  MetaDBusRemoteDesktopSession *skeleton =
+    META_DBUS_REMOTE_DESKTOP_SESSION (interface_skeleton);
+
+  meta_dbus_remote_desktop_session_set_session_id (skeleton, session->session_id);
+
+  session->connection =
+    meta_dbus_session_manager_get_connection (session->session_manager);
+  if (!g_dbus_interface_skeleton_export (interface_skeleton,
+                                         session->connection,
+                                         session->object_path,
+                                         error))
+    return FALSE;
+
+  g_object_bind_property (keymap, "caps-lock-state",
+                          session, "caps-lock-state",
+                          G_BINDING_DEFAULT | G_BINDING_SYNC_CREATE);
+  g_object_bind_property (keymap, "num-lock-state",
+                          session, "num-lock-state",
+                          G_BINDING_DEFAULT | G_BINDING_SYNC_CREATE);
+
+  return TRUE;
+}
+
+static void
+initable_init_iface (GInitableIface *iface)
+{
+  iface->init = meta_remote_desktop_session_initable_init;
+}
+
 static void
 meta_remote_desktop_session_init_iface (MetaDBusRemoteDesktopSessionIface *iface)
 {
@@ -1676,15 +1689,9 @@ meta_remote_desktop_session_init_iface (MetaDBusRemoteDesktopSessionIface *iface
 }
 
 static void
-meta_remote_desktop_session_client_vanished (MetaDbusSession *dbus_session)
-{
-  meta_remote_desktop_session_close (META_REMOTE_DESKTOP_SESSION (dbus_session));
-}
-
-static void
 meta_dbus_session_init_iface (MetaDbusSessionInterface *iface)
 {
-  iface->client_vanished = meta_remote_desktop_session_client_vanished;
+  iface->close = meta_remote_desktop_session_close;
 }
 
 static void
@@ -1710,18 +1717,59 @@ meta_remote_desktop_session_finalize (GObject *object)
 }
 
 static void
+meta_remote_desktop_session_set_property (GObject      *object,
+                                          guint         prop_id,
+                                          const GValue *value,
+                                          GParamSpec   *pspec)
+{
+  MetaRemoteDesktopSession *session = META_REMOTE_DESKTOP_SESSION (object);
+
+  switch (prop_id)
+    {
+    case N_PROPS + META_DBUS_SESSION_PROP_SESSION_MANAGER:
+      session->session_manager = g_value_get_object (value);
+      break;
+    case N_PROPS + META_DBUS_SESSION_PROP_PEER_NAME:
+      session->peer_name = g_value_dup_string (value);
+      break;
+    case N_PROPS + META_DBUS_SESSION_PROP_ID:
+      session->session_id = g_value_dup_string (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
+}
+
+static void
+meta_remote_desktop_session_get_property (GObject    *object,
+                                          guint       prop_id,
+                                          GValue     *value,
+                                          GParamSpec *pspec)
+{
+  MetaRemoteDesktopSession *session = META_REMOTE_DESKTOP_SESSION (object);
+
+  switch (prop_id)
+    {
+    case N_PROPS + META_DBUS_SESSION_PROP_SESSION_MANAGER:
+      g_value_set_object (value, session->session_manager);
+      break;
+    case N_PROPS + META_DBUS_SESSION_PROP_PEER_NAME:
+      g_value_set_string (value, session->peer_name);
+      break;
+    case N_PROPS + META_DBUS_SESSION_PROP_ID:
+      g_value_set_string (value, session->session_id);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
+}
+
+static void
 meta_remote_desktop_session_init (MetaRemoteDesktopSession *session)
 {
-  MetaDBusRemoteDesktopSession *skeleton =
-    META_DBUS_REMOTE_DESKTOP_SESSION  (session);
-  GRand *rand;
   static unsigned int global_session_number = 0;
-
-  rand = g_rand_new ();
-  session->session_id = meta_generate_random_id (rand, 32);
-  g_rand_free (rand);
-
-  meta_dbus_remote_desktop_session_set_session_id (skeleton, session->session_id);
 
   session->object_path =
     g_strdup_printf (META_REMOTE_DESKTOP_SESSION_DBUS_PATH "/u%u",
@@ -1737,6 +1785,10 @@ meta_remote_desktop_session_class_init (MetaRemoteDesktopSessionClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = meta_remote_desktop_session_finalize;
+  object_class->set_property = meta_remote_desktop_session_set_property;
+  object_class->get_property = meta_remote_desktop_session_get_property;
+
+  meta_dbus_session_install_properties (object_class, N_PROPS);
 }
 
 static MetaRemoteDesktopSessionHandle *
@@ -1759,7 +1811,7 @@ meta_remote_desktop_session_handle_stop (MetaRemoteAccessHandle *handle)
   if (!session)
     return;
 
-  meta_remote_desktop_session_close (session);
+  meta_dbus_session_close (META_DBUS_SESSION (session));
 }
 
 static void

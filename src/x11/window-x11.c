@@ -91,6 +91,10 @@ meta_window_x11_maybe_focus_delayed (MetaWindow *window,
                                      guint32     timestamp);
 
 static void
+meta_window_x11_impl_process_property_notify (MetaWindow     *window,
+                                              XPropertyEvent *event);
+
+static void
 meta_window_x11_init (MetaWindowX11 *window_x11)
 {
 }
@@ -558,7 +562,7 @@ meta_window_x11_manage (MetaWindow *window)
   if (!window->override_redirect)
     update_sm_hints (window); /* must come after transient_for */
 
-  if (window->decorated)
+  if (window->decorated && !window->fullscreen)
     meta_window_ensure_frame (window);
   else
     meta_window_x11_initialize_state (window);
@@ -970,9 +974,6 @@ maybe_focus_default_window (MetaDisplay *display,
 
       if (focus_window->input)
         break;
-
-      if (focus_window->shaded && focus_window->frame)
-        break;
     }
 
   focus_candidates_maybe_take_and_focus_next (&focus_candidates, timestamp);
@@ -985,14 +986,13 @@ meta_window_x11_focus (MetaWindow *window,
   MetaWindowX11 *window_x11 = META_WINDOW_X11 (window);
   MetaWindowX11Private *priv =
     meta_window_x11_get_instance_private (window_x11);
-  /* For output-only or shaded windows, focus the frame.
+  /* For output-only windows, focus the frame.
    * This seems to result in the client window getting key events
    * though, so I don't know if it's icccm-compliant.
    *
    * Still, we have to do this or keynav breaks for these windows.
    */
-  if (window->frame &&
-      (window->shaded || !meta_window_is_focusable (window)))
+  if (window->frame && !meta_window_is_focusable (window))
     {
       meta_topic (META_DEBUG_FOCUS,
                   "Focusing frame of %s", window->desc);
@@ -1329,11 +1329,7 @@ meta_window_x11_move_resize_internal (MetaWindow                *window,
 
       /* Compute new frame size */
       new_w = window->rect.width + borders.invisible.left + borders.invisible.right;
-
-      if (window->shaded)
-        new_h = borders.total.top + borders.total.bottom;
-      else
-        new_h = window->rect.height + borders.invisible.top + borders.invisible.bottom;
+      new_h = window->rect.height + borders.invisible.top + borders.invisible.bottom;
 
       if (new_w != window->frame->rect.width ||
           new_h != window->frame->rect.height)
@@ -2229,6 +2225,7 @@ meta_window_x11_class_init (MetaWindowX11Class *klass)
   klass->freeze_commits = meta_window_x11_impl_freeze_commits;
   klass->thaw_commits = meta_window_x11_impl_thaw_commits;
   klass->always_update_shape = meta_window_x11_impl_always_update_shape;
+  klass->process_property_notify = meta_window_x11_impl_process_property_notify;
 
   obj_props[PROP_ATTRIBUTES] =
     g_param_spec_pointer ("attributes",
@@ -2249,11 +2246,6 @@ meta_window_x11_set_net_wm_state (MetaWindow *window)
   unsigned long data[13];
 
   i = 0;
-  if (window->shaded)
-    {
-      data[i] = x11_display->atom__NET_WM_STATE_SHADED;
-      ++i;
-    }
   if (priv->wm_state_modal)
     {
       data[i] = x11_display->atom__NET_WM_STATE_MODAL;
@@ -2284,7 +2276,7 @@ meta_window_x11_set_net_wm_state (MetaWindow *window)
       data[i] = x11_display->atom__NET_WM_STATE_FULLSCREEN;
       ++i;
     }
-  if (!meta_window_showing_on_its_workspace (window) || window->shaded)
+  if (!meta_window_showing_on_its_workspace (window))
     {
       data[i] = x11_display->atom__NET_WM_STATE_HIDDEN;
       ++i;
@@ -2933,9 +2925,9 @@ meta_window_x11_configure_request (MetaWindow *window,
   return TRUE;
 }
 
-static gboolean
-process_property_notify (MetaWindow     *window,
-                         XPropertyEvent *event)
+static void
+meta_window_x11_impl_process_property_notify (MetaWindow     *window,
+                                              XPropertyEvent *event)
 {
   Window xid = window->xwindow;
 
@@ -2952,19 +2944,19 @@ process_property_notify (MetaWindow     *window,
   if (event->atom == window->display->x11_display->atom__NET_WM_USER_TIME &&
       window->user_time_window)
     {
-        xid = window->user_time_window;
+      xid = window->user_time_window;
     }
 
   meta_window_reload_property_from_xwindow (window, xid, event->atom, FALSE);
-
-  return TRUE;
 }
 
-gboolean
+void
 meta_window_x11_property_notify (MetaWindow *window,
                                  XEvent     *event)
 {
-  return process_property_notify (window, &event->xproperty);
+  MetaWindowX11Class *klass = META_WINDOW_X11_GET_CLASS (window);
+
+  klass->process_property_notify (window, &event->xproperty);
 }
 
 #define _NET_WM_MOVERESIZE_SIZE_TOPLEFT      0
@@ -3125,26 +3117,6 @@ meta_window_x11_client_message (MetaWindow *window,
 
           meta_XFree (str1);
           meta_XFree (str2);
-        }
-
-      if (first == x11_display->atom__NET_WM_STATE_SHADED ||
-          second == x11_display->atom__NET_WM_STATE_SHADED)
-        {
-          gboolean shade;
-          guint32 timestamp;
-
-          /* Stupid protocol has no timestamp; of course, shading
-           * sucks anyway so who really cares that we're forced to do
-           * a roundtrip here?
-           */
-          timestamp = meta_display_get_current_time_roundtrip (window->display);
-
-          shade = (action == _NET_WM_STATE_ADD ||
-                   (action == _NET_WM_STATE_TOGGLE && !window->shaded));
-          if (shade && window->has_shade_func)
-            meta_window_shade (window, timestamp);
-          else
-            meta_window_unshade (window, timestamp);
         }
 
       if (first == x11_display->atom__NET_WM_STATE_FULLSCREEN ||
@@ -3448,7 +3420,8 @@ meta_window_x11_client_message (MetaWindow *window,
                                       event->xclient.data.l[4]); /* height */
     }
   else if (event->xclient.message_type ==
-           x11_display->atom__NET_ACTIVE_WINDOW)
+           x11_display->atom__NET_ACTIVE_WINDOW &&
+           meta_display_windows_are_interactable (window->display))
     {
       MetaClientType source_indication;
       guint32        timestamp;
@@ -4080,11 +4053,6 @@ meta_window_x11_set_allowed_actions_hint (MetaWindow *window)
   if (window->has_minimize_func)
     {
       data[i] = x11_display->atom__NET_WM_ACTION_MINIMIZE;
-      ++i;
-    }
-  if (window->has_shade_func)
-    {
-      data[i] = x11_display->atom__NET_WM_ACTION_SHADE;
       ++i;
     }
   /* sticky according to EWMH is different from mutter's sticky;
