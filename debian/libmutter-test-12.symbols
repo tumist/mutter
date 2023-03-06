@@ -27,6 +27,7 @@ libmutter-test-12.so libmutter-test-12 #MINVER#
  meta_monitor_manager_test_get_type@Base 41.0
  meta_monitor_manager_test_read_current@Base 41.0
  meta_monitor_manager_test_set_handles_transforms@Base 41.0
+ meta_monitor_manager_test_set_layout_mode@Base 44~rc
  meta_orientation_to_string@Base 42~beta
  meta_output_test_get_type@Base 41.0
  meta_read_file@Base 42~beta
