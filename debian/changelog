@@ -1,3 +1,21 @@
+mutter (43.3-5) UNRELEASED; urgency=medium
+
+  * d/patches: Use the same order in which patches were applied upstream
+  * d/p/color-device-Make-sure-lcms_context-is-not-NULL.patch,
+    d/p/color-device-Don-t-close-lcms-profile-on-error-from-cd_ic.patch:
+    Use final version of these patches as applied upstream
+  * d/p/Revert-x11-Do-not-move-X11-input-focus-during-grabs.patch,
+    d/p/Revert-x11-events-Do-not-update-focus-XWindow-during-grab.patch,
+    d/p/x11-Ignore-_NET_ACTIVE_WINDOW-client-messages-while-grabb.patch,
+    d/p/core-Avoid-focusing-windows-on-map-during-grabs.patch:
+    Backport upstream merge request !2878, fixing X11 focus regressions
+    (Closes: #1032388, #1031945)
+  * d/p/tests-Use-a-more-interoperable-path-to-bash.patch:
+    Fix path to interpreter in x11-test.sh instead of disabling it
+    - d/p/tests-Disable-broken-test.patch: Drop patch, no longer needed
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 06 Mar 2023 11:27:22 +0000
+
 mutter (43.3-4) unstable; urgency=medium
 
   * Team upload
