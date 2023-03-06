@@ -18,23 +18,28 @@ the colord CdIcc object, so it will be freed when the g_autoptr unrefs
 the CdIcc, and we must not free it again: that would be a double-free,
 potentially resulting in memory corruption.
 
+(cherry picked from commit ed12df1099d2c9b524c48d989f30c7ce1a8b1459)
+
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2659
 Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1031847
 Signed-off-by: Simon McVittie <smcv@debian.org>
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2877
+Applied-upstream: 44.rc, commit:ed12df1099d2c9b524c48d989f30c7ce1a8b1459
+Applied-upstream: 43.4, commit:c1133d2f9d6a6a271b0790916470090fbd18f73c
 ---
- src/backends/meta-color-device.c | 7 ++-----
- 1 file changed, 2 insertions(+), 5 deletions(-)
+ src/backends/meta-color-device.c | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
 
 diff --git a/src/backends/meta-color-device.c b/src/backends/meta-color-device.c
-index ea3b9de..bb87f48 100644
+index 5533a8e..3032d34 100644
 --- a/src/backends/meta-color-device.c
 +++ b/src/backends/meta-color-device.c
-@@ -890,12 +890,9 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
+@@ -889,12 +889,10 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
    cmsSetHeaderRenderingIntent (lcms_profile, INTENT_PERCEPTUAL);
    cmsSetDeviceClass (lcms_profile, cmsSigDisplayClass);
  
 -  if (!cd_icc_load_handle (cd_icc, lcms_profile,
++  g_warn_if_fail (cmsGetProfileContextID (lcms_profile));
 +  if (!cd_icc_load_handle (cd_icc, g_steal_pointer (&lcms_profile),
                             CD_ICC_LOAD_FLAGS_PRIMARIES, error))
 -    {

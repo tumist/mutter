@@ -6,24 +6,27 @@ lcms interprets a NULL context as using a default, non-thread-safe
 context, which is unsuitable for mutter's use. Make sure we're always
 using a non-trivial context.
 
+(cherry picked from commit e2be2d271b9fe79e456628f58ef5d828a27edb0d)
+
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2659
 Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1031847
 Signed-off-by: Simon McVittie <smcv@debian.org>
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2877
+Applied-upstream: 44.rc, commit:e2be2d271b9fe79e456628f58ef5d828a27edb0d
+Applied-upstream: 43.4, commit:c418c4497b2138fc893cfc729ac79fba55b0788b
 ---
- src/backends/meta-color-device.c | 10 +++++++++-
- 1 file changed, 9 insertions(+), 1 deletion(-)
+ src/backends/meta-color-device.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/src/backends/meta-color-device.c b/src/backends/meta-color-device.c
-index c0a98a4..ea3b9de 100644
+index c0a98a4..5533a8e 100644
 --- a/src/backends/meta-color-device.c
 +++ b/src/backends/meta-color-device.c
-@@ -846,6 +846,15 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
+@@ -846,6 +846,14 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
        return NULL;
      }
  
 +  lcms_context = meta_color_manager_get_lcms_context (color_manager);
-+
 +  if (!lcms_context)
 +    {
 +      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
@@ -34,7 +37,7 @@ index c0a98a4..ea3b9de 100644
    cd_icc = cd_icc_new ();
  
    chroma.Red.x = edid_info->red_x;
-@@ -863,7 +872,6 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
+@@ -863,7 +871,6 @@ create_icc_profile_from_edid (MetaColorDevice     *color_device,
    transfer_curve[1] = transfer_curve[0];
    transfer_curve[2] = transfer_curve[0];
  
