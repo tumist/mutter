@@ -1,7 +1,7 @@
+wayland-Don-t-overwrite-surface-offsets.patch
 x11-Avoid-updating-focus-on-wayland-compositor.patch
 color-device-Make-sure-lcms_context-is-not-NULL.patch
 color-device-Don-t-close-lcms-profile-on-error-from-cd_ic.patch
-wayland-Don-t-overwrite-surface-offsets.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 meson-add-back-default_driver-option.patch
 tests-Disable-broken-test.patch
