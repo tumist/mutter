@@ -1,5 +1,5 @@
+tests-Use-a-more-interoperable-path-to-bash.patch
 meson-add-back-default_driver-option.patch
-tests-Disable-broken-test.patch
 tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
 debian/backends-native-kms-crtc-Don-t-compare-gamma-values-on-un.patch
 debian/meson-Do-not-mark-CI-test-tools-as-required.patch

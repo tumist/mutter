@@ -41,6 +41,46 @@ mutter (44~beta-1) experimental; urgency=medium
 
  -- Jeremy Bicha <jbicha@ubuntu.com>  Fri, 17 Feb 2023 16:41:43 -0500
 
+mutter (43.3-5) unstable; urgency=medium
+
+  * Team upload
+  * d/patches: Use the same order in which patches were applied upstream
+  * d/p/color-device-Make-sure-lcms_context-is-not-NULL.patch,
+    d/p/color-device-Don-t-close-lcms-profile-on-error-from-cd_ic.patch:
+    Use final version of these patches as applied upstream
+  * d/p/Revert-x11-Do-not-move-X11-input-focus-during-grabs.patch,
+    d/p/Revert-x11-events-Do-not-update-focus-XWindow-during-grab.patch,
+    d/p/x11-Ignore-_NET_ACTIVE_WINDOW-client-messages-while-grabb.patch,
+    d/p/core-Avoid-focusing-windows-on-map-during-grabs.patch:
+    Backport upstream merge request !2878, fixing X11 focus regressions
+    (Closes: #1032388, #1031945)
+  * d/p/tests-Use-a-more-interoperable-path-to-bash.patch:
+    Fix path to interpreter in x11-test.sh instead of disabling it
+    - d/p/tests-Disable-broken-test.patch: Drop patch, no longer needed
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 06 Mar 2023 11:35:23 +0000
+
+mutter (43.3-4) unstable; urgency=medium
+
+  * Team upload
+  * d/p/color-device-Make-sure-lcms_context-is-not-NULL.patch,
+    d/p/color-device-Don-t-close-lcms-profile-on-error-from-cd_ic.patch:
+    Fix a double-free when loading the ICC profile from a device's EDID
+    fails (Closes: #1031847)
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 02 Mar 2023 08:50:50 +0000
+
+mutter (43.3-3) unstable; urgency=medium
+
+  * Team upload
+  * d/p/x11-Avoid-updating-focus-on-wayland-compositor.patch:
+    Add patch from upstream fixing a focus-handling regression in
+    Wayland sessions.
+    In 43.3, switching from an Xwayland window to a native Wayland window
+    would not always work.
+
+ -- Simon McVittie <smcv@debian.org>  Sat, 18 Feb 2023 18:44:12 +0000
+
 mutter (43.3-2) unstable; urgency=medium
 
   * Team upload
