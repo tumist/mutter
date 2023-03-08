@@ -30,7 +30,7 @@ index 29ca429..85fd0c6 100644
 +
  #define COGL_CONFIG_H_INCLUDED 1
 diff --git a/cogl/meson.build b/cogl/meson.build
-index a87cd18..6a60648 100644
+index e73f1a8..b4b6f10 100644
 --- a/cogl/meson.build
 +++ b/cogl/meson.build
 @@ -10,6 +10,10 @@ cdata.set('HAVE_COGL_GLES2', have_gles2)
@@ -45,10 +45,10 @@ index a87cd18..6a60648 100644
    input: 'cogl-config.h.meson',
    output: 'cogl-config.h',
 diff --git a/meson.build b/meson.build
-index bcacf4b..d7708b9 100644
+index b114509..28ba29e 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -268,6 +268,8 @@ if have_wayland_eglstream
+@@ -273,6 +273,8 @@ if have_wayland_eglstream
    endif
  endif
  
@@ -57,7 +57,7 @@ index bcacf4b..d7708b9 100644
  have_sm = get_option('sm')
  if have_sm
    sm_dep = dependency('sm')
-@@ -661,6 +663,7 @@ summary('X11', have_x11, section: 'Options')
+@@ -684,6 +686,7 @@ summary('X11', have_x11, section: 'Options')
  summary('XWayland', have_xwayland, section: 'Options')
  summary('Native Backend', have_native_backend, section: 'Options')
  summary('EGL Device', have_egl_device, section: 'Options')
@@ -66,10 +66,10 @@ index bcacf4b..d7708b9 100644
  summary('libgnome-desktop', have_gnome_desktop, section: 'Options')
  summary('Sound player', have_sound_player, section: 'Options')
 diff --git a/meson_options.txt b/meson_options.txt
-index cddcc1a..674d30e 100644
+index a13a25c..a312942 100644
 --- a/meson_options.txt
 +++ b/meson_options.txt
-@@ -75,6 +75,12 @@ option('wayland_eglstream',
+@@ -81,6 +81,12 @@ option('wayland_eglstream',
    description: 'Enable Wayland EGLStream support client support'
  )
  

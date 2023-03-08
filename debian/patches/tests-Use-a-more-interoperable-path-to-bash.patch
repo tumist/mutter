@@ -39,7 +39,7 @@ index ca875c9..182363c 100755
  # We need a coverity token to fetch the tarball
  if [ -x $COVERITY_TOKEN ]
 diff --git a/src/tests/kvm/run-kvm-test.sh b/src/tests/kvm/run-kvm-test.sh
-index 974ff75..5ad2c6b 100755
+index ff94a68..4213ef9 100755
 --- a/src/tests/kvm/run-kvm-test.sh
 +++ b/src/tests/kvm/run-kvm-test.sh
 @@ -1,4 +1,4 @@
@@ -49,7 +49,7 @@ index 974ff75..5ad2c6b 100755
  set -e
  
 diff --git a/src/tests/kvm/virtme-run.sh b/src/tests/kvm/virtme-run.sh
-index 755f280..8c96c79 100755
+index 836b383..d079654 100755
 --- a/src/tests/kvm/virtme-run.sh
 +++ b/src/tests/kvm/virtme-run.sh
 @@ -1,4 +1,4 @@

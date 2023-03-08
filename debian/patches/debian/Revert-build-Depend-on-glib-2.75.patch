@@ -38,7 +38,7 @@ index b8d0929..5b18f10 100644
    g_free (dmabuf_handle);
  }
 diff --git a/meson.build b/meson.build
-index 8c99ead..ee6c71b 100644
+index 26e0aa1..e454c56 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -16,7 +16,7 @@ mutter_builddir = meson.current_build_dir()
