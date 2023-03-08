@@ -1,4 +1,4 @@
-mutter (44~rc-1) UNRELEASED; urgency=medium
+mutter (44~rc-1) experimental; urgency=medium
 
   [ Jeremy Bicha ]
   * New upstream release
@@ -31,7 +31,7 @@ mutter (44~rc-1) UNRELEASED; urgency=medium
     It's not possible to compile older gnome-shell versions with mutter
     44~rc due to the gtk dependency removal
 
- -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Wed, 08 Mar 2023 02:04:03 +0100
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Wed, 08 Mar 2023 02:29:22 +0100
 
 mutter (44~beta-3) experimental; urgency=medium
 
