@@ -174,7 +174,7 @@ Depends: adwaita-icon-theme,
 Breaks: apparmor (<< 2.13.3-5~),
         gnome-control-center (<< 1:3.25.2),
         gnome-settings-daemon (<< 3.31.101),
-        gnome-shell (<< 42~rc),
+        gnome-shell (<< 44~rc),
         libgtk-3-0 (<< 3.24.33-2~),
         libgtk-4-1 (<< 4.6.3+ds1-2~)
 Description: window manager library from the Mutter window manager
