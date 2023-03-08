@@ -1,8 +1,6 @@
-wayland-Don-t-overwrite-surface-offsets.patch
+tests-Use-a-more-interoperable-path-to-bash.patch
 meson-add-back-default_driver-option.patch
-tests-Disable-broken-test.patch
 tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
-debian/backends-native-kms-crtc-Don-t-compare-gamma-values-on-un.patch
 debian/meson-Do-not-mark-CI-test-tools-as-required.patch
 debian/tests-Do-not-run-screencast-tests.patch
 debian/tests-skip-monitor-width-size-check-as-it-may-lead-to-une.patch
@@ -10,9 +8,7 @@ debian/tests-Tag-unstable-tests-as-flaky.patch
 debian/wayland-data-device-Allow-any-drag-timestamp-as-drag-star.patch
 debian/Support-Dynamic-triple-double-buffering.patch
 debian/tests-Disable-restore-size-test.patch
-debian/Revert-build-Depend-on-glib-2.75.patch
 ubuntu/x11-Add-support-for-fractional-scaling-using-Randr.patch
 workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch
 debian/Mark-xwayland-test-case-as-known-to-be-flaky-on-32-bit-AR.patch
 cursor-renderer-native-Workaround-broken-arm64-drivers.patch
-x11-Avoid-updating-focus-on-wayland-compositor.patch

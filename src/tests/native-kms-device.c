@@ -105,19 +105,8 @@ assert_crtc_state_equals (const MetaKmsCrtcState *crtc_state1,
                        crtc_state2->drm_mode.name);
     }
 
-  g_assert_cmpint (crtc_state1->gamma.size, ==, crtc_state1->gamma.size);
-  g_assert_cmpmem (crtc_state1->gamma.red,
-                   crtc_state1->gamma.size * sizeof (uint16_t),
-                   crtc_state2->gamma.red,
-                   crtc_state2->gamma.size * sizeof (uint16_t));
-  g_assert_cmpmem (crtc_state1->gamma.green,
-                   crtc_state1->gamma.size * sizeof (uint16_t),
-                   crtc_state2->gamma.green,
-                   crtc_state2->gamma.size * sizeof (uint16_t));
-  g_assert_cmpmem (crtc_state1->gamma.blue,
-                   crtc_state1->gamma.size * sizeof (uint16_t),
-                   crtc_state2->gamma.blue,
-                   crtc_state2->gamma.size * sizeof (uint16_t));
+  g_assert_true (meta_gamma_lut_equal (crtc_state1->gamma.value,
+                                       crtc_state2->gamma.value));
 }
 
 static int
@@ -213,12 +202,10 @@ copy_crtc_state (const MetaKmsCrtcState *crtc_state)
   g_assert_nonnull (crtc_state);
 
   new_state = *crtc_state;
-  new_state.gamma.red = g_memdup2 (new_state.gamma.red,
-                                   new_state.gamma.size * sizeof (uint16_t));
-  new_state.gamma.green = g_memdup2 (new_state.gamma.green,
-                                     new_state.gamma.size * sizeof (uint16_t));
-  new_state.gamma.blue = g_memdup2 (new_state.gamma.blue,
-                                    new_state.gamma.size * sizeof (uint16_t));
+  if (crtc_state->gamma.value)
+    new_state.gamma.value = meta_gamma_lut_copy (crtc_state->gamma.value);
+  else
+    new_state.gamma.value = NULL;
 
   return new_state;
 }
@@ -246,11 +233,9 @@ copy_connector_state (const MetaKmsConnectorState *connector_state)
 }
 
 static void
-release_crtc_state (const MetaKmsCrtcState *crtc_state)
+release_crtc_state (MetaKmsCrtcState *crtc_state)
 {
-  g_free (crtc_state->gamma.red);
-  g_free (crtc_state->gamma.green);
-  g_free (crtc_state->gamma.blue);
+  g_clear_pointer (&crtc_state->gamma.value, meta_gamma_lut_free);
 }
 
 static void
@@ -274,6 +259,7 @@ meta_test_kms_device_mode_set (void)
   MetaKmsCrtcState crtc_state;
   MetaKmsConnectorState connector_state;
   MetaRectangle mode_rect;
+  MetaKmsFeedback *feedback;
 
   device = meta_get_test_kms_device (test_context);
   crtc = meta_get_test_kms_crtc (device);
@@ -296,9 +282,9 @@ meta_test_kms_device_mode_set (void)
                                 meta_get_mode_fixed_rect_16 (mode),
                                 meta_get_mode_rect (mode),
                                 META_KMS_ASSIGN_PLANE_FLAG_NONE);
-  meta_kms_device_process_update_sync (device, update,
-                                       META_KMS_UPDATE_FLAG_NONE);
-  meta_kms_update_free (update);
+  feedback = meta_kms_device_process_update_sync (device, update,
+                                                  META_KMS_UPDATE_FLAG_NONE);
+  meta_kms_feedback_unref (feedback);
 
   g_assert_nonnull (meta_kms_crtc_get_current_state (crtc));
   crtc_state = copy_crtc_state (meta_kms_crtc_get_current_state (crtc));
@@ -329,6 +315,7 @@ meta_test_kms_device_power_save (void)
 {
   MetaKmsDevice *device;
   MetaKmsUpdate *update;
+  MetaKmsFeedback *feedback;
   MetaKmsCrtc *crtc;
   MetaKmsConnector *connector;
   MetaKmsMode *mode;
@@ -359,9 +346,9 @@ meta_test_kms_device_power_save (void)
                                 meta_get_mode_fixed_rect_16 (mode),
                                 meta_get_mode_rect (mode),
                                 META_KMS_ASSIGN_PLANE_FLAG_NONE);
-  meta_kms_device_process_update_sync (device, update,
-                                       META_KMS_UPDATE_FLAG_NONE);
-  meta_kms_update_free (update);
+  feedback = meta_kms_device_process_update_sync (device, update,
+                                                  META_KMS_UPDATE_FLAG_NONE);
+  meta_kms_feedback_unref (feedback);
 
   g_assert_true (meta_kms_crtc_is_active (crtc));
 
@@ -396,9 +383,9 @@ meta_test_kms_device_power_save (void)
                                 meta_get_mode_fixed_rect_16 (mode),
                                 meta_get_mode_rect (mode),
                                 META_KMS_ASSIGN_PLANE_FLAG_NONE);
-  meta_kms_device_process_update_sync (device, update,
-                                       META_KMS_UPDATE_FLAG_NONE);
-  meta_kms_update_free (update);
+  feedback = meta_kms_device_process_update_sync (device, update,
+                                                  META_KMS_UPDATE_FLAG_NONE);
+  meta_kms_feedback_unref (feedback);
 
   g_assert_true (meta_kms_crtc_is_active (crtc));
   connector_state = meta_kms_connector_get_current_state (connector);

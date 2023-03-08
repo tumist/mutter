@@ -1,5 +1,6 @@
 libmutter-12.so.0 libmutter-12-0 #MINVER#
 * Build-Depends-Package: libmutter-12-dev
+ hdr_metadata_equal@Base 44~rc
  meta_accelerator_name@Base 44~beta
  meta_add_clutter_debug_flags@Base 43.0
  meta_add_debug_paint_flag@Base 43.0
@@ -34,6 +35,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_backend_native_get_device_pool@Base 43.0
  meta_backend_native_get_kms@Base 43.0
  (arch=linux-any)meta_backend_native_get_type@Base 43.0
+ meta_backend_native_get_udev@Base 44~rc
  meta_backend_set_keymap@Base 43.0
  meta_backend_x11_nested_get_type@Base 43.0
  meta_background_actor_get_type@Base 43.0
@@ -223,9 +225,16 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_focus_stage_window@Base 43.0
  meta_frame_borders_clear@Base 43.0
  meta_frame_flags_get_type@Base 43.0
+ meta_frame_native_ensure_kms_update@Base 44~rc
+ meta_frame_native_from_frame@Base 44~rc
+ meta_frame_native_has_kms_update@Base 44~rc
  meta_frame_type_get_type@Base 43.0
  meta_frame_type_to_string@Base 43.0
  meta_g_utf8_strndup@Base 43.0
+ meta_gamma_lut_copy@Base 44~rc
+ meta_gamma_lut_equal@Base 44~rc
+ meta_gamma_lut_free@Base 44~rc
+ meta_gamma_lut_new@Base 44~rc
  meta_get_clutter_debug_flags@Base 43.0
  meta_get_debug_paint_flags@Base 43.0
  meta_get_feedback_group_for_display@Base 43.0
@@ -298,6 +307,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_kms_device_get_type@Base 43.0
  meta_kms_device_process_update_sync@Base 43.0
  meta_kms_device_uses_monotonic_clock@Base 43.0
+ meta_kms_feedback_unref@Base 44~rc
  meta_kms_get_backend@Base 43.0
  meta_kms_get_devices@Base 43.0
  meta_kms_impl_device_atomic_get_type@Base 43.0
@@ -312,19 +322,26 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_kms_plane_get_device@Base 43.0
  meta_kms_plane_get_plane_type@Base 43.0
  meta_kms_plane_is_usable_with@Base 43.0
+ meta_kms_update_add_page_flip_listener@Base 44~rc
+ meta_kms_update_add_result_listener@Base 44~rc
  meta_kms_update_assign_plane@Base 43.0
  meta_kms_update_free@Base 43.0
  meta_kms_update_get_connector_updates@Base 43.0
- meta_kms_update_get_crtc_gammas@Base 43.0
+ meta_kms_update_get_crtc_color_updates@Base 44~rc
  meta_kms_update_get_cursor_plane_assignment@Base 43.0
  meta_kms_update_get_device@Base 43.0
  meta_kms_update_get_mode_sets@Base 43.0
  meta_kms_update_get_page_flip_listeners@Base 43.0
  meta_kms_update_get_plane_assignments@Base 43.0
  meta_kms_update_get_primary_plane_assignment@Base 43.0
- meta_kms_update_is_locked@Base 43.0
+ meta_kms_update_is_sealed@Base 44~rc
+ meta_kms_update_merge_from@Base 44~rc
  meta_kms_update_mode_set@Base 43.0
  meta_kms_update_new@Base 43.0
+ meta_kms_update_set_crtc_gamma@Base 44~rc
+ meta_kms_update_set_max_bpc@Base 44~rc
+ meta_kms_update_set_privacy_screen@Base 44~rc
+ meta_kms_update_set_underscanning@Base 44~rc
  meta_kms_update_states_sync@Base 43.0
  meta_later_type_get_type@Base 43.0
  meta_laters_add@Base 43.0
@@ -514,6 +531,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_prefs_get_gnome_accessibility@Base 43.0
  meta_prefs_get_gnome_animations@Base 43.0
  meta_prefs_get_keybinding_action@Base 43.0
+ meta_prefs_get_keybinding_label@Base 44~rc
  meta_prefs_get_mouse_button_menu@Base 43.0
  meta_prefs_get_mouse_button_mods@Base 43.0
  meta_prefs_get_mouse_button_resize@Base 43.0
@@ -572,6 +590,8 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_remove_verbose_topic@Base 43.0
  meta_renderer_get_view_for_crtc@Base 43.0
  meta_renderer_get_views@Base 43.0
+ meta_renderer_native_get_type@Base 44~rc
+ meta_renderer_native_has_pending_mode_sets@Base 44~rc
  meta_renderer_view_get_crtc@Base 44~beta
  meta_renderer_view_get_type@Base 44~beta
  meta_restart@Base 43.0
@@ -594,6 +614,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_selection_unset_owner@Base 43.0
  meta_service_channel_get_service_client@Base 44~beta
  meta_set_color_efivar_test_path@Base 43.0
+ meta_set_drm_hdr_metadata@Base 44~rc
  meta_settings_enable_experimental_feature@Base 43.0
  meta_settings_get_font_dpi@Base 43.0
  meta_settings_get_ui_scaling_factor@Base 43.0
@@ -643,6 +664,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_startup_sequence_get_workspace@Base 43.0
  meta_tab_list_get_type@Base 43.0
  meta_tab_show_type_get_type@Base 43.0
+ meta_udev_list_drm_devices@Base 44~rc
  meta_unsigned_long_equal@Base 43.0
  meta_unsigned_long_hash@Base 43.0
  meta_verify_logical_monitor_config@Base 43.0
@@ -678,6 +700,8 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  (arch=linux-any)meta_wayland_get_wayland_display_name@Base 43.0
  (arch=linux-any)meta_wayland_override_display_name@Base 43.0
  (arch=linux-any)meta_wayland_surface_get_actor@Base 43.0
+ meta_wayland_surface_get_buffer_height@Base 44~rc
+ meta_wayland_surface_get_buffer_width@Base 44~rc
  (arch=linux-any)meta_wayland_surface_get_height@Base 43.1
  meta_wayland_surface_get_resource@Base 44~beta
  (arch=linux-any)meta_wayland_surface_get_width@Base 43.1
@@ -704,7 +728,6 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_window_can_close@Base 43.0
  meta_window_can_maximize@Base 43.0
  meta_window_can_minimize@Base 43.0
- meta_window_can_shade@Base 43.0
  meta_window_change_workspace@Base 43.0
  meta_window_change_workspace_by_index@Base 43.0
  meta_window_check_alive@Base 43.0
@@ -778,7 +801,6 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_window_is_override_redirect@Base 43.0
  meta_window_is_remote@Base 43.0
  meta_window_is_screen_sized@Base 43.0
- meta_window_is_shaded@Base 43.0
  meta_window_is_skip_taskbar@Base 43.0
  meta_window_kill@Base 43.0
  meta_window_located_on_workspace@Base 43.0
@@ -793,10 +815,10 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_window_move_resize_frame@Base 43.0
  meta_window_move_to_monitor@Base 43.0
  meta_window_raise@Base 43.0
+ meta_window_raise_and_make_recent@Base 44~rc
  meta_window_set_compositor_private@Base 43.0
  meta_window_set_demands_attention@Base 43.0
  meta_window_set_icon_geometry@Base 43.0
- meta_window_shade@Base 43.0
  meta_window_shape_equal@Base 43.0
  meta_window_shape_get_borders@Base 43.0
  meta_window_shape_get_type@Base 43.0
@@ -817,7 +839,6 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_window_unmaximize@Base 43.0
  meta_window_unminimize@Base 43.0
  meta_window_unset_demands_attention@Base 43.0
- meta_window_unshade@Base 43.0
  meta_window_unstick@Base 43.0
  meta_window_untile@Base 43.0
  (arch=linux-any)meta_window_wayland_get_type@Base 43.1
@@ -846,25 +867,20 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_workspace_manager_update_num_workspaces@Base 43.1
  meta_workspace_set_builtin_struts@Base 43.0
  meta_x11_display_add_alarm_filter@Base 43.2
- meta_x11_display_clear_stage_input_region@Base 43.0
- meta_x11_display_get_damage_event_base@Base 43.0
- meta_x11_display_get_screen_number@Base 43.0
- meta_x11_display_get_shape_event_base@Base 43.0
+ meta_x11_display_add_event_func@Base 44~rc
  meta_x11_display_get_type@Base 43.0
  meta_x11_display_get_xdisplay@Base 43.0
- meta_x11_display_get_xinput_opcode@Base 43.0
  meta_x11_display_get_xroot@Base 43.0
- meta_x11_display_has_shape@Base 43.0
  meta_x11_display_lookup_group@Base 43.0
  meta_x11_display_remove_alarm_filter@Base 43.2
- meta_x11_display_set_cm_selection@Base 43.0
+ meta_x11_display_remove_event_func@Base 44~rc
  meta_x11_display_set_stage_input_region@Base 43.0
- meta_x11_display_xwindow_is_a_no_focus_window@Base 43.0
  meta_x11_error_trap_pop@Base 43.0
  meta_x11_error_trap_pop_with_return@Base 43.0
  meta_x11_error_trap_push@Base 43.0
  (arch=linux-any)meta_xwayland_override_display_number@Base 43.0
  (arch=linux-any)meta_xwayland_signal@Base 43.0
+ set_output_hdr_metadata@Base 44~rc
 libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
 * Build-Depends-Package: libmutter-12-dev
  _clutter_backend_translate_event@Base 43.0
@@ -1935,6 +1951,7 @@ libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
  clutter_stage_view_notify_ready@Base 43.0
  clutter_stage_view_peek_scanout@Base 43.0
  clutter_stage_view_schedule_update@Base 43.0
+ clutter_stage_view_schedule_update_now@Base 44~rc
  clutter_stage_view_take_accumulated_redraw_clip@Base 43.0
  clutter_stage_view_take_redraw_clip@Base 43.0
  clutter_stage_view_take_scanout@Base 43.0
@@ -2652,6 +2669,7 @@ libmutter-cogl-12.so.0 libmutter-12-0 #MINVER#
  cogl_scanout_blit_to_framebuffer@Base 43.0
  cogl_scanout_error_quark@Base 43.0
  cogl_scanout_get_type@Base 43.0
+ cogl_scanout_notify_failed@Base 44~rc
  cogl_set_tracing_disabled_on_thread@Base 43.0
  cogl_set_tracing_enabled_on_thread@Base 43.0
  cogl_set_tracing_enabled_on_thread_with_fd@Base 43.0

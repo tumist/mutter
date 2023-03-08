@@ -90,12 +90,6 @@ if have_introspection
   ]
 endif
 
-if have_x11_client
-  mutter_pkg_deps += [
-    gtk3_dep,
-  ]
-endif
-
 if have_x11
   mutter_pkg_deps += [
     xfixes_dep,
@@ -214,6 +208,10 @@ mutter_sources = [
   'backends/meta-cursor-sprite-xcursor.h',
   'backends/meta-cursor-tracker.c',
   'backends/meta-cursor-tracker-private.h',
+  'backends/meta-dbus-session-manager.c',
+  'backends/meta-dbus-session-manager.h',
+  'backends/meta-dbus-session-watcher.c',
+  'backends/meta-dbus-session-watcher.h',
   'backends/meta-display-config-shared.h',
   'backends/meta-dnd-private.h',
   'backends/meta-gpu.c',
@@ -472,6 +470,7 @@ if have_x11_client
     'x11/meta-x11-display.c',
     'x11/meta-x11-display-private.h',
     'x11/meta-x11-errors.c',
+    'x11/meta-x11-event-source.c',
     'x11/meta-x11-selection.c',
     'x11/meta-x11-selection-private.h',
     'x11/meta-x11-selection-input-stream.c',
@@ -519,8 +518,6 @@ endif
 
 if have_remote_desktop
   mutter_sources += [
-    'backends/meta-dbus-session-watcher.c',
-    'backends/meta-dbus-session-watcher.h',
     'backends/meta-remote-desktop.c',
     'backends/meta-remote-desktop.h',
     'backends/meta-remote-desktop-session.c',
@@ -599,6 +596,8 @@ if have_wayland
     'wayland/meta-wayland-dnd-surface.h',
     'wayland/meta-wayland-filter-manager.c',
     'wayland/meta-wayland-filter-manager.h',
+    'wayland/meta-wayland-fractional-scale.c',
+    'wayland/meta-wayland-fractional-scale.h',
     'wayland/meta-wayland-gtk-shell.c',
     'wayland/meta-wayland-gtk-shell.h',
     'wayland/meta-wayland.h',
@@ -741,6 +740,8 @@ if have_native_backend
     'backends/native/meta-drm-buffer.h',
     'backends/native/meta-gpu-kms.c',
     'backends/native/meta-gpu-kms.h',
+    'backends/native/meta-frame-native.c',
+    'backends/native/meta-frame-native.h',
     'backends/native/meta-input-device-native.c',
     'backends/native/meta-input-device-native.h',
     'backends/native/meta-input-device-tool-native.c',
@@ -786,6 +787,7 @@ if have_native_backend
     'backends/native/meta-kms-plane-private.h',
     'backends/native/meta-kms-plane.h',
     'backends/native/meta-kms-private.h',
+    'backends/native/meta-kms-types-private.h',
     'backends/native/meta-kms-types.h',
     'backends/native/meta-kms-update-private.h',
     'backends/native/meta-kms-update.c',
@@ -810,6 +812,8 @@ if have_native_backend
     'backends/native/meta-renderer-native-private.h',
     'backends/native/meta-renderer-native.c',
     'backends/native/meta-renderer-native.h',
+    'backends/native/meta-renderer-view-native.c',
+    'backends/native/meta-renderer-view-native.h',
     'backends/native/meta-seat-impl.c',
     'backends/native/meta-seat-impl.h',
     'backends/native/meta-seat-native.c',
@@ -843,6 +847,7 @@ mutter_private_enum_sources = []
 if have_remote_desktop
   mutter_private_enum_sources += [
     'backends/meta-screen-cast.h',
+    'backends/meta-screen-cast-session.h',
   ]
 endif
 
@@ -1002,6 +1007,7 @@ if have_wayland
   #  - protocol stability ('private', 'stable' or 'unstable')
   #  - protocol version (if stability is 'unstable')
   wayland_protocols = [
+    ['fractional-scale', 'staging', 'v1', ],
     ['gtk-shell', 'private', ],
     ['keyboard-shortcuts-inhibit', 'unstable', 'v1', ],
     ['linux-dmabuf', 'unstable', 'v1', ],

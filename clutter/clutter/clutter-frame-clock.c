@@ -111,6 +111,9 @@ struct _ClutterFrameClock
   int inhibit_count;
 
   GList *timelines;
+
+  int n_missed_frames;
+  int64_t missed_frame_report_time_us;
 };
 
 G_DEFINE_TYPE (ClutterFrameClock, clutter_frame_clock,
@@ -239,6 +242,38 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
 {
   COGL_TRACE_BEGIN_SCOPED (ClutterFrameClockNotifyPresented,
                            "Frame Clock (presented)");
+
+  if (G_UNLIKELY (CLUTTER_HAS_DEBUG (FRAME_CLOCK)))
+    {
+      int64_t now_us;
+
+      if (frame_clock->is_next_presentation_time_valid &&
+          frame_info->presentation_time != 0)
+        {
+          int64_t diff_us;
+          int n_missed_frames;
+
+          diff_us = llabs (frame_info->presentation_time -
+                           frame_clock->next_presentation_time_us);
+          n_missed_frames =
+            (int) roundf ((float) diff_us /
+                          (float) frame_clock->refresh_interval_us);
+
+          frame_clock->n_missed_frames = n_missed_frames;
+        }
+
+      now_us = g_get_monotonic_time ();
+      if ((now_us - frame_clock->missed_frame_report_time_us) > G_USEC_PER_SEC)
+        {
+          if (frame_clock->n_missed_frames > 0)
+            {
+              CLUTTER_NOTE (FRAME_CLOCK, "Missed %d frames the last second",
+                            frame_clock->n_missed_frames);
+            }
+          frame_clock->n_missed_frames = 0;
+          frame_clock->missed_frame_report_time_us = now_us;
+        }
+    }
 
 #ifdef COGL_HAS_TRACING
   if (G_UNLIKELY (cogl_is_tracing_enabled ()))
@@ -632,10 +667,9 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
     {
     case CLUTTER_FRAME_CLOCK_STATE_INIT:
     case CLUTTER_FRAME_CLOCK_STATE_IDLE:
+    case CLUTTER_FRAME_CLOCK_STATE_SCHEDULED:
       next_update_time_us = g_get_monotonic_time ();
       break;
-    case CLUTTER_FRAME_CLOCK_STATE_SCHEDULED:
-      return;
     case CLUTTER_FRAME_CLOCK_STATE_DISPATCHING:
     case CLUTTER_FRAME_CLOCK_STATE_PENDING_PRESENTED:
       frame_clock->pending_reschedule = TRUE;
@@ -733,7 +767,11 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
 
   frame_count = frame_clock->frame_count++;
 
-  frame = clutter_frame_new ();
+  if (iface->new_frame)
+    frame = iface->new_frame (frame_clock, frame_clock->listener.user_data);
+  if (!frame)
+    frame = clutter_frame_new (ClutterFrame, NULL);
+
   frame->frame_count = frame_count;
   frame->has_target_presentation_time = frame_clock->is_next_presentation_time_valid;
   frame->target_presentation_time_us = frame_clock->next_presentation_time_us;

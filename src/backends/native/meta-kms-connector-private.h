@@ -40,6 +40,8 @@ typedef enum _MetaKmsConnectorProp
   META_KMS_CONNECTOR_PROP_PANEL_ORIENTATION,
   META_KMS_CONNECTOR_PROP_NON_DESKTOP,
   META_KMS_CONNECTOR_PROP_MAX_BPC,
+  META_KMS_CONNECTOR_PROP_COLORSPACE,
+  META_KMS_CONNECTOR_PROP_HDR_OUTPUT_METADATA,
   META_KMS_CONNECTOR_N_PROPS
 } MetaKmsConnectorProp;
 
@@ -92,6 +94,28 @@ typedef enum _MetaKmsConnectorPanelOrientation
   META_KMS_CONNECTOR_PANEL_ORIENTATION_UNKNOWN,
 } MetaKmsConnectorPanelOrientation;
 
+typedef enum _MetaKmsConnectorColorspace
+{
+  META_KMS_CONNECTOR_COLORSPACE_DEFAULT = 0,
+  META_KMS_CONNECTOR_COLORSPACE_RGB_WIDE_GAMUT_FIXED_POINT,
+  META_KMS_CONNECTOR_COLORSPACE_RGB_WIDE_GAMUT_FLOATING_POINT,
+  META_KMS_CONNECTOR_COLORSPACE_RGB_OPRGB,
+  META_KMS_CONNECTOR_COLORSPACE_RGB_DCI_P3_RGB_D65,
+  META_KMS_CONNECTOR_COLORSPACE_BT2020_RGB,
+  META_KMS_CONNECTOR_COLORSPACE_BT601_YCC,
+  META_KMS_CONNECTOR_COLORSPACE_BT709_YCC,
+  META_KMS_CONNECTOR_COLORSPACE_XVYCC_601,
+  META_KMS_CONNECTOR_COLORSPACE_XVYCC_709,
+  META_KMS_CONNECTOR_COLORSPACE_SYCC_601,
+  META_KMS_CONNECTOR_COLORSPACE_OPYCC_601,
+  META_KMS_CONNECTOR_COLORSPACE_BT2020_CYCC,
+  META_KMS_CONNECTOR_COLORSPACE_BT2020_YCC,
+  META_KMS_CONNECTOR_COLORSPACE_SMPTE_170M_YCC,
+  META_KMS_CONNECTOR_COLORSPACE_DCI_P3_RGB_THEATER,
+  META_KMS_CONNECTOR_COLORSPACE_N_PROPS,
+  META_KMS_CONNECTOR_COLORSPACE_UNKNOWN,
+} MetaKmsConnectorColorspace;
+
 uint32_t meta_kms_connector_get_prop_id (MetaKmsConnector     *connector,
                                          MetaKmsConnectorProp  prop);
 
@@ -102,14 +126,14 @@ uint64_t meta_kms_connector_get_prop_drm_value (MetaKmsConnector     *connector,
                                                 MetaKmsConnectorProp  prop,
                                                 uint64_t              value);
 
-MetaKmsResourceChanges meta_kms_connector_update_state (MetaKmsConnector *connector,
-                                                        drmModeRes       *drm_resources,
-                                                        drmModeConnector *drm_connector);
+MetaKmsResourceChanges meta_kms_connector_update_state_in_impl (MetaKmsConnector *connector,
+                                                                drmModeRes       *drm_resources,
+                                                                drmModeConnector *drm_connector);
 
-void meta_kms_connector_disable (MetaKmsConnector *connector);
+void meta_kms_connector_disable_in_impl (MetaKmsConnector *connector);
 
-MetaKmsResourceChanges meta_kms_connector_predict_state (MetaKmsConnector *connector,
-                                                         MetaKmsUpdate    *update);
+MetaKmsResourceChanges meta_kms_connector_predict_state_in_impl (MetaKmsConnector *connector,
+                                                               MetaKmsUpdate    *update);
 
 MetaKmsConnector * meta_kms_connector_new (MetaKmsImplDevice *impl_device,
                                            drmModeConnector  *drm_connector,
@@ -117,5 +141,19 @@ MetaKmsConnector * meta_kms_connector_new (MetaKmsImplDevice *impl_device,
 
 gboolean meta_kms_connector_is_same_as (MetaKmsConnector *connector,
                                         drmModeConnector *drm_connector);
+
+uint64_t meta_output_color_space_to_drm_color_space (MetaOutputColorspace color_space);
+
+META_EXPORT_TEST
+void meta_set_drm_hdr_metadata (MetaOutputHdrMetadata      *metadata,
+                                struct hdr_output_metadata *drm_metadata);
+
+META_EXPORT_TEST
+gboolean set_output_hdr_metadata (struct hdr_output_metadata *drm_metadata,
+                                  MetaOutputHdrMetadata      *metadata);
+
+META_EXPORT_TEST
+gboolean hdr_metadata_equal (MetaOutputHdrMetadata *metadata,
+                             MetaOutputHdrMetadata *other_metadata);
 
 #endif /* META_KMS_CONNECTOR_PRIVATE_H */

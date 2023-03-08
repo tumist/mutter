@@ -23,12 +23,27 @@
 #include <glib.h>
 #include <stdint.h>
 
+#include "backends/meta-output.h"
+#include "backends/native/meta-kms-crtc.h"
 #include "backends/native/meta-kms-plane-private.h"
 #include "backends/native/meta-kms-types.h"
+#include "backends/native/meta-kms-types-private.h"
 #include "backends/native/meta-kms-update.h"
+
+typedef struct _MetaKmsCrtcColorUpdate
+{
+  MetaKmsCrtc *crtc;
+
+  struct {
+    gboolean has_update;
+    MetaGammaLut *state;
+  } gamma;
+} MetaKmsCrtcColorUpdate;
 
 typedef struct _MetaKmsFeedback
 {
+  gatomicrefcount ref_count;
+
   MetaKmsFeedbackResult result;
 
   GList *failed_planes;
@@ -87,10 +102,22 @@ typedef struct _MetaKmsConnectorUpdate
     gboolean has_update;
     uint64_t value;
   } max_bpc;
+
+  struct {
+    gboolean has_update;
+    MetaOutputColorspace value;
+  } colorspace;
+
+  struct {
+    gboolean has_update;
+    MetaOutputHdrMetadata value;
+  } hdr;
 } MetaKmsConnectorUpdate;
 
 typedef struct _MetaKmsPageFlipListener
 {
+  gatomicrefcount ref_count;
+
   MetaKmsCrtc *crtc;
   const MetaKmsPageFlipListenerVtable *vtable;
   MetaKmsPageFlipListenerFlag flags;
@@ -98,11 +125,13 @@ typedef struct _MetaKmsPageFlipListener
   GDestroyNotify destroy_notify;
 } MetaKmsPageFlipListener;
 
-typedef struct _MetaKmsResultListener
+struct _MetaKmsResultListener
 {
   MetaKmsResultListenerFunc func;
   gpointer user_data;
-} MetaKmsResultListener;
+
+  MetaKmsFeedback *feedback;
+};
 
 typedef struct _MetaKmsCustomPageFlip
 {
@@ -125,17 +154,10 @@ MetaKmsFeedback * meta_kms_feedback_new_passed (GList *failed_planes);
 MetaKmsFeedback * meta_kms_feedback_new_failed (GList  *failed_planes,
                                                 GError *error);
 
-void meta_kms_update_lock (MetaKmsUpdate *update);
-
-void meta_kms_update_unlock (MetaKmsUpdate *update);
+void meta_kms_update_seal (MetaKmsUpdate *update);
 
 META_EXPORT_TEST
-gboolean meta_kms_update_is_locked (MetaKmsUpdate *update);
-
-uint64_t meta_kms_update_get_sequence_number (MetaKmsUpdate *update);
-
-META_EXPORT_TEST
-MetaKmsDevice * meta_kms_update_get_device (MetaKmsUpdate *update);
+gboolean meta_kms_update_is_sealed (MetaKmsUpdate *update);
 
 void meta_kms_plane_assignment_set_rotation (MetaKmsPlaneAssignment *plane_assignment,
                                              MetaKmsPlaneRotation    rotation);
@@ -157,13 +179,11 @@ GList * meta_kms_update_get_mode_sets (MetaKmsUpdate *update);
 META_EXPORT_TEST
 GList * meta_kms_update_get_page_flip_listeners (MetaKmsUpdate *update);
 
-void meta_kms_update_drop_defunct_page_flip_listeners (MetaKmsUpdate *update);
-
 META_EXPORT_TEST
 GList * meta_kms_update_get_connector_updates (MetaKmsUpdate *update);
 
 META_EXPORT_TEST
-GList * meta_kms_update_get_crtc_gammas (MetaKmsUpdate *update);
+GList * meta_kms_update_get_crtc_color_updates (MetaKmsUpdate *update);
 
 MetaKmsCustomPageFlip * meta_kms_update_take_custom_page_flip_func (MetaKmsUpdate *update);
 
@@ -172,12 +192,19 @@ void meta_kms_update_drop_plane_assignment (MetaKmsUpdate *update,
 
 GList * meta_kms_update_take_result_listeners (MetaKmsUpdate *update);
 
-void meta_kms_result_listener_notify (MetaKmsResultListener *listener,
-                                      const MetaKmsFeedback *feedback);
+void meta_kms_result_listener_set_feedback (MetaKmsResultListener *listener,
+                                            MetaKmsFeedback       *feedback);
+
+void meta_kms_result_listener_notify (MetaKmsResultListener *listener);
 
 void meta_kms_result_listener_free (MetaKmsResultListener *listener);
 
 void meta_kms_custom_page_flip_free (MetaKmsCustomPageFlip *custom_page_flip);
+
+void meta_kms_update_realize (MetaKmsUpdate     *update,
+                              MetaKmsImplDevice *impl_device);
+
+gboolean meta_kms_update_get_needs_modeset (MetaKmsUpdate *update);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (MetaKmsPlaneFeedback,
                                meta_kms_plane_feedback_free)

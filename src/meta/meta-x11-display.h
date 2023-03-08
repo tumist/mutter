@@ -27,13 +27,14 @@
 #include <meta/prefs.h>
 #include <meta/types.h>
 
+typedef void (* MetaX11DisplayEventFunc) (MetaX11Display *x11_display,
+                                          XEvent         *xev,
+                                          gpointer        user_data);
+
 #define META_TYPE_X11_DISPLAY (meta_x11_display_get_type ())
 
 META_EXPORT
 G_DECLARE_FINAL_TYPE (MetaX11Display, meta_x11_display, META, X11_DISPLAY, GObject)
-
-META_EXPORT
-int      meta_x11_display_get_screen_number (MetaX11Display *x11_display);
 
 META_EXPORT
 Display *meta_x11_display_get_xdisplay      (MetaX11Display *x11_display);
@@ -42,29 +43,17 @@ META_EXPORT
 Window   meta_x11_display_get_xroot         (MetaX11Display *x11_display);
 
 META_EXPORT
-int      meta_x11_display_get_xinput_opcode     (MetaX11Display *x11_display);
-
-META_EXPORT
-int      meta_x11_display_get_damage_event_base (MetaX11Display *x11_display);
-
-META_EXPORT
-int      meta_x11_display_get_shape_event_base  (MetaX11Display *x11_display);
-
-META_EXPORT
-gboolean meta_x11_display_has_shape             (MetaX11Display *x11_display);
-
-META_EXPORT
-void meta_x11_display_set_cm_selection (MetaX11Display *x11_display);
-
-META_EXPORT
-gboolean meta_x11_display_xwindow_is_a_no_focus_window (MetaX11Display *x11_display,
-                                                        Window xwindow);
-
-META_EXPORT
 void     meta_x11_display_set_stage_input_region (MetaX11Display *x11_display,
                                                   XserverRegion   region);
 
 META_EXPORT
-void     meta_x11_display_clear_stage_input_region (MetaX11Display *x11_display);
+unsigned int meta_x11_display_add_event_func (MetaX11Display          *x11_display,
+                                              MetaX11DisplayEventFunc  event_func,
+                                              gpointer                 user_data,
+                                              GDestroyNotify           destroy_notify);
+
+META_EXPORT
+void meta_x11_display_remove_event_func (MetaX11Display *x11_display,
+                                         unsigned int    id);
 
 #endif /* META_X11_DISPLAY_H */

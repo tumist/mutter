@@ -56,6 +56,7 @@
 #include "backends/meta-barrier-private.h"
 #include "backends/meta-cursor-renderer.h"
 #include "backends/meta-cursor-tracker-private.h"
+#include "backends/meta-dbus-session-watcher.h"
 #include "backends/meta-idle-manager.h"
 #include "backends/meta-idle-monitor-private.h"
 #include "backends/meta-input-mapper-private.h"
@@ -76,7 +77,6 @@
 #include "meta/util.h"
 
 #ifdef HAVE_REMOTE_DESKTOP
-#include "backends/meta-dbus-session-watcher.h"
 #include "backends/meta-remote-access-controller-private.h"
 #include "backends/meta-remote-desktop.h"
 #include "backends/meta-screen-cast.h"
@@ -133,9 +133,9 @@ struct _MetaBackendPrivate
   MetaEgl *egl;
 #endif
   MetaSettings *settings;
+  MetaDbusSessionWatcher *dbus_session_watcher;
 #ifdef HAVE_REMOTE_DESKTOP
   MetaRemoteAccessController *remote_access_controller;
-  MetaDbusSessionWatcher *dbus_session_watcher;
   MetaScreenCast *screen_cast;
   MetaRemoteDesktop *remote_desktop;
 #endif
@@ -206,9 +206,9 @@ meta_backend_dispose (GObject *object)
 #ifdef HAVE_REMOTE_DESKTOP
   g_clear_object (&priv->remote_desktop);
   g_clear_object (&priv->screen_cast);
+#endif
   g_clear_object (&priv->dbus_session_watcher);
   g_clear_object (&priv->remote_access_controller);
-#endif
 
 #ifdef HAVE_LIBWACOM
   g_clear_pointer (&priv->wacom_db, libwacom_database_destroy);
@@ -557,14 +557,20 @@ meta_backend_real_post_init (MetaBackend *backend)
                         input_settings);
     }
 
-#ifdef HAVE_REMOTE_DESKTOP
-  priv->dbus_session_watcher = g_object_new (META_TYPE_DBUS_SESSION_WATCHER, NULL);
-  priv->screen_cast = meta_screen_cast_new (backend,
-                                            priv->dbus_session_watcher);
-  priv->remote_desktop = meta_remote_desktop_new (backend,
-                                                  priv->dbus_session_watcher);
   priv->remote_access_controller =
-    meta_remote_access_controller_new (priv->remote_desktop, priv->screen_cast);
+    meta_remote_access_controller_new ();
+  priv->dbus_session_watcher =
+    g_object_new (META_TYPE_DBUS_SESSION_WATCHER, NULL);
+
+#ifdef HAVE_REMOTE_DESKTOP
+  priv->screen_cast = meta_screen_cast_new (backend);
+  meta_remote_access_controller_add (
+    priv->remote_access_controller,
+    META_DBUS_SESSION_MANAGER (priv->screen_cast));
+  priv->remote_desktop = meta_remote_desktop_new (backend);
+  meta_remote_access_controller_add (
+    priv->remote_access_controller,
+    META_DBUS_SESSION_MANAGER (priv->remote_desktop));
 #endif /* HAVE_REMOTE_DESKTOP */
 
   if (!meta_monitor_manager_is_headless (priv->monitor_manager))
@@ -1361,6 +1367,14 @@ meta_backend_get_settings (MetaBackend *backend)
   MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
 
   return priv->settings;
+}
+
+MetaDbusSessionWatcher *
+meta_backend_get_dbus_session_watcher (MetaBackend *backend)
+{
+  MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
+
+  return priv->dbus_session_watcher;
 }
 
 #ifdef HAVE_REMOTE_DESKTOP

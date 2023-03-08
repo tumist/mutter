@@ -45,10 +45,10 @@ index e73f1a8..b4b6f10 100644
    input: 'cogl-config.h.meson',
    output: 'cogl-config.h',
 diff --git a/meson.build b/meson.build
-index eea427a..248519c 100644
+index b114509..28ba29e 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -274,6 +274,8 @@ if have_wayland_eglstream
+@@ -273,6 +273,8 @@ if have_wayland_eglstream
    endif
  endif
  
@@ -57,7 +57,7 @@ index eea427a..248519c 100644
  have_sm = get_option('sm')
  if have_sm
    sm_dep = dependency('sm')
-@@ -683,6 +685,7 @@ summary('X11', have_x11, section: 'Options')
+@@ -684,6 +686,7 @@ summary('X11', have_x11, section: 'Options')
  summary('XWayland', have_xwayland, section: 'Options')
  summary('Native Backend', have_native_backend, section: 'Options')
  summary('EGL Device', have_egl_device, section: 'Options')

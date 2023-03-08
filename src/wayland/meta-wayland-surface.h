@@ -233,6 +233,14 @@ struct _MetaWaylandSurface
     int dst_height;
   } viewport;
 
+  /* wp_fractional_scale */
+  struct {
+    struct wl_resource *resource;
+    gulong destroy_handler_id;
+
+    double scale;
+  } fractional_scale;
+
   /* table of seats for which shortcuts are inhibited */
   GHashTable *shortcut_inhibited_seats;
 
@@ -313,6 +321,8 @@ void                meta_wayland_surface_drag_dest_focus_out (MetaWaylandSurface
 void                meta_wayland_surface_drag_dest_drop      (MetaWaylandSurface   *surface);
 void                meta_wayland_surface_drag_dest_update    (MetaWaylandSurface   *surface);
 
+double              meta_wayland_surface_get_highest_output_scale (MetaWaylandSurface *surface);
+
 void                meta_wayland_surface_update_outputs (MetaWaylandSurface *surface);
 
 MetaWaylandSurface *meta_wayland_surface_get_toplevel (MetaWaylandSurface *surface);
@@ -377,6 +387,12 @@ int                 meta_wayland_surface_get_width (MetaWaylandSurface *surface)
 
 META_EXPORT_TEST
 int                 meta_wayland_surface_get_height (MetaWaylandSurface *surface);
+
+META_EXPORT_TEST
+int                 meta_wayland_surface_get_buffer_width (MetaWaylandSurface *surface);
+
+META_EXPORT_TEST
+int                 meta_wayland_surface_get_buffer_height (MetaWaylandSurface *surface);
 
 CoglScanout *       meta_wayland_surface_try_acquire_scanout (MetaWaylandSurface *surface,
                                                               CoglOnscreen       *onscreen);

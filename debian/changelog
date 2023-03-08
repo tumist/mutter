@@ -1,3 +1,38 @@
+mutter (44~rc-1) experimental; urgency=medium
+
+  [ Jeremy Bicha ]
+  * New upstream release
+  * d/p/wayland-Don-t-overwrite-surface-offsets.patch,
+    d/p/x11-Avoid-updating-focus-on-wayland-compositor.patch:
+    Drop, applied in new release
+  * debian/control.in: Build-Depend on libgnome-desktop-4-dev instead of -3
+  * debian/control.in: Mark libgtk-3-dev as only needed for build tests
+  * debian/control.in: Bump minimum wayland-protocols to 1.31
+  * debian/*.symbols: Update; some "private" meta_* symbols were dropped
+
+  [ Simon McVittie ]
+  * Merge packaging from unstable (Closes: #1031945, #1032388, #1031847)
+    - Drop patches that were backported from upstream 44.rc into unstable
+    - d/p/tests-Use-a-more-interoperable-path-to-bash.patch:
+      Fix path to interpreter in x11-test.sh instead of disabling it
+    - d/p/tests-Disable-broken-test.patch: Drop patch, no longer needed
+  * d/p/debian/backends-native-kms-crtc-Don-t-compare-gamma-values-on-un.patch:
+    Drop patch from upstream !2371, which no longer applies cleanly.
+    As far as I can see, this is unnecessary since commit 9001fa97
+    "kms/crtc: Always read the gamma state" from !2435.
+
+  [ Marco Trevisan (Treviño) ]
+  * d/p/debian/Support-Dynamic-triple-double-buffering.patch:
+    Refreshed with the 44-WIP version from Daniel, it's working properly in
+    main tested scenarios.
+  * debian/patches: Drop patch removing dependency on glib 2.75
+  * debian/control: Bump build-dependency on glib-2.75
+  * debian/control: Add breaks on gnome-shell << 44~rc.
+    It's not possible to compile older gnome-shell versions with mutter
+    44~rc due to the gtk dependency removal
+
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Wed, 08 Mar 2023 02:29:22 +0100
+
 mutter (44~beta-3ubuntu2) lunar; urgency=medium
 
   * debian/patches: Update code to get backend on X11-fractional scaling

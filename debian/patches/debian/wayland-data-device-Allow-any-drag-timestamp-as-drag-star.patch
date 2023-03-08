@@ -56,7 +56,7 @@ index 054bb44..5f5bb67 100644
        seat->pointer->focus_surface != surface)
      return;
 diff --git a/src/wayland/meta-wayland-pointer.c b/src/wayland/meta-wayland-pointer.c
-index e18ad9e..6965513 100644
+index 9374117..d891755 100644
 --- a/src/wayland/meta-wayland-pointer.c
 +++ b/src/wayland/meta-wayland-pointer.c
 @@ -722,6 +722,9 @@ notify_motion (MetaWaylandPointer *pointer,

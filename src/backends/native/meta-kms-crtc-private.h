@@ -30,6 +30,7 @@ typedef enum _MetaKmsCrtcProp
   META_KMS_CRTC_PROP_MODE_ID = 0,
   META_KMS_CRTC_PROP_ACTIVE,
   META_KMS_CRTC_PROP_GAMMA_LUT,
+  META_KMS_CRTC_PROP_GAMMA_LUT_SIZE,
   META_KMS_CRTC_N_PROPS
 } MetaKmsCrtcProp;
 
@@ -38,11 +39,11 @@ MetaKmsCrtc * meta_kms_crtc_new (MetaKmsImplDevice  *impl_device,
                                  int                 idx,
                                  GError            **error);
 
-MetaKmsResourceChanges meta_kms_crtc_update_state (MetaKmsCrtc *crtc);
+MetaKmsResourceChanges meta_kms_crtc_update_state_in_impl (MetaKmsCrtc *crtc);
 
-void meta_kms_crtc_disable (MetaKmsCrtc *crtc);
+void meta_kms_crtc_disable_in_impl (MetaKmsCrtc *crtc);
 
-void meta_kms_crtc_predict_state (MetaKmsCrtc   *crtc,
+void meta_kms_crtc_predict_state_in_impl (MetaKmsCrtc   *crtc,
                                   MetaKmsUpdate *update);
 
 uint32_t meta_kms_crtc_get_prop_id (MetaKmsCrtc     *crtc,

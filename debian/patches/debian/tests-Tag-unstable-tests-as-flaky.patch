@@ -31,10 +31,10 @@ index b10299e..b2e4ef2 100644
      is_parallel: false,
    )
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index d0a2b1f..5ee9924 100644
+index 3768b83..02a24da 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
-@@ -253,6 +253,7 @@ test_cases += [
+@@ -250,6 +250,7 @@ test_cases += [
    },
    {
      'name': 'stage-views',
@@ -42,7 +42,7 @@ index d0a2b1f..5ee9924 100644
      'suite': 'compositor',
      'sources': [ 'stage-view-tests.c', ],
    },
-@@ -476,7 +477,8 @@ if have_native_tests
+@@ -500,7 +501,8 @@ if have_native_tests
      )
  
      test(test_case['name'], test_executable,
@@ -52,7 +52,7 @@ index d0a2b1f..5ee9924 100644
        env: test_env,
        is_parallel: false,
        timeout: 60,
-@@ -485,7 +487,6 @@ if have_native_tests
+@@ -509,7 +511,6 @@ if have_native_tests
  endif
  
  stacking_tests = [
@@ -60,7 +60,7 @@ index d0a2b1f..5ee9924 100644
    'basic-wayland',
    'client-side-decorated',
    'closed-transient',
-@@ -497,7 +498,6 @@ stacking_tests = [
+@@ -521,7 +522,6 @@ stacking_tests = [
    'closed-transient-no-input-parents',
    'closed-transient-no-input-parents-queued-default-focus-destroyed',
    'closed-transient-only-take-focus-parents',
@@ -68,7 +68,7 @@ index d0a2b1f..5ee9924 100644
    'mixed-windows',
    'set-parent',
    'override-redirect',
-@@ -522,6 +522,23 @@ stacking_tests = [
+@@ -546,6 +546,23 @@ stacking_tests = [
    'workspace-only-on-primary-focus',
  ]
  
