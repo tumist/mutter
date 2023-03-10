@@ -1,3 +1,17 @@
+mutter (44~rc-1ubuntu1) lunar; urgency=medium
+
+  [ Jeremy Bicha
+  * Merge with Debian. Remaining changes:
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
+    - debian/control: Do not depend on legacy EGL package name
+  * Temporarily disable triple buffering patch to ensure quality
+    after major changes to mutter since 44~beta
+
+  [ Marco Trevisan (Treviño) ]
+  * Update the fractional scaling patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Fri, 10 Mar 2023 08:20:44 -0500
+
 mutter (44~rc-1) experimental; urgency=medium
 
   [ Jeremy Bicha ]
@@ -11,7 +25,7 @@ mutter (44~rc-1) experimental; urgency=medium
   * debian/*.symbols: Update; some "private" meta_* symbols were dropped
 
   [ Simon McVittie ]
-  * Merge packaging from unstable (Closes: #1031945, #1032388, #1031847)
+  * Merge packaging from unstable (Closes: #1031945, #1031847)
     - Drop patches that were backported from upstream 44.rc into unstable
     - d/p/tests-Use-a-more-interoperable-path-to-bash.patch:
       Fix path to interpreter in x11-test.sh instead of disabling it
