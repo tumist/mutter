@@ -1,3 +1,11 @@
+mutter (43.3-6) UNRELEASED; urgency=medium
+
+  * Remove #1032388 from previous changelog entry.
+    I hoped !2878 would fix both #1032388 and #1031945, but in fact it
+    only fixes #1031945.
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 10 Mar 2023 00:35:06 +0000
+
 mutter (43.3-5) unstable; urgency=medium
 
   * Team upload
@@ -10,7 +18,7 @@ mutter (43.3-5) unstable; urgency=medium
     d/p/x11-Ignore-_NET_ACTIVE_WINDOW-client-messages-while-grabb.patch,
     d/p/core-Avoid-focusing-windows-on-map-during-grabs.patch:
     Backport upstream merge request !2878, fixing X11 focus regressions
-    (Closes: #1032388, #1031945)
+    (Closes: #1031945)
   * d/p/tests-Use-a-more-interoperable-path-to-bash.patch:
     Fix path to interpreter in x11-test.sh instead of disabling it
     - d/p/tests-Disable-broken-test.patch: Drop patch, no longer needed
