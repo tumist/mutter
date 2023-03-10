@@ -6,7 +6,7 @@ debian/tests-Do-not-run-screencast-tests.patch
 debian/tests-skip-monitor-width-size-check-as-it-may-lead-to-une.patch
 debian/tests-Tag-unstable-tests-as-flaky.patch
 debian/wayland-data-device-Allow-any-drag-timestamp-as-drag-star.patch
-debian/Support-Dynamic-triple-double-buffering.patch
+#debian/Support-Dynamic-triple-double-buffering.patch
 debian/tests-Disable-restore-size-test.patch
 ubuntu/x11-Add-support-for-fractional-scaling-using-Randr.patch
 workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch
