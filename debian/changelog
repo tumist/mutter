@@ -1,3 +1,11 @@
+mutter (44~rc-2) UNRELEASED; urgency=medium
+
+  * Remove #1032388 from previous changelog entry.
+    I hoped !2878 would fix both #1032388 and #1031945, but in fact it
+    only solves #1031945.
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 10 Mar 2023 00:43:07 +0000
+
 mutter (44~rc-1) experimental; urgency=medium
 
   [ Jeremy Bicha ]
@@ -11,7 +19,7 @@ mutter (44~rc-1) experimental; urgency=medium
   * debian/*.symbols: Update; some "private" meta_* symbols were dropped
 
   [ Simon McVittie ]
-  * Merge packaging from unstable (Closes: #1031945, #1032388, #1031847)
+  * Merge packaging from unstable (Closes: #1031945, #1031847)
     - Drop patches that were backported from upstream 44.rc into unstable
     - d/p/tests-Use-a-more-interoperable-path-to-bash.patch:
       Fix path to interpreter in x11-test.sh instead of disabling it
