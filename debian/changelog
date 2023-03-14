@@ -1,3 +1,9 @@
+mutter (44~rc-1ubuntu3) lunar; urgency=medium
+
+  * debian/control.in: Have libmutter-12-dev depend on libegl1-mesa-dev
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Tue, 14 Mar 2023 19:19:46 -0400
+
 mutter (44~rc-1ubuntu2) lunar; urgency=medium
 
   [ Jeremy Bicha ]
