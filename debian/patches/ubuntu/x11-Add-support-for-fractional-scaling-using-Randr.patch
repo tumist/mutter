@@ -634,7 +634,7 @@ index d6a92bf..0493c6b 100644
                     meta_monitor_manager_get_capabilities (MetaMonitorManager *manager);
  
 diff --git a/src/backends/meta-monitor-manager.c b/src/backends/meta-monitor-manager.c
-index 19cbb26..6d665eb 100644
+index 19cbb26..158b914 100644
 --- a/src/backends/meta-monitor-manager.c
 +++ b/src/backends/meta-monitor-manager.c
 @@ -128,6 +128,15 @@ static gboolean
@@ -872,8 +872,8 @@ index 19cbb26..6d665eb 100644
 +          if (G_UNLIKELY (applied_config !=
 +                          meta_monitor_config_manager_get_previous (manager->config_manager)))
 +            {
-+              g_warning ("The removed configuration doesn't match the "
-+                         "previously applied one, reverting may not work");
++              meta_warning ("The removed configuration doesn't match the "
++                            "previously applied one, reverting may not work");
 +            }
 +          else
 +            {
@@ -893,8 +893,8 @@ index 19cbb26..6d665eb 100644
 +    }
 +  else
 +    {
-+      g_warning ("Impossible to apply the layout config %s\n",
-+                 error->message);
++      meta_warning ("Impossible to apply the layout config %s\n",
++                    error->message);
 +      return FALSE;
 +    }
 +
@@ -1569,7 +1569,7 @@ index 589326a..221e59e 100644
      case META_LOGICAL_MONITOR_LAYOUT_MODE_PHYSICAL:
        constraints |= META_MONITOR_SCALES_CONSTRAINT_NO_FRAC;
 diff --git a/src/backends/x11/meta-crtc-xrandr.c b/src/backends/x11/meta-crtc-xrandr.c
-index 9ffc001..b896f31 100644
+index 9ffc001..34df3c5 100644
 --- a/src/backends/x11/meta-crtc-xrandr.c
 +++ b/src/backends/x11/meta-crtc-xrandr.c
 @@ -36,6 +36,7 @@
@@ -1644,8 +1644,8 @@ index 9ffc001..b896f31 100644
 +  xcb_error = xcb_request_check (xcb_conn, transform_cookie);
 +  if (xcb_error)
 +    {
-+      g_warning ("Impossible to set scaling on crtc %u to %f, error id %u",
-+                 xrandr_crtc, scale, xcb_error->error_code);
++      meta_warning ("Impossible to set scaling on crtc %u to %f, error id %u",
++                    xrandr_crtc, scale, xcb_error->error_code);
 +      g_clear_pointer (&xcb_error, free);
 +
 +      return FALSE;
@@ -1950,7 +1950,7 @@ index 2086f86..a1f3b48 100644
                                            int           *max_width,
                                            int           *max_height);
 diff --git a/src/backends/x11/meta-monitor-manager-xrandr.c b/src/backends/x11/meta-monitor-manager-xrandr.c
-index beb9fb8..7e97143 100644
+index beb9fb8..0a0cb7d 100644
 --- a/src/backends/x11/meta-monitor-manager-xrandr.c
 +++ b/src/backends/x11/meta-monitor-manager-xrandr.c
 @@ -36,6 +36,7 @@
@@ -2073,8 +2073,8 @@ index beb9fb8..7e97143 100644
 +
 +      XGetErrorText (manager_xrandr->xdisplay, xcb_error->error_code, buf,
 +                     sizeof (buf) - 1);
-+      g_warning ("Impossible to resize screen at size %dx%d, error id %u: %s",
-+                 width, height, xcb_error->error_code, buf);
++      meta_warning ("Impossible to resize screen at size %dx%d, error id %u: %s",
++                    width, height, xcb_error->error_code, buf);
 +      g_clear_pointer (&xcb_error, free);
 +    }
 +
