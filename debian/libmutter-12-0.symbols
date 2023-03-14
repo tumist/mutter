@@ -814,6 +814,7 @@ libmutter-12.so.0 libmutter-12-0 #MINVER#
  meta_window_move_frame@Base 43.0
  meta_window_move_resize_frame@Base 43.0
  meta_window_move_to_monitor@Base 43.0
+ meta_window_override_constraints@Base 44~rc-1ubuntu2
  meta_window_raise@Base 43.0
  meta_window_raise_and_make_recent@Base 44~rc
  meta_window_set_compositor_private@Base 43.0
