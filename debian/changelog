@@ -1,14 +1,19 @@
 mutter (44.0-1) UNRELEASED; urgency=medium
 
   [ Marco Trevisan (Treviño) ]
-  * New upstream release
+  * New upstream release:
+    - Fixes feedback loops with old statically compiled SDL applications
+      (LP: #2011803)
+  * debian/patches: refresh indexes
+  * debian/patches/debian/Support-Dynamic-triple-double-buffering.patch: Update
+    We still keep it enabled, given that we're in experimental anyways
 
   [ Simon McVittie ]
   * Remove #1032388 from previous changelog entry.
     I hoped !2878 would fix both #1032388 and #1031945, but in fact it
     only solves #1031945.
 
- -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Mon, 20 Mar 2023 16:01:08 +0100
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Mon, 20 Mar 2023 20:28:10 +0100
 
 mutter (44~rc-1) experimental; urgency=medium
 
