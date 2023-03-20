@@ -67,7 +67,7 @@ index 6cc9030..51315f7 100644
  
    uint64_t preferred_output_winsys_id;
 diff --git a/src/core/window.c b/src/core/window.c
-index c0fe6e3..0534219 100644
+index d5d2e5b..b91a7b3 100644
 --- a/src/core/window.c
 +++ b/src/core/window.c
 @@ -73,6 +73,7 @@
@@ -137,10 +137,10 @@ index c0fe6e3..0534219 100644
  
  void
 diff --git a/src/meson.build b/src/meson.build
-index ec76179..e0f6d3a 100644
+index a4fe085..3a7f84a 100644
 --- a/src/meson.build
 +++ b/src/meson.build
-@@ -1206,7 +1206,8 @@ if have_introspection
+@@ -1204,7 +1204,8 @@ if have_introspection
      sources: [
        mutter_enum_types[1],
        mutter_introspected_sources,
