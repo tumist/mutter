@@ -116,6 +116,8 @@ typedef struct _MetaMonitorManagerPrivate
   gboolean has_builtin_panel;
   gboolean night_light_supported;
   const char *experimental_hdr;
+
+  guint switch_config_handle_id;
 } MetaMonitorManagerPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MetaMonitorManager, meta_monitor_manager,
@@ -1356,17 +1358,17 @@ static void
 meta_monitor_manager_dispose (GObject *object)
 {
   MetaMonitorManager *manager = META_MONITOR_MANAGER (object);
+  MetaMonitorManagerPrivate *priv =
+    meta_monitor_manager_get_instance_private (manager);
 
-  if (manager->dbus_name_id != 0)
-    {
-      g_bus_unown_name (manager->dbus_name_id);
-      manager->dbus_name_id = 0;
-    }
+  g_clear_handle_id (&manager->dbus_name_id, g_bus_unown_name);
 
   g_clear_object (&manager->display_config);
   g_clear_object (&manager->config_manager);
 
   g_clear_handle_id (&manager->persistent_timeout_id, g_source_remove);
+  g_clear_handle_id (&manager->restore_config_id, g_source_remove);
+  g_clear_handle_id (&priv->switch_config_handle_id, g_source_remove);
 
   G_OBJECT_CLASS (meta_monitor_manager_parent_class)->dispose (object);
 }
@@ -1963,12 +1965,6 @@ save_config_timeout (gpointer user_data)
   manager->persistent_timeout_id = 0;
 
   return G_SOURCE_REMOVE;
-}
-
-static void
-cancel_persistent_confirmation (MetaMonitorManager *manager)
-{
-  g_clear_handle_id (&manager->persistent_timeout_id, g_source_remove);
 }
 
 static void
@@ -2826,9 +2822,11 @@ meta_monitor_manager_handle_apply_monitors_config (MetaDBusDisplayConfig *skelet
       return TRUE;
     }
 
-  if (manager->persistent_timeout_id &&
-      method != META_MONITORS_CONFIG_METHOD_VERIFY)
-    cancel_persistent_confirmation (manager);
+  if (method != META_MONITORS_CONFIG_METHOD_VERIFY)
+    {
+      g_clear_handle_id (&manager->restore_config_id, g_source_remove);
+      g_clear_handle_id (&manager->persistent_timeout_id, g_source_remove);
+    }
 
   if (!meta_monitor_manager_apply_monitors_config (manager,
                                                    config,
@@ -2856,28 +2854,25 @@ meta_monitor_manager_handle_apply_monitors_config (MetaDBusDisplayConfig *skelet
 #undef MONITOR_CONFIGS_FORMAT
 #undef LOGICAL_MONITOR_CONFIG_FORMAT
 
-static void
-confirm_configuration (MetaMonitorManager *manager,
-                       gboolean            confirmed)
-{
-  if (confirmed)
-    meta_monitor_config_manager_save_current (manager->config_manager);
-  else
-    restore_previous_config (manager);
-}
-
 void
 meta_monitor_manager_confirm_configuration (MetaMonitorManager *manager,
                                             gboolean            ok)
 {
   if (!manager->persistent_timeout_id)
-    {
-      /* too late */
-      return;
-    }
+    return;
 
-  cancel_persistent_confirmation (manager);
-  confirm_configuration (manager, ok);
+  g_clear_handle_id (&manager->restore_config_id, g_source_remove);
+  g_clear_handle_id (&manager->persistent_timeout_id, g_source_remove);
+
+  if (ok)
+    {
+      meta_monitor_config_manager_save_current (manager->config_manager);
+    }
+  else
+    {
+      manager->restore_config_id =
+        g_idle_add_once ((GSourceOnceFunc) restore_previous_config, manager);
+    }
 }
 
 static gboolean
@@ -3873,35 +3868,66 @@ meta_monitor_manager_rotate_monitor (MetaMonitorManager *manager)
   g_object_unref (config);
 }
 
-void
-meta_monitor_manager_switch_config (MetaMonitorManager          *manager,
-                                    MetaMonitorSwitchConfigType  config_type)
+typedef struct
 {
-  GError *error = NULL;
-  MetaMonitorsConfig *config;
+  MetaMonitorManager *monitor_manager;
+  MetaMonitorSwitchConfigType config_type;
+} SwitchConfigData;
 
-  g_return_if_fail (config_type != META_MONITOR_SWITCH_CONFIG_UNKNOWN);
+static gboolean
+switch_config_idle_cb (gpointer user_data)
+{
+  SwitchConfigData *data = user_data;
+  MetaMonitorManager *monitor_manager = data->monitor_manager;
+  MetaMonitorManagerPrivate *priv =
+    meta_monitor_manager_get_instance_private (monitor_manager);
+  MetaMonitorConfigManager *config_manager = monitor_manager->config_manager;
+  MetaMonitorsConfig *config;
+  g_autoptr (GError) error = NULL;
+
+  priv->switch_config_handle_id = 0;
 
   config =
-    meta_monitor_config_manager_create_for_switch_config (manager->config_manager,
-                                                          config_type);
+    meta_monitor_config_manager_create_for_switch_config (config_manager,
+                                                          data->config_type);
   if (!config)
-    return;
+    return G_SOURCE_REMOVE;
 
-  if (!meta_monitor_manager_apply_monitors_config (manager,
+  if (!meta_monitor_manager_apply_monitors_config (monitor_manager,
                                                    config,
                                                    META_MONITORS_CONFIG_METHOD_TEMPORARY,
                                                    &error))
     {
       g_warning ("Failed to use switch monitor configuration: %s",
                  error->message);
-      g_error_free (error);
     }
   else
     {
-      manager->current_switch_config = config_type;
+      monitor_manager->current_switch_config = data->config_type;
     }
-  g_object_unref (config);
+
+  return G_SOURCE_REMOVE;
+}
+
+void
+meta_monitor_manager_switch_config (MetaMonitorManager          *manager,
+                                    MetaMonitorSwitchConfigType  config_type)
+{
+  MetaMonitorManagerPrivate *priv =
+    meta_monitor_manager_get_instance_private (manager);
+  SwitchConfigData *data;
+
+  g_return_if_fail (config_type != META_MONITOR_SWITCH_CONFIG_UNKNOWN);
+
+  data = g_new0 (SwitchConfigData, 1);
+  data->monitor_manager = manager;
+  data->config_type = config_type;
+
+  g_clear_handle_id (&priv->switch_config_handle_id, g_source_remove);
+  priv->switch_config_handle_id = g_idle_add_full (G_PRIORITY_DEFAULT_IDLE,
+                                                   switch_config_idle_cb,
+                                                   data,
+                                                   g_free);
 }
 
 gboolean
