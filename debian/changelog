@@ -1,3 +1,20 @@
+mutter (44.0-1) experimental; urgency=medium
+
+  [ Marco Trevisan (Treviño) ]
+  * New upstream release:
+    - Fixes feedback loops with old statically compiled SDL applications
+      (LP: #2011803)
+  * debian/patches: refresh indexes
+  * debian/patches/debian/Support-Dynamic-triple-double-buffering.patch: Update
+    We still keep it enabled, given that we're in experimental anyways
+
+  [ Simon McVittie ]
+  * Remove #1032388 from previous changelog entry.
+    I hoped !2878 would fix both #1032388 and #1031945, but in fact it
+    only solves #1031945.
+
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Mon, 20 Mar 2023 20:35:02 +0100
+
 mutter (44~rc-1ubuntu3) lunar; urgency=medium
 
   * debian/control.in: Have libmutter-12-dev depend on libegl1-mesa-dev
@@ -82,6 +99,7 @@ mutter (44~beta-3ubuntu1) lunar; urgency=medium
   * Merge with Debian. Remaining change:
     - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
 
+  * Merge packaging from unstable (Closes: #1031945, #1031847)
   [ Marco Trevisan (Treviño) ]
   * Update the fractional scaling patch
 
