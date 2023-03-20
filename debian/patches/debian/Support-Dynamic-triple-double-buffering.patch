@@ -53,7 +53,7 @@ Last-Update: 2023-02-16
  create mode 100644 src/backends/native/meta-swap-chain.h
 
 diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
-index e5d1a44..bae0e60 100644
+index eeba108..f7aae1e 100644
 --- a/clutter/clutter/clutter-frame-clock.c
 +++ b/clutter/clutter/clutter-frame-clock.c
 @@ -35,6 +35,15 @@ enum
@@ -457,7 +457,7 @@ index e5d1a44..bae0e60 100644
  }
  
  GString *
-@@ -977,6 +1110,15 @@ static void
+@@ -979,6 +1112,15 @@ static void
  clutter_frame_clock_class_init (ClutterFrameClockClass *klass)
  {
    GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -856,7 +856,7 @@ index f1b7459..8080098 100644
      return;
  
 diff --git a/src/backends/native/meta-kms-crtc.c b/src/backends/native/meta-kms-crtc.c
-index fb79544..ea4bb33 100644
+index 556f853..1ec84e8 100644
 --- a/src/backends/native/meta-kms-crtc.c
 +++ b/src/backends/native/meta-kms-crtc.c
 @@ -46,6 +46,8 @@ struct _MetaKmsCrtc
@@ -881,7 +881,7 @@ index fb79544..ea4bb33 100644
  gboolean
  meta_kms_crtc_is_active (MetaKmsCrtc *crtc)
  {
-@@ -467,12 +475,23 @@ meta_kms_crtc_new (MetaKmsImplDevice  *impl_device,
+@@ -468,12 +476,23 @@ meta_kms_crtc_new (MetaKmsImplDevice  *impl_device,
    return crtc;
  }
  
@@ -905,7 +905,7 @@ index fb79544..ea4bb33 100644
  
    G_OBJECT_CLASS (meta_kms_crtc_parent_class)->finalize (object);
  }
-@@ -482,6 +501,7 @@ meta_kms_crtc_init (MetaKmsCrtc *crtc)
+@@ -483,6 +502,7 @@ meta_kms_crtc_init (MetaKmsCrtc *crtc)
  {
    crtc->current_state.gamma.size = 0;
    crtc->current_state.gamma.value = NULL;
@@ -913,7 +913,7 @@ index fb79544..ea4bb33 100644
  }
  
  static void
-@@ -489,5 +509,6 @@ meta_kms_crtc_class_init (MetaKmsCrtcClass *klass)
+@@ -490,5 +510,6 @@ meta_kms_crtc_class_init (MetaKmsCrtcClass *klass)
  {
    GObjectClass *object_class = G_OBJECT_CLASS (klass);
  
