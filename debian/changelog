@@ -1,10 +1,14 @@
-mutter (44~rc-2) UNRELEASED; urgency=medium
+mutter (44.0-1) UNRELEASED; urgency=medium
 
+  [ Marco Trevisan (Treviño) ]
+  * New upstream release
+
+  [ Simon McVittie ]
   * Remove #1032388 from previous changelog entry.
     I hoped !2878 would fix both #1032388 and #1031945, but in fact it
     only solves #1031945.
 
- -- Simon McVittie <smcv@debian.org>  Fri, 10 Mar 2023 00:43:07 +0000
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Mon, 20 Mar 2023 16:01:08 +0100
 
 mutter (44~rc-1) experimental; urgency=medium
 
