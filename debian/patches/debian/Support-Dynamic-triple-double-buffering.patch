@@ -537,10 +537,10 @@ index dffe018..e0215f7 100644
 +
  #endif /* __COGL_ONSCREEN_PRIVATE_H */
 diff --git a/cogl/cogl/cogl-onscreen.c b/cogl/cogl/cogl-onscreen.c
-index ff9e174..b25b4af 100644
+index 842ecec..1e2b11d 100644
 --- a/cogl/cogl/cogl-onscreen.c
 +++ b/cogl/cogl/cogl-onscreen.c
-@@ -510,6 +510,14 @@ cogl_onscreen_pop_head_frame_info (CoglOnscreen *onscreen)
+@@ -508,6 +508,14 @@ cogl_onscreen_pop_head_frame_info (CoglOnscreen *onscreen)
    return g_queue_pop_head (&priv->pending_frame_infos);
  }
  
@@ -556,10 +556,10 @@ index ff9e174..b25b4af 100644
  cogl_onscreen_add_frame_callback (CoglOnscreen *onscreen,
                                    CoglFrameCallback callback,
 diff --git a/src/backends/meta-stage-impl.c b/src/backends/meta-stage-impl.c
-index ca6f1f4..a4b1c8c 100644
+index 25d240d..d8f009a 100644
 --- a/src/backends/meta-stage-impl.c
 +++ b/src/backends/meta-stage-impl.c
-@@ -721,6 +721,8 @@ meta_stage_impl_redraw_view (ClutterStageWindow *stage_window,
+@@ -731,6 +731,8 @@ meta_stage_impl_redraw_view (ClutterStageWindow *stage_window,
      {
        g_autoptr (GError) error = NULL;
  
