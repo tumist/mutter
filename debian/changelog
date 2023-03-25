@@ -1,10 +1,11 @@
-mutter (43.3-6) UNRELEASED; urgency=medium
+mutter (43.4-1) UNRELEASED; urgency=medium
 
   * Remove #1032388 from previous changelog entry.
     I hoped !2878 would fix both #1032388 and #1031945, but in fact it
     only fixes #1031945.
+  * New upstream release
 
- -- Simon McVittie <smcv@debian.org>  Fri, 10 Mar 2023 00:35:06 +0000
+ -- Simon McVittie <smcv@debian.org>  Sat, 25 Mar 2023 13:50:20 +0000
 
 mutter (43.3-5) unstable; urgency=medium
 
