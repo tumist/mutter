@@ -1,3 +1,11 @@
+mutter (44.0-2) experimental; urgency=medium
+
+  * Update debian/patches/debian/Support-Dynamic-triple-double-buffering.patch:
+    Compared to the last update, a crash on resuming from sleep has been
+    fixed. And some minor code tidying.
+
+ -- Daniel van Vugt <daniel.van.vugt@canonical.com>  Mon, 27 Mar 2023 09:27:35 -0400
+
 mutter (44.0-1) experimental; urgency=medium
 
   [ Marco Trevisan (Treviño) ]
