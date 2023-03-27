@@ -1,3 +1,11 @@
+mutter (44.0-2ubuntu1) lunar; urgency=medium
+
+  * Merge with Debian. Remaining change:
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
+  * Re-enable the triple buffering patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 27 Mar 2023 09:35:04 -0400
+
 mutter (44.0-2) experimental; urgency=medium
 
   * Update debian/patches/debian/Support-Dynamic-triple-double-buffering.patch:
