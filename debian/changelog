@@ -1,3 +1,9 @@
+mutter (44.0-2ubuntu2) lunar; urgency=medium
+
+  * debian/libmutter-12-0.symbols: Restore symbols for triple buffering patch
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 27 Mar 2023 09:46:13 -0400
+
 mutter (44.0-2ubuntu1) lunar; urgency=medium
 
   * Merge with Debian. Remaining change:
