@@ -1,9 +1,9 @@
-mutter (44.0-2ubuntu3) UNRELEASED; urgency=medium
+mutter (44.0-2ubuntu3) lunar; urgency=medium
 
   * debian/patches: Listen to XSettings changes to update decorations
     (LP: #2012733)
 
- -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Tue, 04 Apr 2023 22:26:06 +0200
+ -- Marco Trevisan (Treviño) <marco@ubuntu.com>  Tue, 04 Apr 2023 22:26:20 +0200
 
 mutter (44.0-2ubuntu2) lunar; urgency=medium
 
