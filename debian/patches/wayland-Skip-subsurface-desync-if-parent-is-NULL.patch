@@ -1,0 +1,35 @@
+From: Colin Kinloch <colin.kinloch@collabora.com>
+Date: Wed, 15 Mar 2023 18:35:22 +0000
+Subject: wayland: Skip subsurface desync if parent is NULL
+
+In order to avoid crashes when a client already destroyed the parent
+wl_surface.
+
+Part-of: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2917
+Applied-upstream: 43.5, commit:76ce6a0ab5975062ffe1f8b885b9be650b60e5a7
+---
+ src/wayland/meta-wayland-subsurface.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/wayland/meta-wayland-subsurface.c b/src/wayland/meta-wayland-subsurface.c
+index f044c52..9c80635 100644
+--- a/src/wayland/meta-wayland-subsurface.c
++++ b/src/wayland/meta-wayland-subsurface.c
+@@ -462,13 +462,15 @@ wl_subsurface_set_desync (struct wl_client   *client,
+                           struct wl_resource *resource)
+ {
+   MetaWaylandSurface *surface = wl_resource_get_user_data (resource);
++  MetaWaylandSurface *parent;
+   gboolean is_parent_effectively_synchronized;
+ 
+-  if (!surface->sub.synchronous)
++  parent = surface->sub.parent;
++  if (!parent || !surface->sub.synchronous)
+     return;
+ 
+   is_parent_effectively_synchronized =
+-    is_surface_effectively_synchronized (surface->sub.parent);
++    is_surface_effectively_synchronized (parent);
+ 
+   if (!is_parent_effectively_synchronized)
+     meta_wayland_surface_apply_cached_state (surface);
