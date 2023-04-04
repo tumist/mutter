@@ -1,3 +1,4 @@
+frames-window-tracker-Select-StructureNotifyMask-X11-even.patch
 tests-Use-a-more-interoperable-path-to-bash.patch
 meson-add-back-default_driver-option.patch
 tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch

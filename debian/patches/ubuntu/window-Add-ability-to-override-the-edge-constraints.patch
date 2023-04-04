@@ -137,10 +137,10 @@ index d5d2e5b..b91a7b3 100644
  
  void
 diff --git a/src/meson.build b/src/meson.build
-index a4fe085..3a7f84a 100644
+index ec76179..e0f6d3a 100644
 --- a/src/meson.build
 +++ b/src/meson.build
-@@ -1204,7 +1204,8 @@ if have_introspection
+@@ -1206,7 +1206,8 @@ if have_introspection
      sources: [
        mutter_enum_types[1],
        mutter_introspected_sources,
