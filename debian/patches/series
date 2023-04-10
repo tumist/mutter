@@ -1,4 +1,5 @@
 wayland-Skip-subsurface-desync-if-parent-is-NULL.patch
+Update-Abkhazian-translation.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 tests-Use-a-more-interoperable-path-to-bash.patch
 meson-add-back-default_driver-option.patch

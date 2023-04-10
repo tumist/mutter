@@ -2,16 +2,16 @@ mutter (43.4-1) UNRELEASED; urgency=medium
 
   * New upstream release
     - Improve performance by reducing memory bandwidth use on some GPUs
-      (GNOME!2091)
+      (GNOME/mutter!2091)
     - Fix handling of rotated screens, for example on Pinephone Pro and
-      Pinebook Pro (GNOME#2557)
+      Pinebook Pro (GNOME/mutter#2557)
     - Avoid warnings when destroying a ClutterText object with recent
-      GLib versions (GNOME#2566)
+      GLib versions (GNOME/mutter#2566)
     - Other changes were included in previous Debian packaging updates
   * Drop most patches, applied upstream
-  * d/p/wayland-Skip-subsurface-desync-if-parent-is-NULL.patch:
-    Add patch from upstream gnome-43 branch to fix a crash with newer
-    GStreamer gtkwaylandsink
+  * d/patches: Update to upstream gnome-43 branch commit 43.4-2-gba5cb0542
+    - Fix a crash with newer GStreamer gtkwaylandsink (GNOME/mutter!2917)
+    - Translation update: ab
   * Remove #1032388 from previous changelog entry.
     I hoped !2878 would fix both #1032388 and #1031945, but in fact it
     only fixes #1031945.
