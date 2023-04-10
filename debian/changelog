@@ -1,5 +1,6 @@
-mutter (43.4-1) UNRELEASED; urgency=medium
+mutter (43.4-1) unstable; urgency=medium
 
+  * Team upload
   * New upstream release
     - Improve performance by reducing memory bandwidth use on some GPUs
       (GNOME/mutter!2091)
@@ -16,7 +17,7 @@ mutter (43.4-1) UNRELEASED; urgency=medium
     I hoped !2878 would fix both #1032388 and #1031945, but in fact it
     only fixes #1031945.
 
- -- Simon McVittie <smcv@debian.org>  Tue, 04 Apr 2023 09:38:21 +0100
+ -- Simon McVittie <smcv@debian.org>  Mon, 10 Apr 2023 14:07:33 +0100
 
 mutter (43.3-5) unstable; urgency=medium
 
