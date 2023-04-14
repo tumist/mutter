@@ -14,3 +14,4 @@ workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch
 debian/Mark-xwayland-test-case-as-known-to-be-flaky-on-32-bit-AR.patch
 cursor-renderer-native-Workaround-broken-arm64-drivers.patch
 ubuntu/window-Add-ability-to-override-the-edge-constraints.patch
+backends-x11-Trap-errors-from-XIChangeProperty.patch
