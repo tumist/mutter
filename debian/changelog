@@ -3,7 +3,7 @@ mutter (44.0-2ubuntu5) UNRELEASED; urgency=medium
   [ Marco Trevisan (Treviño) ]
   * Fix issue with Firefox opening black window in wayland sessions
     - d/p/display-Set-compositor-selection-earlier-on-XWayland.patch
-      (LP: #1987976, LP: #2016918)
+      (LP: #1987976)
 
  -- Gunnar Hjalmarsson <gunnarhj@ubuntu.com>  Tue, 18 Apr 2023 22:59:15 +0200
 
