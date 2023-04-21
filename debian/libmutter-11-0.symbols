@@ -16,6 +16,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_backend_get_context@Base 43.0
  meta_backend_get_core_idle_monitor@Base 43.0
  meta_backend_get_current_logical_monitor@Base 43.0
+ meta_backend_get_cursor_renderer@Base 43.4-2~
  meta_backend_get_cursor_tracker@Base 43.0
  meta_backend_get_default_seat@Base 43.0
  meta_backend_get_dnd@Base 43.0
@@ -159,6 +160,8 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_crtc_unassign_output@Base 43.0
  meta_crtc_unset_config@Base 43.0
  meta_cursor_get_type@Base 43.0
+ meta_cursor_renderer_get_cursor@Base 43.4-2~
+ meta_cursor_sprite_wayland_get_type@Base 43.4-2~
  meta_cursor_tracker_get_for_display@Base 43.0
  meta_cursor_tracker_get_hot@Base 43.0
  meta_cursor_tracker_get_pointer@Base 43.0
