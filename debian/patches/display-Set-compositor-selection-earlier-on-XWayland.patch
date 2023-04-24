@@ -12,6 +12,10 @@ properly at later times, let's make their life easier by just
 initializing the selection as early as the other X11 properties, given
 that in this case there's nothing to replace.
 
+Currently the upstream MR on which this patch is based includes 7
+commits. After consultation with Marco Trevisan only the first 4 of
+those commits are included in this patch.
+
 Origin: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2970
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2472
 Bug-Ubuntu: https://launchpad.net/bugs/1987976
