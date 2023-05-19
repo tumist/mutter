@@ -1,3 +1,20 @@
+mutter (44.1-1) experimental; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release
+  * Drop bash patch applied in new release
+  * debian/libmutter-12-0.symbols: Add new symbols
+
+  [ Daniel van Vugt ]
+  * Update triple buffering patch for Mutter 44.1
+
+  [ Marco Trevisan (Treviño) ]
+  * Fix issue with Firefox opening black window in wayland sessions
+    - Add d/p/display-Set-compositor-selection-earlier-on-XWayland.patch
+      (LP: #1987976)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Fri, 19 May 2023 16:18:13 -0400
+
 mutter (44.0-2ubuntu6) mantic; urgency=medium
 
   [ Marco Trevisan (Treviño) ]
