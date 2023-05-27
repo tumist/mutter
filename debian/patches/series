@@ -1,5 +1,6 @@
 compositor-view-Chain-up-finalize.patch
 wayland-xdg-shell-Dismiss-instead-of-destroy-invalid-popu.patch
+wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 tests-Use-a-more-interoperable-path-to-bash.patch
 meson-add-back-default_driver-option.patch
