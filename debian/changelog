@@ -16,7 +16,8 @@ mutter (43.5-0+deb12u1) UNRELEASED; urgency=medium
       Update metadata to reflect upstream backport, no functional change
   * d/p/wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch:
     Backport patch from 44~beta to fix a crash during suspend/resume in
-    some circumstances (mutter#2570, potentially also resolves #1010478)
+    some circumstances (mutter#2570, potentially also resolves
+    #1010478 and #1036268)
 
  -- Simon McVittie <smcv@debian.org>  Sat, 27 May 2023 15:46:33 +0100
 
