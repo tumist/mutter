@@ -780,6 +780,7 @@ libmutter-11.so.0 libmutter-11-0 #MINVER#
  meta_window_group_leader_changed@Base 43.0
  meta_window_has_attached_dialogs@Base 43.0
  meta_window_has_focus@Base 43.0
+ meta_window_has_pointer@Base 43.5
  meta_window_is_above@Base 43.0
  meta_window_is_always_on_all_workspaces@Base 43.0
  meta_window_is_ancestor_of_transient@Base 43.0
