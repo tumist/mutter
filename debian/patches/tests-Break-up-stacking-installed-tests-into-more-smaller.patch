@@ -25,7 +25,7 @@ Accidentally mitigates: https://bugs.debian.org/1024438
  create mode 100644 src/tests/stacking.test.in
 
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index f28436a..f9ec97a 100644
+index 66b79b6..efe95e5 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
 @@ -86,19 +86,6 @@ subdir('wayland-test-clients')
@@ -48,7 +48,7 @@ index f28436a..f9ec97a 100644
    install_subdir('stacking', install_dir: stacking_files_datadir)
  endif
  
-@@ -464,6 +451,22 @@ foreach stacking_test: stacking_tests
+@@ -472,6 +459,22 @@ foreach stacking_test: stacking_tests
      is_parallel: false,
      timeout: 60,
    )
