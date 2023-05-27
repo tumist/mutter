@@ -1,4 +1,4 @@
-mutter (43.5-1) UNRELEASED; urgency=medium
+mutter (43.5-0+deb12u1) UNRELEASED; urgency=medium
 
   * New upstream stable release
     - Always update surfaces belonging to a window that is being recorded
