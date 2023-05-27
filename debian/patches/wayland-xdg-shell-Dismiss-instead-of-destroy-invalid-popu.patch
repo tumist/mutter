@@ -8,7 +8,9 @@ popup grab is assumed to always have at least one popup in its chain.
 
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2728
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2940
+(cherry picked from commit 50a37a7f)
 Applied-upstream: 44.1, commit:50a37a7fc087e17f50004071af7603afc98a465c
+Applied-upstream: 43.6, commit:8d7e958b862234c5975e95579b252883978f944d
 ---
  src/wayland/meta-wayland-xdg-shell.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

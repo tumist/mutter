@@ -1,3 +1,4 @@
+compositor-view-Chain-up-finalize.patch
 wayland-xdg-shell-Dismiss-instead-of-destroy-invalid-popu.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 tests-Use-a-more-interoperable-path-to-bash.patch

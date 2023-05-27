@@ -1,0 +1,26 @@
+From: =?utf-8?q?Jonas_=C3=85dahl?= <jadahl@gmail.com>
+Date: Tue, 9 May 2023 12:17:57 +0200
+Subject: compositor-view: Chain up finalize()
+
+The chaining up to the GObject finalize() method was missing, fix that.
+
+Part-of: <https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2991>
+(cherry picked from commit 802c1baec742f467ab2da9a9c6f648dc4d921d69)
+Origin: upstream, 43.6, commit:316fa6a765599526399bf752f72554da4ea11285
+---
+ src/compositor/meta-compositor-view.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/compositor/meta-compositor-view.c b/src/compositor/meta-compositor-view.c
+index b95cec7..6ce6224 100644
+--- a/src/compositor/meta-compositor-view.c
++++ b/src/compositor/meta-compositor-view.c
+@@ -170,6 +170,8 @@ meta_compositor_view_finalize (GObject *object)
+     meta_compositor_view_get_instance_private (compositor_view);
+ 
+   g_clear_weak_pointer (&priv->top_window_actor);
++
++  G_OBJECT_CLASS (meta_compositor_view_parent_class)->finalize (object);
+ }
+ 
+ static void
