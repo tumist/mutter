@@ -6,6 +6,7 @@ mutter (43.5-0+deb12u1) UNRELEASED; urgency=medium
       on a local display (mutter#2538, mutter!2789)
     - Export previously-private meta_window_has_pointer(), needed by
       screenshot UI fixes in gnome-shell 43.5 (mutter!2928)
+      + d/libmutter-11-0.symbols: Update to add that symbol
     - All other changes were already present in 43.4-2
   * d/patches: Drop patches that were applied upstream
   * d/patches: Update to upstream gnome-43 branch commit 43.5-2-g8d7e958b8
