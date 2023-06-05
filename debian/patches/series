@@ -8,4 +8,3 @@ debian/Support-Dynamic-triple-double-buffering.patch
 debian/tests-Disable-restore-size-test.patch
 workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch
 cursor-renderer-native-Workaround-broken-arm64-drivers.patch
-display-Set-compositor-selection-earlier-on-XWayland.patch
