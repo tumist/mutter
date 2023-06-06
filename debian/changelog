@@ -1,6 +1,6 @@
 mutter (43.6-1) UNRELEASED; urgency=medium
 
-  * New upstream stable release
+  * New upstream stable release 43.5
     - Always update surfaces belonging to a window that is being recorded
       or included in a screencast, even if the window is not visible
       on a local display (mutter#2538, mutter!2789)
@@ -8,18 +8,14 @@ mutter (43.6-1) UNRELEASED; urgency=medium
       screenshot UI fixes in gnome-shell 43.5 (mutter!2928)
       + d/libmutter-11-0.symbols: Update to add that symbol
     - All other changes were already present in 43.4-2
+  * New upstream stable release 43.6
+    - Fix a resource leak when a compositor view is destroyed (mutter!2991)
+    - Fix a crash when headless gdm greeter via gnome-remote-desktop
+      attempts to blank the screen (mutter#2841)
   * d/patches: Drop patches that were applied upstream
-  * d/patches: Update to upstream gnome-43 branch commit 43.5-2-g8d7e958b8
-    for additional post-release fixes
-    - d/p/compositor-view-Chain-up-finalize.patch:
-      Fix a resource leak when a compositor view is destroyed (mutter!2991)
-    - d/p/wayland-xdg-shell-Dismiss-instead-of-destroy-invalid-popu.patch:
-      Update metadata to reflect upstream backport, no functional change
   * d/p/wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch:
-    Backport patch from 44~beta to fix a crash during suspend/resume in
-    some circumstances (mutter#2570, potentially also resolves
-    #1010478 and #1036268)
-  * New upstream release
+    Backport patch from 44~beta to fix a crash during suspend/resume on
+    some systems (mutter#2570, Closes: #1036268)
 
  -- Simon McVittie <smcv@debian.org>  Tue, 06 Jun 2023 18:33:18 +0100
 
