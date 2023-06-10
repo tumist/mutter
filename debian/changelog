@@ -1,4 +1,4 @@
-mutter (43.6-1) UNRELEASED; urgency=medium
+mutter (43.6-1) unstable; urgency=medium
 
   * New upstream stable release 43.5
     - Always update surfaces belonging to a window that is being recorded
@@ -17,7 +17,7 @@ mutter (43.6-1) UNRELEASED; urgency=medium
     Backport patch from 44~beta to fix a crash during suspend/resume on
     some systems (mutter#2570, Closes: #1036268)
 
- -- Simon McVittie <smcv@debian.org>  Tue, 06 Jun 2023 18:33:18 +0100
+ -- Simon McVittie <smcv@debian.org>  Sat, 10 Jun 2023 21:17:19 +0100
 
 mutter (43.4-2) unstable; urgency=medium
 
