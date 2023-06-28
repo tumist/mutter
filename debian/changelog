@@ -1,3 +1,17 @@
+mutter (44.2-2) experimental; urgency=medium
+
+  [ Daniel van Vugt ]
+  * Cherry-pick 2 patches for stuttering fixes
+    * Avoid cursor stuttering over some windows (LP: #2023766). This will also
+      improve best-case input latency by roughly half a frame.
+    * Avoid render stuttering in some fullscreen games (LP: #2016990).
+  * Update Support-Dynamic-triple-double-buffering.patch
+    * Fix a failure to resume from sleep (frozen black screen), which seems
+      to be an old bug but only became likely in 44.1.
+    * Fix a crash on resume from sleep (LP: #2020049).
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 28 Jun 2023 09:42:56 -0400
+
 mutter (44.2-1) experimental; urgency=medium
 
   [ Jeremy Bícha ]
