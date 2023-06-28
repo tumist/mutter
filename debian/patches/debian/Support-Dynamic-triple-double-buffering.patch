@@ -41,7 +41,7 @@ Last-Update: 2023-06-05
  src/backends/native/meta-kms-update.c             |   3 +-
  src/backends/native/meta-kms.c                    |   9 +
  src/backends/native/meta-kms.h                    |   2 +
- src/backends/native/meta-onscreen-native.c        | 338 +++++++++++++++++-----
+ src/backends/native/meta-onscreen-native.c        | 339 +++++++++++++++++-----
  src/backends/native/meta-onscreen-native.h        |   2 +
  src/backends/native/meta-renderer-native.c        |  34 ++-
  src/backends/native/meta-swap-chain.c             | 149 ++++++++++
@@ -49,7 +49,7 @@ Last-Update: 2023-06-05
  src/meson.build                                   |   2 +
  src/tests/clutter/conform/event-delivery.c        |   1 +
  src/tests/native-kms-render.c                     | 107 +++++--
- 27 files changed, 919 insertions(+), 282 deletions(-)
+ 27 files changed, 920 insertions(+), 282 deletions(-)
  create mode 100644 src/backends/native/meta-swap-chain.c
  create mode 100644 src/backends/native/meta-swap-chain.h
 
@@ -1257,7 +1257,7 @@ index fe4fef1..88421ed 100644
                          MetaKmsFlags   flags,
                          GError       **error);
 diff --git a/src/backends/native/meta-onscreen-native.c b/src/backends/native/meta-onscreen-native.c
-index 1ab117e..a9765ed 100644
+index 1ab117e..ffe95f8 100644
 --- a/src/backends/native/meta-onscreen-native.c
 +++ b/src/backends/native/meta-onscreen-native.c
 @@ -72,7 +72,7 @@ typedef struct _MetaOnscreenNativeSecondaryGpuState
@@ -1579,7 +1579,7 @@ index 1ab117e..a9765ed 100644
    /*
     * If we changed EGL context, cogl will have the wrong idea about what is
     * current, making it fail to set it when it needs to. Avoid that by making
-@@ -1161,12 +1201,82 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1161,12 +1201,83 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
    if (egl_context_changed)
      _cogl_winsys_egl_ensure_current (cogl_display);
  
@@ -1623,7 +1623,8 @@ index 1ab117e..a9765ed 100644
 +  g_autoptr (ClutterFrame) frame = NULL;
 +  MetaFrameNative *frame_native;
 +
-+  if (onscreen_native->next_post.frame == NULL)
++  if (onscreen_native->next_post.frame == NULL ||
++      onscreen_native->view == NULL)
 +    return;
 +
 +  if (meta_kms_is_shutting_down (kms))
@@ -1664,7 +1665,7 @@ index 1ab117e..a9765ed 100644
        kms_update = meta_frame_native_ensure_kms_update (frame_native,
                                                          kms_device);
        meta_kms_update_add_result_listener (kms_update,
-@@ -1179,15 +1289,14 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
+@@ -1179,15 +1290,13 @@ meta_onscreen_native_swap_buffers_with_damage (CoglOnscreen  *onscreen,
                                        onscreen_native->crtc,
                                        kms_update,
                                        META_KMS_PAGE_FLIP_LISTENER_FLAG_NONE,
@@ -1675,7 +1676,6 @@ index 1ab117e..a9765ed 100644
      }
    else
      {
-+      frame = g_steal_pointer (&onscreen_native->next_post.frame);
        meta_renderer_native_queue_power_save_page_flip (renderer_native,
                                                         onscreen);
 -      clutter_frame_set_result (frame,
@@ -1876,6 +1876,12 @@ index 1ab117e..a9765ed 100644
  }
  
  static void
+@@ -2483,4 +2661,5 @@ void
+ meta_onscreen_native_detach (MetaOnscreenNative *onscreen_native)
+ {
+   clear_invalidation_handlers (onscreen_native);
++  onscreen_native->view = NULL;
+ }
 diff --git a/src/backends/native/meta-onscreen-native.h b/src/backends/native/meta-onscreen-native.h
 index 05a9ecd..a33ee38 100644
 --- a/src/backends/native/meta-onscreen-native.h
