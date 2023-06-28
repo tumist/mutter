@@ -1,3 +1,9 @@
+mutter (44.2-3) experimental; urgency=medium
+
+  * Cherry-pick patch to fix build test with mesa 23.1 (LP: #2025287)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 28 Jun 2023 15:29:10 -0400
+
 mutter (44.2-2ubuntu1) mantic; urgency=medium
 
   * Merge with Debian. Remaining changes:
