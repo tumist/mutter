@@ -1,3 +1,14 @@
+mutter (44.3-1) experimental; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release
+  * Drop 2 patches applied in new release
+
+  [ Daniel van Vugt ]
+  * Update triple buffering patch
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 06 Jul 2023 17:04:05 -0400
+
 mutter (44.2-3ubuntu1) mantic; urgency=medium
 
   * Merge with Debian. Remaining changes:
