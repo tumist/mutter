@@ -1,3 +1,9 @@
+mutter (44.3-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 06 Jul 2023 16:39:04 -0400
+
 mutter (44.2-3) experimental; urgency=medium
 
   * Cherry-pick patch to fix build test with mesa 23.1 (LP: #2025287)
