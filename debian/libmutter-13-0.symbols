@@ -227,7 +227,6 @@ libmutter-13.so.0 libmutter-13-0 #MINVER#
  meta_finish_monitors_config_migration@Base 43.0
  meta_focus_stage_window@Base 43.0
  meta_frame_borders_clear@Base 43.0
- meta_frame_flags_get_type@Base 43.0
  meta_frame_native_ensure_kms_update@Base 44~rc
  meta_frame_native_from_frame@Base 44~rc
  meta_frame_native_had_kms_update@Base 44.1
@@ -543,7 +542,6 @@ libmutter-13.so.0 libmutter-13-0 #MINVER#
  meta_prefs_get_num_workspaces@Base 43.0
  meta_prefs_get_raise_on_click@Base 43.0
  meta_prefs_get_show_fallback_app_menu@Base 43.0
- meta_prefs_get_titlebar_font@Base 43.0
  meta_prefs_get_visual_bell@Base 43.0
  meta_prefs_get_visual_bell_type@Base 43.0
  meta_prefs_get_workspace_name@Base 43.0
@@ -697,6 +695,7 @@ libmutter-13.so.0 libmutter-13-0 #MINVER#
  (arch=linux-any)meta_wayland_client_spawnv@Base 43.0
  meta_wayland_compositor_get_context@Base 44~beta
  meta_wayland_compositor_get_filter_manager@Base 44~beta
+ meta_wayland_compositor_get_type@Base 45~beta.1
  meta_wayland_compositor_get_wayland_display@Base 44~beta
  (arch=linux-any)meta_wayland_compositor_get_xwayland_manager@Base 43.0
  meta_wayland_filter_manager_add_global@Base 44~beta
@@ -878,6 +877,7 @@ libmutter-13.so.0 libmutter-13-0 #MINVER#
  meta_x11_display_get_xdisplay@Base 43.0
  meta_x11_display_get_xroot@Base 43.0
  meta_x11_display_lookup_group@Base 43.0
+ meta_x11_display_redirect_windows@Base 45~beta.1
  meta_x11_display_remove_alarm_filter@Base 43.2
  meta_x11_display_remove_event_func@Base 44~rc
  meta_x11_display_set_stage_input_region@Base 43.0
@@ -907,6 +907,7 @@ libmutter-clutter-13.so.0 libmutter-13-0 #MINVER#
  _clutter_set_sync_to_vblank@Base 43.0
  _clutter_stage_get_window@Base 43.0
  _clutter_stage_maybe_setup_viewport@Base 43.0
+ _clutter_stage_process_queued_events@Base 45~beta.1
  _clutter_stage_queue_event@Base 43.0
  _clutter_stage_set_window@Base 43.0
  _clutter_stage_window_can_clip_redraws@Base 43.0
@@ -1041,6 +1042,7 @@ libmutter-clutter-13.so.0 libmutter-13-0 #MINVER#
  clutter_actor_get_preferred_width@Base 43.0
  clutter_actor_get_previous_sibling@Base 43.0
  clutter_actor_get_reactive@Base 43.0
+ clutter_actor_get_relative_transformation_matrix@Base 45~beta.1
  clutter_actor_get_request_mode@Base 43.0
  clutter_actor_get_resource_scale@Base 43.0
  clutter_actor_get_rotation_angle@Base 43.0
@@ -1110,6 +1112,7 @@ libmutter-clutter-13.so.0 libmutter-13-0 #MINVER#
  clutter_actor_new@Base 43.0
  clutter_actor_node_get_type@Base 43.0
  clutter_actor_node_new@Base 43.0
+ clutter_actor_notify_transform_invalid@Base 45~beta.1
  clutter_actor_paint@Base 43.0
  clutter_actor_peek_stage_views@Base 43.0
  clutter_actor_pick@Base 43.0
@@ -1589,6 +1592,7 @@ libmutter-clutter-13.so.0 libmutter-13-0 #MINVER#
  clutter_input_focus_filter_event@Base 43.0
  clutter_input_focus_get_type@Base 43.0
  clutter_input_focus_is_focused@Base 43.0
+ clutter_input_focus_process_event@Base 45~beta.1
  clutter_input_focus_reset@Base 43.0
  clutter_input_focus_set_can_show_preedit@Base 43.0
  clutter_input_focus_set_content_hints@Base 43.0
@@ -1753,7 +1757,6 @@ libmutter-clutter-13.so.0 libmutter-13-0 #MINVER#
  clutter_param_spec_color@Base 43.0
  clutter_param_spec_units@Base 43.0
  clutter_param_units_get_type@Base 43.0
- clutter_path_add_cairo_path@Base 43.0
  clutter_path_add_close@Base 43.0
  clutter_path_add_curve_to@Base 43.0
  clutter_path_add_line_to@Base 43.0
@@ -1789,7 +1792,6 @@ libmutter-clutter-13.so.0 libmutter-13-0 #MINVER#
  clutter_path_remove_node@Base 43.0
  clutter_path_replace_node@Base 43.0
  clutter_path_set_description@Base 43.0
- clutter_path_to_cairo_path@Base 43.0
  clutter_perspective_get_type@Base 43.0
  clutter_pick_context_destroy@Base 43.0
  clutter_pick_context_get_mode@Base 43.0
@@ -1876,6 +1878,7 @@ libmutter-clutter-13.so.0 libmutter-13-0 #MINVER#
  clutter_seat_handle_event_post@Base 43.0
  clutter_seat_has_touchscreen@Base 43.0
  clutter_seat_inhibit_unfocus@Base 43.0
+ clutter_seat_init_pointer_position@Base 45~beta.1
  clutter_seat_is_unfocus_inhibited@Base 43.0
  clutter_seat_list_devices@Base 43.0
  clutter_seat_query_state@Base 43.0
@@ -2430,7 +2433,6 @@ libmutter-cogl-13.so.0 libmutter-13-0 #MINVER#
  cogl_framebuffer_push_primitive_clip@Base 43.0
  cogl_framebuffer_push_rectangle_clip@Base 43.0
  cogl_framebuffer_push_region_clip@Base 43.0
- cogl_framebuffer_push_scissor_clip@Base 43.0
  cogl_framebuffer_read_pixels@Base 43.0
  cogl_framebuffer_read_pixels_into_bitmap@Base 43.0
  cogl_framebuffer_resolve_samples@Base 43.0
@@ -2680,7 +2682,6 @@ libmutter-cogl-13.so.0 libmutter-13-0 #MINVER#
  cogl_scanout_notify_failed@Base 44~rc
  cogl_set_tracing_disabled_on_thread@Base 43.0
  cogl_set_tracing_enabled_on_thread@Base 43.0
- cogl_set_tracing_enabled_on_thread_with_fd@Base 43.0
  cogl_shader_get_type@Base 43.0
  cogl_shader_source@Base 43.0
  cogl_snippet_get_declarations@Base 43.0
@@ -2694,6 +2695,9 @@ libmutter-cogl-13.so.0 libmutter-13-0 #MINVER#
  cogl_snippet_set_post@Base 43.0
  cogl_snippet_set_pre@Base 43.0
  cogl_snippet_set_replace@Base 43.0
+ cogl_start_tracing_with_fd@Base 45~beta.1
+ cogl_start_tracing_with_path@Base 45~beta.1
+ cogl_stop_tracing@Base 45~beta.1
  cogl_sub_texture_get_parent@Base 43.0
  cogl_sub_texture_new@Base 43.0
  cogl_swap_chain_get_gtype@Base 43.0
