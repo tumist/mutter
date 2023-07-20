@@ -22,7 +22,7 @@ git suggests. Also add Gbp-Pq: Topic debian
 Origin: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/1441
 Last-Update: 2023-07-06
 ---
- clutter/clutter/clutter-frame-clock.c             | 230 ++++++++++++---
+ clutter/clutter/clutter-frame-clock.c             | 252 ++++++++++++----
  clutter/clutter/clutter-frame-clock.h             |  11 +-
  clutter/clutter/clutter-frame-private.h           |   1 +
  clutter/clutter/clutter-frame.c                   |  13 +
@@ -49,12 +49,12 @@ Last-Update: 2023-07-06
  src/meson.build                                   |   2 +
  src/tests/clutter/conform/event-delivery.c        |   1 +
  src/tests/native-kms-render.c                     | 107 +++++--
- 27 files changed, 920 insertions(+), 282 deletions(-)
+ 27 files changed, 933 insertions(+), 291 deletions(-)
  create mode 100644 src/backends/native/meta-swap-chain.c
  create mode 100644 src/backends/native/meta-swap-chain.h
 
 diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
-index ed375e2..a3ac6ee 100644
+index ed375e2..d5cafac 100644
 --- a/clutter/clutter/clutter-frame-clock.c
 +++ b/clutter/clutter/clutter-frame-clock.c
 @@ -35,6 +35,15 @@ enum
@@ -103,7 +103,18 @@ index ed375e2..a3ac6ee 100644
  
    /* Last time we promoted short term durations to long term ones */
    int64_t longterm_promotion_us;
-@@ -242,6 +256,12 @@ void
+@@ -225,10 +239,6 @@ static void
+ update_longterm_max (int64_t *longterm_max,
+                      int64_t *shortterm_max)
+ {
+-  /* Do not update long term max if there has been no measurement in over a second. */
+-  if (!*shortterm_max)
+-    return;
+-
+   if (*longterm_max > *shortterm_max)
+     /* Exponential drop-off toward the short term max */
+     *longterm_max -= (*longterm_max - *shortterm_max) / 2;
+@@ -242,6 +252,12 @@ void
  clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
                                        ClutterFrameInfo  *frame_info)
  {
@@ -116,12 +127,20 @@ index ed375e2..a3ac6ee 100644
    COGL_TRACE_BEGIN_SCOPED (ClutterFrameClockNotifyPresented,
                             "Frame Clock (presented)");
  
-@@ -324,18 +344,38 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
-   if (frame_info->cpu_time_before_buffer_swap_us != 0)
+@@ -321,21 +337,49 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
+ 
+   frame_clock->got_measurements_last_frame = FALSE;
+ 
+-  if (frame_info->cpu_time_before_buffer_swap_us != 0)
++  if (frame_info->cpu_time_before_buffer_swap_us != 0 ||
++      frame_clock->ever_got_measurements)
      {
        int64_t dispatch_to_swap_us, swap_to_rendering_done_us, swap_to_flip_us;
 +      int64_t dispatch_time_us = 0, flip_time_us = 0;
-+
+ 
+-      dispatch_to_swap_us =
+-        frame_info->cpu_time_before_buffer_swap_us -
+-        frame_clock->last_dispatch_time_us;
 +      switch (frame_clock->state)
 +        {
 +        case CLUTTER_FRAME_CLOCK_STATE_INIT:
@@ -139,17 +158,25 @@ index ed375e2..a3ac6ee 100644
 +          flip_time_us = frame_clock->prev_last_flip_time_us;
 +          break;
 +        }
- 
-       dispatch_to_swap_us =
-         frame_info->cpu_time_before_buffer_swap_us -
--        frame_clock->last_dispatch_time_us;
-+        dispatch_time_us;
++
++      if (frame_info->cpu_time_before_buffer_swap_us == 0)
++        {
++          /* Cursor-only updates with no "swap" or "flip" */
++          dispatch_to_swap_us = 0;
++          swap_to_flip_us = 0;
++        }
++      else
++        {
++          dispatch_to_swap_us = frame_info->cpu_time_before_buffer_swap_us -
++                                dispatch_time_us;
++          swap_to_flip_us = flip_time_us -
++                            frame_info->cpu_time_before_buffer_swap_us;
++        }
        swap_to_rendering_done_us =
          frame_info->gpu_rendering_duration_ns / 1000;
-       swap_to_flip_us =
+-      swap_to_flip_us =
 -        frame_clock->last_flip_time_us -
-+        flip_time_us -
-         frame_info->cpu_time_before_buffer_swap_us;
+-        frame_info->cpu_time_before_buffer_swap_us;
  
        CLUTTER_NOTE (FRAME_TIMINGS,
 -                    "update2dispatch %ld µs, dispatch2swap %ld µs, swap2render %ld µs, swap2flip %ld µs",
@@ -158,7 +185,7 @@ index ed375e2..a3ac6ee 100644
                      frame_clock->last_dispatch_lateness_us,
                      dispatch_to_swap_us,
                      swap_to_rendering_done_us,
-@@ -353,7 +393,8 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
+@@ -353,7 +397,8 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
      }
    else
      {
@@ -168,7 +195,7 @@ index ed375e2..a3ac6ee 100644
                      frame_clock->last_dispatch_lateness_us);
      }
  
-@@ -384,11 +425,18 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
+@@ -384,11 +429,18 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
      case CLUTTER_FRAME_CLOCK_STATE_SCHEDULED:
        g_warn_if_reached ();
        break;
@@ -189,7 +216,7 @@ index ed375e2..a3ac6ee 100644
      }
  }
  
-@@ -404,11 +452,18 @@ clutter_frame_clock_notify_ready (ClutterFrameClock *frame_clock)
+@@ -404,11 +456,18 @@ clutter_frame_clock_notify_ready (ClutterFrameClock *frame_clock)
      case CLUTTER_FRAME_CLOCK_STATE_SCHEDULED:
        g_warn_if_reached ();
        break;
@@ -210,7 +237,7 @@ index ed375e2..a3ac6ee 100644
      }
  }
  
-@@ -427,7 +482,15 @@ clutter_frame_clock_compute_max_render_time_us (ClutterFrameClock *frame_clock)
+@@ -427,7 +486,15 @@ clutter_frame_clock_compute_max_render_time_us (ClutterFrameClock *frame_clock)
    if (!frame_clock->ever_got_measurements ||
        G_UNLIKELY (clutter_paint_debug_flags &
                    CLUTTER_DEBUG_DISABLE_DYNAMIC_MAX_RENDER_TIME))
@@ -227,7 +254,7 @@ index ed375e2..a3ac6ee 100644
  
    max_dispatch_lateness_us =
      MAX (frame_clock->longterm.max_dispatch_lateness_us,
-@@ -460,8 +523,6 @@ clutter_frame_clock_compute_max_render_time_us (ClutterFrameClock *frame_clock)
+@@ -460,8 +527,6 @@ clutter_frame_clock_compute_max_render_time_us (ClutterFrameClock *frame_clock)
      frame_clock->vblank_duration_us +
      clutter_max_render_time_constant_us;
  
@@ -236,7 +263,7 @@ index ed375e2..a3ac6ee 100644
    return max_render_time_us;
  }
  
-@@ -476,7 +537,7 @@ calculate_next_update_time_us (ClutterFrameClock *frame_clock,
+@@ -476,7 +541,7 @@ calculate_next_update_time_us (ClutterFrameClock *frame_clock,
    int64_t refresh_interval_us;
    int64_t min_render_time_allowed_us;
    int64_t max_render_time_allowed_us;
@@ -245,7 +272,7 @@ index ed375e2..a3ac6ee 100644
    int64_t next_update_time_us;
  
    now_us = g_get_monotonic_time ();
-@@ -521,7 +582,24 @@ calculate_next_update_time_us (ClutterFrameClock *frame_clock,
+@@ -521,7 +586,24 @@ calculate_next_update_time_us (ClutterFrameClock *frame_clock,
     *
     */
    last_presentation_time_us = frame_clock->last_presentation_time_us;
@@ -271,7 +298,7 @@ index ed375e2..a3ac6ee 100644
  
    /*
     * However, the last presentation could have happened more than a frame ago.
-@@ -636,8 +714,12 @@ clutter_frame_clock_inhibit (ClutterFrameClock *frame_clock)
+@@ -636,8 +718,12 @@ clutter_frame_clock_inhibit (ClutterFrameClock *frame_clock)
            frame_clock->pending_reschedule = TRUE;
            frame_clock->state = CLUTTER_FRAME_CLOCK_STATE_IDLE;
            break;
@@ -286,7 +313,7 @@ index ed375e2..a3ac6ee 100644
            break;
          }
  
-@@ -674,9 +756,15 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
+@@ -674,9 +760,15 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
      case CLUTTER_FRAME_CLOCK_STATE_IDLE:
      case CLUTTER_FRAME_CLOCK_STATE_SCHEDULED:
        next_update_time_us = g_get_monotonic_time ();
@@ -304,7 +331,7 @@ index ed375e2..a3ac6ee 100644
        frame_clock->pending_reschedule = TRUE;
        frame_clock->pending_reschedule_now = TRUE;
        return;
-@@ -686,7 +774,6 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
+@@ -686,7 +778,6 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
  
    frame_clock->next_update_time_us = next_update_time_us;
    g_source_set_ready_time (frame_clock->source, next_update_time_us);
@@ -312,7 +339,7 @@ index ed375e2..a3ac6ee 100644
    frame_clock->is_next_presentation_time_valid = FALSE;
  }
  
-@@ -694,6 +781,10 @@ void
+@@ -694,6 +785,10 @@ void
  clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
  {
    int64_t next_update_time_us = -1;
@@ -323,7 +350,7 @@ index ed375e2..a3ac6ee 100644
  
    if (frame_clock->inhibit_count > 0)
      {
-@@ -705,6 +796,7 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -705,6 +800,7 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
      {
      case CLUTTER_FRAME_CLOCK_STATE_INIT:
        next_update_time_us = g_get_monotonic_time ();
@@ -331,7 +358,7 @@ index ed375e2..a3ac6ee 100644
        break;
      case CLUTTER_FRAME_CLOCK_STATE_IDLE:
        calculate_next_update_time_us (frame_clock,
-@@ -713,11 +805,37 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -713,11 +809,37 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
                                       &frame_clock->min_render_time_allowed_us);
        frame_clock->is_next_presentation_time_valid =
          (frame_clock->next_presentation_time_us != 0);
@@ -371,7 +398,7 @@ index ed375e2..a3ac6ee 100644
        frame_clock->pending_reschedule = TRUE;
        return;
      }
-@@ -726,7 +844,6 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
+@@ -726,7 +848,6 @@ clutter_frame_clock_schedule_update (ClutterFrameClock *frame_clock)
  
    frame_clock->next_update_time_us = next_update_time_us;
    g_source_set_ready_time (frame_clock->source, next_update_time_us);
@@ -379,7 +406,7 @@ index ed375e2..a3ac6ee 100644
  }
  
  static void
-@@ -757,7 +874,7 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -757,7 +878,7 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
                               frame_clock->refresh_interval_us;
  
    lateness_us = time_us - ideal_dispatch_time_us;
@@ -388,7 +415,7 @@ index ed375e2..a3ac6ee 100644
      frame_clock->last_dispatch_lateness_us = 0;
    else
      frame_clock->last_dispatch_lateness_us = lateness_us;
-@@ -766,10 +883,25 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -766,10 +887,25 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
      MAX (frame_clock->shortterm.max_dispatch_lateness_us,
           frame_clock->last_dispatch_lateness_us);
  
@@ -415,7 +442,7 @@ index ed375e2..a3ac6ee 100644
  
    frame_count = frame_clock->frame_count++;
  
-@@ -798,25 +930,31 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -798,25 +934,31 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
    result = iface->frame (frame_clock, frame, frame_clock->listener.user_data);
    COGL_TRACE_END (ClutterFrameClockFrame);
  
@@ -459,7 +486,7 @@ index ed375e2..a3ac6ee 100644
          }
        break;
      }
-@@ -849,10 +987,13 @@ frame_clock_source_dispatch (GSource     *source,
+@@ -849,10 +991,13 @@ frame_clock_source_dispatch (GSource     *source,
  }
  
  void
@@ -475,7 +502,7 @@ index ed375e2..a3ac6ee 100644
  }
  
  GString *
-@@ -964,8 +1105,6 @@ clutter_frame_clock_dispose (GObject *object)
+@@ -964,8 +1109,6 @@ clutter_frame_clock_dispose (GObject *object)
  {
    ClutterFrameClock *frame_clock = CLUTTER_FRAME_CLOCK (object);
  
@@ -484,7 +511,7 @@ index ed375e2..a3ac6ee 100644
    if (frame_clock->source)
      {
        g_signal_emit (frame_clock, signals[DESTROY], 0);
-@@ -986,6 +1125,15 @@ static void
+@@ -986,6 +1129,15 @@ static void
  clutter_frame_clock_class_init (ClutterFrameClockClass *klass)
  {
    GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -641,7 +668,7 @@ index db94c7e..aed2296 100644
                                          stage_view,
                                          scanout,
 diff --git a/src/backends/native/meta-cursor-renderer-native.c b/src/backends/native/meta-cursor-renderer-native.c
-index e524766..b05e228 100644
+index f1b7459..8080098 100644
 --- a/src/backends/native/meta-cursor-renderer-native.c
 +++ b/src/backends/native/meta-cursor-renderer-native.c
 @@ -59,19 +59,6 @@
@@ -816,7 +843,7 @@ index e524766..b05e228 100644
  }
  
  static void
-@@ -1427,35 +1347,7 @@ load_cursor_sprite_gbm_buffer_for_gpu (MetaCursorRendererNative *native,
+@@ -1423,35 +1343,7 @@ load_cursor_sprite_gbm_buffer_for_gpu (MetaCursorRendererNative *native,
        return;
      }
  
@@ -853,7 +880,7 @@ index e524766..b05e228 100644
  }
  
  static gboolean
-@@ -1642,7 +1534,7 @@ realize_cursor_sprite_from_wl_buffer_for_gpu (MetaCursorRenderer      *renderer,
+@@ -1638,7 +1530,7 @@ realize_cursor_sprite_from_wl_buffer_for_gpu (MetaCursorRenderer      *renderer,
    if (!cursor_renderer_gpu_data || cursor_renderer_gpu_data->hw_cursor_broken)
      return;
  
@@ -862,7 +889,7 @@ index e524766..b05e228 100644
        is_cursor_scale_and_transform_valid (renderer, cursor_sprite))
      return;
  
-@@ -1787,8 +1679,8 @@ realize_cursor_sprite_from_wl_buffer_for_gpu (MetaCursorRenderer      *renderer,
+@@ -1783,8 +1675,8 @@ realize_cursor_sprite_from_wl_buffer_for_gpu (MetaCursorRenderer      *renderer,
            return;
          }
  
@@ -873,7 +900,7 @@ index e524766..b05e228 100644
      }
  }
  #endif
-@@ -1812,7 +1704,7 @@ realize_cursor_sprite_from_xcursor_for_gpu (MetaCursorRenderer      *renderer,
+@@ -1808,7 +1700,7 @@ realize_cursor_sprite_from_xcursor_for_gpu (MetaCursorRenderer      *renderer,
    if (!cursor_renderer_gpu_data || cursor_renderer_gpu_data->hw_cursor_broken)
      return;
  
