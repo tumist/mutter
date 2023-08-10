@@ -1,6 +1,9 @@
 mutter (43.7-1) UNRELEASED; urgency=medium
 
-  * New upstream release
+  * New upstream stable release 43.7
+    - Functionally equivalent to 43.6-1
+  * d/p/wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch:
+    Drop patch, applied upstream
 
  -- Simon McVittie <smcv@debian.org>  Thu, 10 Aug 2023 09:57:26 +0100
 
