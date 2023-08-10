@@ -1,3 +1,71 @@
+mutter (44.3-2) UNRELEASED; urgency=medium
+
+  * Merge changelog from unstable
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 10 Apr 2023 14:07:33 +0100
+
+mutter (43.6-1) unstable; urgency=medium
+
+  * New upstream stable release 43.5
+    - Always update surfaces belonging to a window that is being recorded
+      or included in a screencast, even if the window is not visible
+      on a local display (mutter#2538, mutter!2789)
+    - Export previously-private meta_window_has_pointer(), needed by
+      screenshot UI fixes in gnome-shell 43.5 (mutter!2928)
+      + d/libmutter-11-0.symbols: Update to add that symbol
+    - All other changes were already present in 43.4-2
+  * New upstream stable release 43.6
+    - Fix a resource leak when a compositor view is destroyed (mutter!2991)
+    - Fix a crash when headless gdm greeter via gnome-remote-desktop
+      attempts to blank the screen (mutter#2841)
+  * d/patches: Drop patches that were applied upstream
+  * d/p/wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch:
+    Backport patch from 44~beta to fix a crash during suspend/resume on
+    some systems (mutter#2570, Closes: #1036268)
+
+ -- Simon McVittie <smcv@debian.org>  Sat, 10 Jun 2023 21:17:19 +0100
+
+mutter (43.4-2) unstable; urgency=medium
+
+  * Team upload
+  * d/patches: Update to upstream gnome-43 branch commit 43.4-5-gc35e9f8c0
+    - d/p/clutter-actor-Get-next-action-from-list-before-handling-c.patch:
+      Fix a use-after-free that was always a problem in theory, but causes
+      crashes in practice with GLib 2.76.x (mutter!2955, gnome-shell#6552)
+    - d/p/cursor-tracker-Don-t-leak-window-cursor-on-exit.patch:
+      Fix a minor memory leak (mutter!2969)
+    - d/p/wayland-cursor-surface-Update-cursor-on-dispose.patch:
+      Fix a crash in rare situations involving Wayland cursor changes,
+      and add test coverage (mutter!2969)
+  * d/libmutter-11-0.symbols: Add new private symbols used by tests
+    for the above changes
+  * d/p/wayland-xdg-shell-Dismiss-instead-of-destroy-invalid-popu.patch:
+    Backport a fix from upstream 44.x branch to fix popup-related crashes
+    (mutter#2728, mutter!2940, Closes: #1033484)
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 21 Apr 2023 10:10:24 +0100
+
+mutter (43.4-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream release
+    - Improve performance by reducing memory bandwidth use on some GPUs
+      (GNOME/mutter!2091)
+    - Fix handling of rotated screens, for example on Pinephone Pro and
+      Pinebook Pro (GNOME/mutter#2557)
+    - Avoid warnings when destroying a ClutterText object with recent
+      GLib versions (GNOME/mutter#2566)
+    - Other changes were included in previous Debian packaging updates
+  * Drop most patches, applied upstream
+  * d/patches: Update to upstream gnome-43 branch commit 43.4-2-gba5cb0542
+    - Fix a crash with newer GStreamer gtkwaylandsink (GNOME/mutter!2917)
+    - Translation update: ab
+  * Remove #1032388 from 43.3-5 changelog entry.
+    I hoped !2878 would fix both #1032388 and #1031945, but in fact it
+    only fixes #1031945.
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 10 Apr 2023 14:07:33 +0100
+
 mutter (44.3-1) experimental; urgency=medium
 
   [ Jeremy Bícha ]
@@ -169,7 +237,7 @@ mutter (43.3-5) unstable; urgency=medium
     d/p/x11-Ignore-_NET_ACTIVE_WINDOW-client-messages-while-grabb.patch,
     d/p/core-Avoid-focusing-windows-on-map-during-grabs.patch:
     Backport upstream merge request !2878, fixing X11 focus regressions
-    (Closes: #1032388, #1031945)
+    (Closes: #1031945)
   * d/p/tests-Use-a-more-interoperable-path-to-bash.patch:
     Fix path to interpreter in x11-test.sh instead of disabling it
     - d/p/tests-Disable-broken-test.patch: Drop patch, no longer needed
