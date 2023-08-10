@@ -1,8 +1,54 @@
 mutter (44.3-2) UNRELEASED; urgency=medium
 
   * Merge changelog from unstable
+    - All fixes in 43.6 were also in 44.2 or earlier
 
  -- Simon McVittie <smcv@debian.org>  Mon, 10 Apr 2023 14:07:33 +0100
+
+mutter (44.3-1) experimental; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release
+  * Drop 2 patches applied in new release
+
+  [ Daniel van Vugt ]
+  * Update triple buffering patch
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 06 Jul 2023 17:04:05 -0400
+
+mutter (44.2-3) experimental; urgency=medium
+
+  * Cherry-pick patch to fix build test with mesa 23.1 (LP: #2025287)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 28 Jun 2023 15:29:10 -0400
+
+mutter (44.2-2) experimental; urgency=medium
+
+  [ Daniel van Vugt ]
+  * Cherry-pick 2 patches for stuttering fixes
+    * Avoid cursor stuttering over some windows (LP: #2023766). This will also
+      improve best-case input latency by roughly half a frame.
+    * Avoid render stuttering in some fullscreen games (LP: #2016990).
+  * Update Support-Dynamic-triple-double-buffering.patch
+    * Fix a failure to resume from sleep (frozen black screen), which seems
+      to be an old bug but only became likely in 44.1.
+    * Fix a crash on resume from sleep (LP: #2020049).
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 28 Jun 2023 09:42:56 -0400
+
+mutter (44.2-1) experimental; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release (LP: #2022951)
+    - Fix drag and drop for Qt applications (LP: #2013235)
+  * Drop display-Set-compositor-selection-earlier patch: applied in new release
+  * Try dropping 2 of our flaky tests patches
+
+  [ Daniel van Vugt ]
+  * Update triple buffering patch to avoid NULL dereference on resume
+    from suspend (LP: #2020652)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 05 Jun 2023 11:47:52 -0400
 
 mutter (43.6-1) unstable; urgency=medium
 
@@ -65,51 +111,6 @@ mutter (43.4-1) unstable; urgency=medium
     only fixes #1031945.
 
  -- Simon McVittie <smcv@debian.org>  Mon, 10 Apr 2023 14:07:33 +0100
-
-mutter (44.3-1) experimental; urgency=medium
-
-  [ Jeremy Bícha ]
-  * New upstream release
-  * Drop 2 patches applied in new release
-
-  [ Daniel van Vugt ]
-  * Update triple buffering patch
-
- -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 06 Jul 2023 17:04:05 -0400
-
-mutter (44.2-3) experimental; urgency=medium
-
-  * Cherry-pick patch to fix build test with mesa 23.1 (LP: #2025287)
-
- -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 28 Jun 2023 15:29:10 -0400
-
-mutter (44.2-2) experimental; urgency=medium
-
-  [ Daniel van Vugt ]
-  * Cherry-pick 2 patches for stuttering fixes
-    * Avoid cursor stuttering over some windows (LP: #2023766). This will also
-      improve best-case input latency by roughly half a frame.
-    * Avoid render stuttering in some fullscreen games (LP: #2016990).
-  * Update Support-Dynamic-triple-double-buffering.patch
-    * Fix a failure to resume from sleep (frozen black screen), which seems
-      to be an old bug but only became likely in 44.1.
-    * Fix a crash on resume from sleep (LP: #2020049).
-
- -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 28 Jun 2023 09:42:56 -0400
-
-mutter (44.2-1) experimental; urgency=medium
-
-  [ Jeremy Bícha ]
-  * New upstream release (LP: #2022951)
-    - Fix drag and drop for Qt applications (LP: #2013235)
-  * Drop display-Set-compositor-selection-earlier patch: applied in new release
-  * Try dropping 2 of our flaky tests patches
-
-  [ Daniel van Vugt ]
-  * Update triple buffering patch to avoid NULL dereference on resume
-    from suspend (LP: #2020652)
-
- -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 05 Jun 2023 11:47:52 -0400
 
 mutter (44.1-1) experimental; urgency=medium
 
