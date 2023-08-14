@@ -1,3 +1,17 @@
+mutter (44.3-2) experimental; urgency=medium
+
+  [ Simon McVittie ]
+  * Merge changelog from unstable
+    - All fixes in 43.6 were also in 44.2 or earlier
+  * d/control: Regenerate
+
+  [ Daniel van Vugt ]
+  * Update Support-Dynamic-triple-double-buffering.patch:
+    Fix increased mouse pointer latency that occurred in 44.1 when using
+    the default atomic KMS backend with Wayland sessions (LP: #2023363)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 14 Aug 2023 17:08:48 -0400
+
 mutter (44.3-1ubuntu1) mantic; urgency=medium
 
   * Merge with Debian. Remaining changes:
@@ -82,6 +96,68 @@ mutter (44.2-1) experimental; urgency=medium
     from suspend (LP: #2020652)
 
  -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 05 Jun 2023 11:47:52 -0400
+
+mutter (43.6-1) unstable; urgency=medium
+
+  * New upstream stable release 43.5
+    - Always update surfaces belonging to a window that is being recorded
+      or included in a screencast, even if the window is not visible
+      on a local display (mutter#2538, mutter!2789)
+    - Export previously-private meta_window_has_pointer(), needed by
+      screenshot UI fixes in gnome-shell 43.5 (mutter!2928)
+      + d/libmutter-11-0.symbols: Update to add that symbol
+    - All other changes were already present in 43.4-2
+  * New upstream stable release 43.6
+    - Fix a resource leak when a compositor view is destroyed (mutter!2991)
+    - Fix a crash when headless gdm greeter via gnome-remote-desktop
+      attempts to blank the screen (mutter#2841)
+  * d/patches: Drop patches that were applied upstream
+  * d/p/wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch:
+    Backport patch from 44~beta to fix a crash during suspend/resume on
+    some systems (mutter#2570, Closes: #1036268)
+
+ -- Simon McVittie <smcv@debian.org>  Sat, 10 Jun 2023 21:17:19 +0100
+
+mutter (43.4-2) unstable; urgency=medium
+
+  * Team upload
+  * d/patches: Update to upstream gnome-43 branch commit 43.4-5-gc35e9f8c0
+    - d/p/clutter-actor-Get-next-action-from-list-before-handling-c.patch:
+      Fix a use-after-free that was always a problem in theory, but causes
+      crashes in practice with GLib 2.76.x (mutter!2955, gnome-shell#6552)
+    - d/p/cursor-tracker-Don-t-leak-window-cursor-on-exit.patch:
+      Fix a minor memory leak (mutter!2969)
+    - d/p/wayland-cursor-surface-Update-cursor-on-dispose.patch:
+      Fix a crash in rare situations involving Wayland cursor changes,
+      and add test coverage (mutter!2969)
+  * d/libmutter-11-0.symbols: Add new private symbols used by tests
+    for the above changes
+  * d/p/wayland-xdg-shell-Dismiss-instead-of-destroy-invalid-popu.patch:
+    Backport a fix from upstream 44.x branch to fix popup-related crashes
+    (mutter#2728, mutter!2940, Closes: #1033484)
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 21 Apr 2023 10:10:24 +0100
+
+mutter (43.4-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream release
+    - Improve performance by reducing memory bandwidth use on some GPUs
+      (GNOME/mutter!2091)
+    - Fix handling of rotated screens, for example on Pinephone Pro and
+      Pinebook Pro (GNOME/mutter#2557)
+    - Avoid warnings when destroying a ClutterText object with recent
+      GLib versions (GNOME/mutter#2566)
+    - Other changes were included in previous Debian packaging updates
+  * Drop most patches, applied upstream
+  * d/patches: Update to upstream gnome-43 branch commit 43.4-2-gba5cb0542
+    - Fix a crash with newer GStreamer gtkwaylandsink (GNOME/mutter!2917)
+    - Translation update: ab
+  * Remove #1032388 from 43.3-5 changelog entry.
+    I hoped !2878 would fix both #1032388 and #1031945, but in fact it
+    only fixes #1031945.
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 10 Apr 2023 14:07:33 +0100
 
 mutter (44.1-1ubuntu1) mantic; urgency=medium
 
@@ -312,6 +388,46 @@ mutter (44~beta-1) experimental; urgency=medium
     - theme-use-gtk_render_icon_suface-to-paint-button-icon.patch
 
  -- Jeremy Bicha <jbicha@ubuntu.com>  Fri, 17 Feb 2023 16:41:43 -0500
+
+mutter (43.3-5) unstable; urgency=medium
+
+  * Team upload
+  * d/patches: Use the same order in which patches were applied upstream
+  * d/p/color-device-Make-sure-lcms_context-is-not-NULL.patch,
+    d/p/color-device-Don-t-close-lcms-profile-on-error-from-cd_ic.patch:
+    Use final version of these patches as applied upstream
+  * d/p/Revert-x11-Do-not-move-X11-input-focus-during-grabs.patch,
+    d/p/Revert-x11-events-Do-not-update-focus-XWindow-during-grab.patch,
+    d/p/x11-Ignore-_NET_ACTIVE_WINDOW-client-messages-while-grabb.patch,
+    d/p/core-Avoid-focusing-windows-on-map-during-grabs.patch:
+    Backport upstream merge request !2878, fixing X11 focus regressions
+    (Closes: #1031945)
+  * d/p/tests-Use-a-more-interoperable-path-to-bash.patch:
+    Fix path to interpreter in x11-test.sh instead of disabling it
+    - d/p/tests-Disable-broken-test.patch: Drop patch, no longer needed
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 06 Mar 2023 11:35:23 +0000
+
+mutter (43.3-4) unstable; urgency=medium
+
+  * Team upload
+  * d/p/color-device-Make-sure-lcms_context-is-not-NULL.patch,
+    d/p/color-device-Don-t-close-lcms-profile-on-error-from-cd_ic.patch:
+    Fix a double-free when loading the ICC profile from a device's EDID
+    fails (Closes: #1031847)
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 02 Mar 2023 08:50:50 +0000
+
+mutter (43.3-3) unstable; urgency=medium
+
+  * Team upload
+  * d/p/x11-Avoid-updating-focus-on-wayland-compositor.patch:
+    Add patch from upstream fixing a focus-handling regression in
+    Wayland sessions.
+    In 43.3, switching from an Xwayland window to a native Wayland window
+    would not always work.
+
+ -- Simon McVittie <smcv@debian.org>  Sat, 18 Feb 2023 18:44:12 +0000
 
 mutter (43.3-2) unstable; urgency=medium
 
