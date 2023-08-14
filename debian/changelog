@@ -1,3 +1,9 @@
+mutter (44.3-3) experimental; urgency=medium
+
+  * debian/control.in: Build-Depend on libgtk-4-dev & libsysprof-4-dev
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 14 Aug 2023 17:54:56 -0400
+
 mutter (44.3-2) experimental; urgency=medium
 
   [ Simon McVittie ]
