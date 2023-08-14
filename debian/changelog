@@ -1,9 +1,16 @@
-mutter (44.3-2) UNRELEASED; urgency=medium
+mutter (44.3-2) experimental; urgency=medium
 
+  [ Simon McVittie ]
   * Merge changelog from unstable
     - All fixes in 43.6 were also in 44.2 or earlier
+  * d/control: Regenerate
 
- -- Simon McVittie <smcv@debian.org>  Mon, 10 Apr 2023 14:07:33 +0100
+  [ Daniel van Vugt ]
+  * Update Support-Dynamic-triple-double-buffering.patch:
+    Fix increased mouse pointer latency that occurred in 44.1 when using
+    the default atomic KMS backend with Wayland sessions (LP: #2023363)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 14 Aug 2023 17:08:48 -0400
 
 mutter (44.3-1) experimental; urgency=medium
 
