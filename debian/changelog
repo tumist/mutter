@@ -1,3 +1,13 @@
+mutter (44.3-2ubuntu1) mantic; urgency=medium
+
+  * Merge with Debian. Remaining changes:
+    - Add x11-Add-support-for-fractional-scaling-using-Randr.patch
+    - Add window-Add-ability-to-override-the-edge-constraints.patch
+      + Make possible for extensions (such as Tiling Assistant) to override
+        window constraints
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 14 Aug 2023 17:29:03 -0400
+
 mutter (44.3-2) experimental; urgency=medium
 
   [ Simon McVittie ]
