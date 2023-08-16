@@ -1996,7 +1996,7 @@ index 0000000..bad772b
 +
 +#endif /* META_SWAP_CHAIN_H */
 diff --git a/src/meson.build b/src/meson.build
-index 46ceb7a..729b887 100644
+index f4efdee..5472b51 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -846,6 +846,8 @@ if have_native_backend
