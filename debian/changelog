@@ -1,8 +1,20 @@
-mutter (45~beta.1-1) UNRELEASED; urgency=medium
+mutter (45~beta.1-0ubuntu1) mantic; urgency=medium
 
+  [ Jeremy Bícha ]
   * New upstream release
+  * Update binary package names for soname bump
+  * Update symbols
+  * debian/control.in: Build-Depend on libei-dev & libeis-dev. See bug 2031406
+  * Refresh patches
+  * Drop mesa 23.1 patch: applied in new release
+  * Drop cursor-renderer arm64 patch: apparently unneeded with mesa >= 22.3.3
+  * Temporarily disable wayland-data-device-Allow-any-drag-timestamp patch
+    until it can be updated
 
- -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 17 Aug 2023 13:16:58 -0400
+  [ Daniel van Vugt ]
+  * Update triple buffering patch
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 17 Aug 2023 13:25:40 -0400
 
 mutter (44.3-3ubuntu1) mantic; urgency=medium
 
