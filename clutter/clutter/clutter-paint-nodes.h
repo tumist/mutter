@@ -22,15 +22,14 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_PAINT_NODES_H__
-#define __CLUTTER_PAINT_NODES_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <cogl/cogl.h>
-#include <clutter/clutter-types.h>
+#include "cogl/cogl.h"
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -205,5 +204,3 @@ ClutterPaintNode * clutter_blur_node_new (unsigned int width,
                                           float        sigma);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_PAINT_NODES_H__ */

@@ -28,13 +28,12 @@
  *
  */
 
-#ifndef __COGL_DISPLAY_PRIVATE_H
-#define __COGL_DISPLAY_PRIVATE_H
+#pragma once
 
-#include "cogl-object-private.h"
-#include "cogl-display.h"
-#include "cogl-renderer.h"
-#include "cogl-onscreen-template.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-display.h"
+#include "cogl/cogl-renderer.h"
+#include "cogl/cogl-onscreen-template.h"
 
 struct _CoglDisplay
 {
@@ -46,5 +45,3 @@ struct _CoglDisplay
 
   void *winsys;
 };
-
-#endif /* __COGL_DISPLAY_PRIVATE_H */

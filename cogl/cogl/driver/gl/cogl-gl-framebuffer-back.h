@@ -23,10 +23,9 @@
  *
  */
 
-#ifndef COGL_GL_FRAMEBUFFER_BACK_H
-#define COGL_GL_FRAMEBUFFER_BACK_H
+#pragma once
 
-#include "cogl-framebuffer-gl-private.h"
+#include "cogl/driver/gl/cogl-framebuffer-gl-private.h"
 
 #define COGL_TYPE_GL_FRAMEBUFFER_BACK (cogl_gl_framebuffer_back_get_type ())
 G_DECLARE_FINAL_TYPE (CoglGlFramebufferBack, cogl_gl_framebuffer_back,
@@ -37,5 +36,3 @@ CoglGlFramebufferBack *
 cogl_gl_framebuffer_back_new (CoglFramebuffer                    *framebuffer,
                               const CoglFramebufferDriverConfig  *driver_config,
                               GError                            **error);
-
-#endif /* COGL_GL_FRAMEBUFFER_BACK_H */

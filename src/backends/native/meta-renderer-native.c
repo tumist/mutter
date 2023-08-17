@@ -51,10 +51,10 @@
 #include "backends/meta-logical-monitor.h"
 #include "backends/native/meta-backend-native-private.h"
 #include "backends/native/meta-cursor-renderer-native.h"
-#include "backends/native/meta-cogl-utils.h"
 #include "backends/native/meta-crtc-kms.h"
 #include "backends/native/meta-crtc-virtual.h"
 #include "backends/native/meta-device-pool.h"
+#include "backends/native/meta-kms-cursor-manager.h"
 #include "backends/native/meta-kms-device.h"
 #include "backends/native/meta-kms.h"
 #include "backends/native/meta-onscreen-native.h"
@@ -64,6 +64,7 @@
 #include "backends/native/meta-renderer-native-private.h"
 #include "backends/native/meta-renderer-view-native.h"
 #include "cogl/cogl.h"
+#include "common/meta-cogl-drm-formats.h"
 #include "core/boxes-private.h"
 
 #ifdef HAVE_EGL_DEVICE
@@ -134,11 +135,7 @@ meta_get_renderer_native_parent_vtable (void)
 static void
 meta_renderer_native_gpu_data_free (MetaRendererNativeGpuData *renderer_gpu_data)
 {
-  MetaRenderer *renderer = META_RENDERER (renderer_gpu_data->renderer_native);
-  MetaBackend *backend = meta_renderer_get_backend (renderer);
-  MetaCursorRenderer *cursor_renderer;
-  MetaGpuKms *gpu_kms;
-  GList *l;
+  MetaGpuKms *gpu_kms = renderer_gpu_data->gpu_kms;
 
   if (renderer_gpu_data->secondary.egl_context != EGL_NO_CONTEXT)
     {
@@ -154,25 +151,10 @@ meta_renderer_native_gpu_data_free (MetaRendererNativeGpuData *renderer_gpu_data
                                 NULL);
     }
 
-  cursor_renderer = meta_backend_get_cursor_renderer (backend);
-  gpu_kms = renderer_gpu_data->gpu_kms;
-  if (cursor_renderer && gpu_kms)
+  if (renderer_gpu_data->crtc_needs_flush_handler_id)
     {
-      MetaCursorRendererNative *cursor_renderer_native =
-        META_CURSOR_RENDERER_NATIVE (cursor_renderer);
-      MetaCursorTracker *cursor_tracker =
-        meta_backend_get_cursor_tracker (backend);
-      GList *cursor_sprites =
-        meta_cursor_tracker_peek_cursor_sprites (cursor_tracker);
-
-      for (l = cursor_sprites; l; l = l->next)
-        {
-          MetaCursorSprite *cursor_sprite = META_CURSOR_SPRITE (l->data);
-
-          meta_cursor_renderer_native_invalidate_gpu_state (cursor_renderer_native,
-                                                            cursor_sprite,
-                                                            gpu_kms);
-        }
+      g_clear_signal_handler (&renderer_gpu_data->crtc_needs_flush_handler_id,
+                              meta_gpu_kms_get_kms_device (gpu_kms));
     }
 
   g_clear_pointer (&renderer_gpu_data->render_device, g_object_unref);
@@ -633,9 +615,7 @@ meta_renderer_native_create_dma_buf_framebuffer (MetaRendererNative  *renderer_n
   CoglOffscreen *cogl_fbo;
   int ret;
 
-  ret = meta_cogl_pixel_format_from_drm_format (drm_format,
-                                                &cogl_format,
-                                                NULL);
+  ret = meta_cogl_pixel_format_from_drm_format (drm_format, &cogl_format, NULL);
   g_assert (ret);
 
   strides[0] = stride;
@@ -836,8 +816,8 @@ clear_detached_onscreens (MetaRendererNative *renderer_native)
 }
 
 static void
-on_mode_sets_update_result (const MetaKmsFeedback *kms_feedback,
-                            gpointer               user_data)
+mode_sets_update_result_feedback (const MetaKmsFeedback *kms_feedback,
+                                  gpointer               user_data)
 {
   const GError *feedback_error;
 
@@ -848,6 +828,10 @@ on_mode_sets_update_result (const MetaKmsFeedback *kms_feedback,
                         G_IO_ERROR_PERMISSION_DENIED))
     g_warning ("Failed to post KMS update: %s", feedback_error->message);
 }
+
+static const MetaKmsResultListenerVtable mode_sets_result_listener_vtable = {
+  .feedback = mode_sets_update_result_feedback,
+};
 
 static void
 post_mode_set_updates (MetaRendererNative *renderer_native)
@@ -865,11 +849,14 @@ post_mode_set_updates (MetaRendererNative *renderer_native)
       g_hash_table_iter_steal (&iter);
 
       meta_kms_update_add_result_listener (kms_update,
-                                           on_mode_sets_update_result,
+                                           &mode_sets_result_listener_vtable,
+                                           NULL,
+                                           NULL,
                                            NULL);
 
-      feedback = meta_kms_device_process_update_sync (kms_device, kms_update,
-                                                      META_KMS_UPDATE_FLAG_NONE);
+      feedback =
+        meta_kms_device_process_update_sync (kms_device, kms_update,
+                                             META_KMS_UPDATE_FLAG_MODE_SET);
     }
 }
 
@@ -1095,7 +1082,13 @@ static void
 meta_renderer_native_queue_modes_reset (MetaRendererNative *renderer_native)
 {
   MetaRenderer *renderer = META_RENDERER (renderer_native);
+  MetaBackend *backend = meta_renderer_get_backend (renderer);
+  MetaKms *kms = meta_backend_native_get_kms (META_BACKEND_NATIVE (backend));
+  MetaKmsCursorManager *kms_cursor_manager = meta_kms_get_cursor_manager (kms);
   GList *l;
+  g_autoptr (GArray) crtc_layouts = NULL;
+
+  crtc_layouts = g_array_new (FALSE, TRUE, sizeof (MetaKmsCrtcLayout));
 
   g_clear_list (&renderer_native->pending_mode_set_views, NULL);
   for (l = meta_renderer_get_views (renderer); l; l = l->next)
@@ -1106,12 +1099,38 @@ meta_renderer_native_queue_modes_reset (MetaRendererNative *renderer_native)
 
       if (COGL_IS_ONSCREEN (framebuffer))
         {
+          MetaOnscreenNative *onscreen_native =
+            META_ONSCREEN_NATIVE (framebuffer);
+          MetaCrtc *crtc;
+          MetaKmsCrtc *kms_crtc;
+          MetaRectangle view_layout;
+          float view_scale;
+          MetaKmsCrtcLayout crtc_layout;
+
           renderer_native->pending_mode_set_views =
             g_list_prepend (renderer_native->pending_mode_set_views,
                             stage_view);
+          meta_onscreen_native_invalidate (onscreen_native);
+          crtc = meta_onscreen_native_get_crtc (onscreen_native);
+          kms_crtc = meta_crtc_kms_get_kms_crtc (META_CRTC_KMS (crtc));
+
+          clutter_stage_view_get_layout (stage_view, &view_layout);
+          view_scale = clutter_stage_view_get_scale (stage_view);
+
+          crtc_layout = (MetaKmsCrtcLayout) {
+            .crtc = kms_crtc,
+            .layout = GRAPHENE_RECT_INIT (view_layout.x,
+                                          view_layout.y,
+                                          view_layout.width,
+                                          view_layout.height),
+            .scale = view_scale,
+          };
+          g_array_append_val (crtc_layouts, crtc_layout);
         }
     }
   renderer_native->pending_mode_set = TRUE;
+
+  meta_kms_cursor_manager_update_crtc_layout (kms_cursor_manager, crtc_layouts);
 
   meta_topic (META_DEBUG_KMS, "Queue mode set");
 }
@@ -1537,6 +1556,22 @@ meta_renderer_native_prepare_frame (MetaRendererNative *renderer_native,
 }
 
 void
+meta_renderer_native_before_redraw (MetaRendererNative *renderer_native,
+                                    MetaRendererView   *view,
+                                    ClutterFrame       *frame)
+{
+  CoglFramebuffer *framebuffer =
+    clutter_stage_view_get_onscreen (CLUTTER_STAGE_VIEW (view));
+
+  if (COGL_IS_ONSCREEN (framebuffer))
+    {
+      CoglOnscreen *onscreen = COGL_ONSCREEN (framebuffer);
+
+      meta_onscreen_native_before_redraw (onscreen, frame);
+    }
+}
+
+void
 meta_renderer_native_finish_frame (MetaRendererNative *renderer_native,
                                    MetaRendererView   *view,
                                    ClutterFrame       *frame)
@@ -1825,6 +1860,19 @@ create_renderer_gpu_data_egl_device (MetaRendererNative  *renderer_native,
 }
 #endif /* HAVE_EGL_DEVICE */
 
+static void
+on_crtc_needs_flush (MetaKmsDevice *kms_device,
+                     MetaKmsCrtc   *kms_crtc,
+                     MetaRenderer  *renderer)
+{
+  MetaCrtc *crtc = META_CRTC (meta_crtc_kms_from_kms_crtc (kms_crtc));
+  MetaRendererView *view;
+
+  view = meta_renderer_get_view_for_crtc (renderer, crtc);
+  if (view)
+    clutter_stage_view_schedule_update (CLUTTER_STAGE_VIEW (view));
+}
+
 static MetaRendererNativeGpuData *
 meta_renderer_native_create_renderer_gpu_data (MetaRendererNative  *renderer_native,
                                                MetaGpuKms          *gpu_kms,
@@ -1835,6 +1883,7 @@ meta_renderer_native_create_renderer_gpu_data (MetaRendererNative  *renderer_nat
   MetaBackendNative *backend_native = META_BACKEND_NATIVE (backend);
   const char *device_path;
   MetaRenderDevice *render_device;
+  MetaRendererNativeGpuData *renderer_gpu_data;
 
   if (!gpu_kms)
     return create_renderer_gpu_data_surfaceless (renderer_native, error);
@@ -1850,16 +1899,16 @@ meta_renderer_native_create_renderer_gpu_data (MetaRendererNative  *renderer_nat
 
   if (META_IS_RENDER_DEVICE_GBM (render_device))
     {
-      return create_renderer_gpu_data_gbm (renderer_native,
-                                           render_device,
-                                           gpu_kms);
+      renderer_gpu_data = create_renderer_gpu_data_gbm (renderer_native,
+                                                        render_device,
+                                                        gpu_kms);
     }
 #ifdef HAVE_EGL_DEVICE
   else if (META_IS_RENDER_DEVICE_EGL_STREAM (render_device))
     {
-      return create_renderer_gpu_data_egl_device (renderer_native,
-                                                  render_device,
-                                                  gpu_kms);
+      renderer_gpu_data = create_renderer_gpu_data_egl_device (renderer_native,
+                                                               render_device,
+                                                               gpu_kms);
     }
 #endif
   else
@@ -1867,6 +1916,13 @@ meta_renderer_native_create_renderer_gpu_data (MetaRendererNative  *renderer_nat
       g_assert_not_reached ();
       return NULL;
     }
+
+  renderer_gpu_data->crtc_needs_flush_handler_id =
+    g_signal_connect (meta_gpu_kms_get_kms_device (gpu_kms),
+                      "crtc-needs-flush",
+                      G_CALLBACK (on_crtc_needs_flush),
+                      renderer_native);
+  return renderer_gpu_data;
 }
 
 static const char *

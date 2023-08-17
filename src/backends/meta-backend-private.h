@@ -22,9 +22,7 @@
  *     Jasper St. Pierre <jstpierre@mecheye.net>
  */
 
-
-#ifndef META_BACKEND_PRIVATE_H
-#define META_BACKEND_PRIVATE_H
+#pragma once
 
 #include <glib-object.h>
 #include <xkbcommon/xkbcommon.h>
@@ -147,7 +145,11 @@ MetaDbusSessionWatcher * meta_backend_get_dbus_session_watcher (MetaBackend *bac
 MetaRemoteDesktop * meta_backend_get_remote_desktop (MetaBackend *backend);
 
 MetaScreenCast * meta_backend_get_screen_cast (MetaBackend *backend);
+
+MetaEis * meta_backend_get_eis (MetaBackend *backend);
 #endif
+
+MetaInputCapture * meta_backend_get_input_capture (MetaBackend *backend);
 
 gboolean meta_backend_grab_device (MetaBackend *backend,
                                    int          device_id,
@@ -211,5 +213,3 @@ void meta_backend_update_from_event (MetaBackend  *backend,
 
 char * meta_backend_get_vendor_name (MetaBackend *backend,
                                      const char  *pnp_id);
-
-#endif /* META_BACKEND_PRIVATE_H */

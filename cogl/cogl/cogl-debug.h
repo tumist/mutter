@@ -28,12 +28,11 @@
  *
  */
 
-#ifndef __COGL_DEBUG_H__
-#define __COGL_DEBUG_H__
+#pragma once
 
-#include "cogl-profile.h"
-#include "cogl-flags.h"
-#include "cogl-util.h"
+#include "cogl/cogl-profile.h"
+#include "cogl/cogl-flags.h"
+#include "cogl/cogl-util.h"
 
 #include <glib.h>
 
@@ -56,7 +55,6 @@ typedef enum
   COGL_DEBUG_DISABLE_SOFTWARE_TRANSFORM,
   COGL_DEBUG_MATRICES,
   COGL_DEBUG_ATLAS,
-  COGL_DEBUG_DUMP_ATLAS_IMAGE,
   COGL_DEBUG_DISABLE_ATLAS,
   COGL_DEBUG_DISABLE_SHARED_ATLAS,
   COGL_DEBUG_OPENGL,
@@ -121,6 +119,3 @@ _cogl_parse_debug_string (const char *value,
                           gboolean ignore_help);
 
 G_END_DECLS
-
-#endif /* __COGL_DEBUG_H__ */
-

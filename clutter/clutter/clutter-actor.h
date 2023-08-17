@@ -22,8 +22,7 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_ACTOR_H__
-#define __CLUTTER_ACTOR_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
@@ -35,12 +34,12 @@
 #include <pango/pango.h>
 #include <atk/atk.h>
 
-#include <cogl/cogl.h>
+#include "cogl/cogl.h"
 
-#include <clutter/clutter-types.h>
-#include <clutter/clutter-event.h>
-#include <clutter/clutter-paint-context.h>
-#include <clutter/clutter-pick-context.h>
+#include "clutter/clutter-types.h"
+#include "clutter/clutter-event.h"
+#include "clutter/clutter-paint-context.h"
+#include "clutter/clutter-pick-context.h"
 
 G_BEGIN_DECLS
 
@@ -80,22 +79,6 @@ G_BEGIN_DECLS
 #define CLUTTER_ACTOR_UNSET_FLAGS(a,f) \
   CLUTTER_MACRO_DEPRECATED \
   (((ClutterActor*)(a))->flags &= ~(f))
-
-#define CLUTTER_ACTOR_IS_MAPPED(a) \
-  CLUTTER_MACRO_DEPRECATED_FOR ("Deprecated macro. Use clutter_actor_is_mapped instead") \
-  ((((ClutterActor*)(a))->flags & CLUTTER_ACTOR_MAPPED) != FALSE)
-
-#define CLUTTER_ACTOR_IS_REALIZED(a) \
-  CLUTTER_MACRO_DEPRECATED_FOR ("Deprecated macro. Use clutter_actor_is_realized instead") \
-  ((((ClutterActor*)(a))->flags & CLUTTER_ACTOR_REALIZED) != FALSE)
-
-#define CLUTTER_ACTOR_IS_VISIBLE(a) \
-  CLUTTER_MACRO_DEPRECATED_FOR ("Deprecated macro. Use clutter_actor_is_visible instead") \
-  ((((ClutterActor*)(a))->flags & CLUTTER_ACTOR_VISIBLE) != FALSE)
-
-#define CLUTTER_ACTOR_IS_REACTIVE(a) \
-  CLUTTER_MACRO_DEPRECATED_FOR ("Deprecated macro. Use clutter_actor_get_reactive instead") \
-  ((((ClutterActor*)(a))->flags & CLUTTER_ACTOR_REACTIVE) != FALSE)
 
 typedef struct _ClutterActorClass    ClutterActorClass;
 typedef struct _ClutterActorPrivate  ClutterActorPrivate;
@@ -253,21 +236,21 @@ struct _ClutterActorClass
   gboolean (* event)                (ClutterActor         *actor,
                                      ClutterEvent         *event);
   gboolean (* button_press_event)   (ClutterActor         *actor,
-                                     ClutterButtonEvent   *event);
+                                     ClutterEvent         *event);
   gboolean (* button_release_event) (ClutterActor         *actor,
-                                     ClutterButtonEvent   *event);
+                                     ClutterEvent         *event);
   gboolean (* scroll_event)         (ClutterActor         *actor,
-                                     ClutterScrollEvent   *event);
+                                     ClutterEvent         *event);
   gboolean (* key_press_event)      (ClutterActor         *actor,
-                                     ClutterKeyEvent      *event);
+                                     ClutterEvent         *event);
   gboolean (* key_release_event)    (ClutterActor         *actor,
-                                     ClutterKeyEvent      *event);
+                                     ClutterEvent         *event);
   gboolean (* motion_event)         (ClutterActor         *actor,
-                                     ClutterMotionEvent   *event);
+                                     ClutterEvent         *event);
   gboolean (* enter_event)          (ClutterActor         *actor,
-                                     ClutterCrossingEvent *event);
+                                     ClutterEvent         *event);
   gboolean (* leave_event)          (ClutterActor         *actor,
-                                     ClutterCrossingEvent *event);
+                                     ClutterEvent         *event);
   gboolean (* captured_event)       (ClutterActor         *actor,
                                      ClutterEvent         *event);
   void     (* key_focus_in)         (ClutterActor         *actor);
@@ -287,15 +270,11 @@ struct _ClutterActorClass
                                      ClutterPaintNode     *root);
 
   gboolean (* touch_event)          (ClutterActor         *self,
-                                     ClutterTouchEvent    *event);
+                                     ClutterEvent         *event);
   gboolean (* has_accessible)       (ClutterActor         *self);
   void     (* resource_scale_changed) (ClutterActor *self);
   float    (* calculate_resource_scale) (ClutterActor *self,
                                          int           phase);
-
-  /*< private >*/
-  /* padding for future expansion */
-  gpointer _padding_dummy[25];
 };
 
 /**
@@ -312,9 +291,7 @@ struct _ClutterActorIter
   /*< private >*/
   gpointer CLUTTER_PRIVATE_FIELD (dummy1);
   gpointer CLUTTER_PRIVATE_FIELD (dummy2);
-  gpointer CLUTTER_PRIVATE_FIELD (dummy3);
-  gint     CLUTTER_PRIVATE_FIELD (dummy4);
-  gpointer CLUTTER_PRIVATE_FIELD (dummy5);
+  gint     CLUTTER_PRIVATE_FIELD (dummy3);
 };
 
 CLUTTER_EXPORT
@@ -931,5 +908,3 @@ CLUTTER_EXPORT
 void clutter_actor_invalidate_paint_volume (ClutterActor *self);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_ACTOR_H__ */

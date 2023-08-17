@@ -15,8 +15,7 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CLUTTER_PICK_CONTEXT_H
-#define CLUTTER_PICK_CONTEXT_H
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
@@ -24,8 +23,8 @@
 
 #include <glib-object.h>
 
-#include "clutter-macros.h"
-#include "clutter-stage-view.h"
+#include "clutter/clutter-macros.h"
+#include "clutter/clutter-stage-view.h"
 
 typedef struct _ClutterPickContext ClutterPickContext;
 
@@ -71,5 +70,3 @@ void clutter_pick_context_get_transform (ClutterPickContext *pick_context,
 
 CLUTTER_EXPORT
 void clutter_pick_context_pop_transform (ClutterPickContext *pick_context);
-
-#endif /* CLUTTER_PICK_CONTEXT_H */

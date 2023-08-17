@@ -44,9 +44,7 @@
  * ```c
  *   GParamSpec *pspec;
  *
- *   pspec = clutter_param_spec_units ("active-width",
- *                                     "Width",
- *                                     "Width of the active area, in millimeters",
+ *   pspec = clutter_param_spec_units ("active-width", NULL, NULL,
  *                                     CLUTTER_UNIT_MM,
  *                                     0.0, 12.0,
  *                                     12.0,
@@ -61,17 +59,17 @@
  * and using [method@GObject.Value.transform].
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <stdlib.h>
 
 #include <glib-object.h>
 #include <gobject/gvaluecollector.h>
 
-#include "clutter-backend-private.h"
-#include "clutter-interval.h"
-#include "clutter-private.h"
-#include "clutter-units.h"
+#include "clutter/clutter-backend-private.h"
+#include "clutter/clutter-interval.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-units.h"
 
 #define DPI_FALLBACK    (96.0)
 

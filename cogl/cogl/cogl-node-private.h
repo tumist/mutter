@@ -31,11 +31,10 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_NODE_PRIVATE_H
-#define __COGL_NODE_PRIVATE_H
+#pragma once
 
-#include "cogl-object-private.h"
-#include "cogl-list.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-list.h"
 
 typedef struct _CoglNode CoglNode;
 
@@ -85,5 +84,3 @@ void
 _cogl_pipeline_node_foreach_child (CoglNode *node,
                                    CoglNodeChildCallback callback,
                                    void *user_data);
-
-#endif /* __COGL_NODE_PRIVATE_H */

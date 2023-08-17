@@ -19,12 +19,11 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_BACKEND_PRIVATE_H__
-#define __CLUTTER_BACKEND_PRIVATE_H__
+#pragma once
 
-#include <clutter/clutter-backend.h>
-#include <clutter/clutter-seat.h>
-#include <clutter/clutter-stage-window.h>
+#include "clutter/clutter-backend.h"
+#include "clutter/clutter-seat.h"
+#include "clutter/clutter-stage-window.h"
 
 #define CLUTTER_BACKEND_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), CLUTTER_TYPE_BACKEND, ClutterBackendClass))
 #define CLUTTER_IS_BACKEND_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), CLUTTER_TYPE_BACKEND))
@@ -80,10 +79,6 @@ struct _ClutterBackendClass
   gboolean              (* create_context)     (ClutterBackend  *backend,
                                                 GError         **error);
 
-  gboolean              (* translate_event)    (ClutterBackend     *backend,
-                                                gpointer            native,
-                                                ClutterEvent       *event);
-
   ClutterSeat *         (* get_default_seat)   (ClutterBackend *backend);
 
   gboolean              (* is_display_server)  (ClutterBackend *backend);
@@ -102,11 +97,6 @@ gboolean                _clutter_backend_create_context                 (Clutter
 
 gboolean                _clutter_backend_finish_init                    (ClutterBackend         *backend,
                                                                          GError                **error);
-
-CLUTTER_EXPORT
-gboolean                _clutter_backend_translate_event                (ClutterBackend         *backend,
-                                                                         gpointer                native,
-                                                                         ClutterEvent           *event);
 
 gfloat                  _clutter_backend_get_units_per_em               (ClutterBackend         *backend,
                                                                          PangoFontDescription   *font_desc);
@@ -129,5 +119,3 @@ CLUTTER_EXPORT
 void clutter_backend_destroy (ClutterBackend *backend);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_BACKEND_PRIVATE_H__ */

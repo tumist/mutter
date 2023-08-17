@@ -28,15 +28,14 @@
  *
  */
 
-#ifndef __COGL_UTIL_H
-#define __COGL_UTIL_H
+#pragma once
 
 #include <glib.h>
 #include <math.h>
 
-#include <cogl/cogl-defines.h>
-#include <cogl/cogl-pixel-format.h>
-#include "cogl-types.h"
+#include "cogl/cogl-defines.h"
+#include "cogl/cogl-pixel-format.h"
+#include "cogl/cogl-types.h"
 
 #include <stdio.h>
 
@@ -166,5 +165,3 @@ _cogl_util_scissor_intersect (int rect_x0,
   *scissor_x1 = MIN (*scissor_x1, rect_x1);
   *scissor_y1 = MIN (*scissor_y1, rect_y1);
 }
-
-#endif /* __COGL_UTIL_H */

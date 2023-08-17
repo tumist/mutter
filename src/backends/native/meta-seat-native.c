@@ -61,7 +61,7 @@ meta_seat_native_handle_event_post (ClutterSeat        *seat,
 {
   MetaSeatNative *seat_native = META_SEAT_NATIVE (seat);
   ClutterInputDevice *device = clutter_event_get_source_device (event);
-  ClutterEventType event_type = event->type;
+  ClutterEventType event_type = clutter_event_type (event);
 
   if (event_type == CLUTTER_PROXIMITY_OUT)
     {
@@ -342,6 +342,16 @@ meta_seat_native_warp_pointer (ClutterSeat *seat,
   meta_seat_impl_warp_pointer (seat_native->impl, x, y);
 }
 
+static void
+meta_seat_native_init_pointer_position (ClutterSeat *seat,
+                                        float        x,
+                                        float        y)
+{
+  MetaSeatNative *seat_native = META_SEAT_NATIVE (seat);
+
+  meta_seat_impl_init_pointer_position (seat_native->impl, x, y);
+}
+
 static gboolean
 meta_seat_native_query_state (ClutterSeat          *seat,
                               ClutterInputDevice   *device,
@@ -374,30 +384,25 @@ meta_seat_native_class_init (MetaSeatNativeClass *klass)
   seat_class->create_virtual_device = meta_seat_native_create_virtual_device;
   seat_class->get_supported_virtual_device_types = meta_seat_native_get_supported_virtual_device_types;
   seat_class->warp_pointer = meta_seat_native_warp_pointer;
+  seat_class->init_pointer_position = meta_seat_native_init_pointer_position;
   seat_class->handle_event_post = meta_seat_native_handle_event_post;
   seat_class->query_state = meta_seat_native_query_state;
 
   props[PROP_SEAT_ID] =
-    g_param_spec_string ("seat-id",
-                         "Seat ID",
-                         "Seat ID",
+    g_param_spec_string ("seat-id", NULL, NULL,
                          NULL,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY);
 
   props[PROP_FLAGS] =
-    g_param_spec_flags ("flags",
-                        "Flags",
-                        "Flags",
+    g_param_spec_flags ("flags", NULL, NULL,
                         META_TYPE_SEAT_NATIVE_FLAG,
                         META_SEAT_NATIVE_FLAG_NONE,
                         G_PARAM_READWRITE |
                         G_PARAM_CONSTRUCT_ONLY);
 
   props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "Backend",
-                         "Backend",
+    g_param_spec_object ("backend", NULL, NULL,
                          META_TYPE_BACKEND,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY);
@@ -412,6 +417,12 @@ static void
 meta_seat_native_init (MetaSeatNative *seat)
 {
   seat->reserved_virtual_slots = g_hash_table_new (NULL, NULL);
+}
+
+void
+meta_seat_native_start (MetaSeatNative *seat_native)
+{
+  meta_seat_impl_start (seat_native->impl);
 }
 
 /**
@@ -641,4 +652,18 @@ meta_seat_native_set_viewports (MetaSeatNative   *seat,
                                 MetaViewportInfo *viewports)
 {
   meta_seat_impl_set_viewports (seat->impl, viewports);
+}
+
+void
+meta_seat_native_run_impl_task (MetaSeatNative *seat,
+                                GSourceFunc     dispatch_func,
+                                gpointer        user_data,
+                                GDestroyNotify  destroy_notify)
+{
+  g_autoptr (GTask) task = NULL;
+
+  task = g_task_new (seat->impl, NULL, NULL, NULL);
+  g_task_set_task_data (task, user_data, destroy_notify);
+  meta_seat_impl_run_input_task (seat->impl, task,
+                                 (GSourceFunc) dispatch_func);
 }

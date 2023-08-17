@@ -31,20 +31,19 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_PIPELINE_PRIVATE_H
-#define __COGL_PIPELINE_PRIVATE_H
+#pragma once
 
-#include "cogl-node-private.h"
-#include "cogl-pipeline-layer-private.h"
-#include "cogl-pipeline.h"
-#include "cogl-object-private.h"
-#include "cogl-profile.h"
-#include "cogl-list.h"
-#include "cogl-boxed-value.h"
-#include "cogl-pipeline-snippet-private.h"
-#include "cogl-pipeline-state.h"
-#include "cogl-framebuffer.h"
-#include "cogl-bitmask.h"
+#include "cogl/cogl-node-private.h"
+#include "cogl/cogl-pipeline-layer-private.h"
+#include "cogl/cogl-pipeline.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-profile.h"
+#include "cogl/cogl-list.h"
+#include "cogl/cogl-boxed-value.h"
+#include "cogl/cogl-pipeline-snippet-private.h"
+#include "cogl/cogl-pipeline-state.h"
+#include "cogl/cogl-framebuffer.h"
+#include "cogl/cogl-bitmask.h"
 
 #include <glib.h>
 
@@ -816,6 +815,3 @@ _cogl_pipeline_get_layer_state_for_fragment_codegen (CoglContext *context);
 
 CoglPipelineState
 _cogl_pipeline_get_state_for_fragment_codegen (CoglContext *context);
-
-#endif /* __COGL_PIPELINE_PRIVATE_H */
-

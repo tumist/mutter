@@ -15,9 +15,9 @@
  * for instance the default font name.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-settings.h"
+#include "clutter/clutter-settings.h"
 
 #ifdef HAVE_PANGO_FT2
 /* for pango_fc_font_map_cache_clear() */
@@ -25,10 +25,10 @@
 #include <pango/pangofc-fontmap.h>
 #endif /* HAVE_PANGO_FT2 */
 
-#include "clutter-debug.h"
-#include "clutter-settings-private.h"
-#include "clutter-stage-private.h"
-#include "clutter-private.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-settings-private.h"
+#include "clutter/clutter-stage-private.h"
+#include "clutter/clutter-private.h"
 
 #include <gdesktop-enums.h>
 #include <stdlib.h>
@@ -92,8 +92,6 @@ struct _ClutterSettingsClass
 enum
 {
   PROP_0,
-
-  PROP_BACKEND,
 
   PROP_DOUBLE_CLICK_TIME,
   PROP_DOUBLE_CLICK_DISTANCE,
@@ -609,10 +607,6 @@ clutter_settings_set_property (GObject      *gobject,
 
   switch (prop_id)
     {
-    case PROP_BACKEND:
-      self->backend = g_value_get_object (value);
-      break;
-
     case PROP_DOUBLE_CLICK_TIME:
       self->double_click_time = g_value_get_int (value);
       break;
@@ -775,31 +769,13 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
   /**
-   * ClutterSettings:backend:
-   *
-   * A back pointer to the [class@Backend]
-   *
-   * Deprecated: 1.10
-   */
-  obj_props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "Backend",
-                         "A pointer to the backend",
-                         CLUTTER_TYPE_BACKEND,
-                         CLUTTER_PARAM_WRITABLE |
-                         G_PARAM_DEPRECATED |
-                         G_PARAM_CONSTRUCT_ONLY);
-
-  /**
    * ClutterSettings:double-click-time:
    *
    * The time, in milliseconds, that should elapse between button-press
    * events in order to increase the click count by 1.
    */
   obj_props[PROP_DOUBLE_CLICK_TIME] =
-    g_param_spec_int ("double-click-time",
-                      P_("Double Click Time"),
-                      P_("The time between clicks necessary to detect a multiple click"),
+    g_param_spec_int ("double-click-time", NULL, NULL,
                       0, G_MAXINT,
                       250,
                       CLUTTER_PARAM_READWRITE);
@@ -811,9 +787,7 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    * determines whether or not to increase the click count by 1.
    */
   obj_props[PROP_DOUBLE_CLICK_DISTANCE] =
-    g_param_spec_int ("double-click-distance",
-                      P_("Double Click Distance"),
-                      P_("The distance between clicks necessary to detect a multiple click"),
+    g_param_spec_int ("double-click-distance", NULL, NULL,
                       0, G_MAXINT,
                       5,
                       CLUTTER_PARAM_READWRITE);
@@ -825,9 +799,7 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    * should travel before a drag operation should start.
    */
   obj_props[PROP_DND_DRAG_THRESHOLD] =
-    g_param_spec_int ("dnd-drag-threshold",
-                      P_("Drag Threshold"),
-                      P_("The distance the cursor should travel before starting to drag"),
+    g_param_spec_int ("dnd-drag-threshold", NULL, NULL,
                       1, G_MAXINT,
                       8,
                       CLUTTER_PARAM_READWRITE);
@@ -839,9 +811,7 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    * a string that can be passed to [func@Pango.FontDescription.from_string].
    */
   obj_props[PROP_FONT_NAME] =
-    g_param_spec_string ("font-name",
-                         P_("Font Name"),
-                         P_("The description of the default font, as one that could be parsed by Pango"),
+    g_param_spec_string ("font-name", NULL, NULL,
                          NULL,
                          CLUTTER_PARAM_READWRITE);
 
@@ -853,9 +823,7 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    * unconditionally; and -1 will use the system's default.
    */
   obj_props[PROP_FONT_ANTIALIAS] =
-    g_param_spec_int ("font-antialias",
-                      P_("Font Antialias"),
-                      P_("Whether to use antialiasing (1 to enable, 0 to disable, and -1 to use the default)"),
+    g_param_spec_int ("font-antialias", NULL, NULL,
                       -1, 1,
                       -1,
                       CLUTTER_PARAM_READWRITE);
@@ -868,17 +836,13 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    * If set to -1, the system's default will be used instead
    */
   obj_props[PROP_FONT_DPI] =
-    g_param_spec_int ("font-dpi",
-                      P_("Font DPI"),
-                      P_("The resolution of the font, in 1024 * dots/inch, or -1 to use the default"),
+    g_param_spec_int ("font-dpi", NULL, NULL,
                       -1, 1024 * 1024,
                       -1,
                       CLUTTER_PARAM_READWRITE);
 
   obj_props[PROP_UNSCALED_FONT_DPI] =
-    g_param_spec_int ("unscaled-font-dpi",
-                      P_("Font DPI"),
-                      P_("The resolution of the font, in 1024 * dots/inch, or -1 to use the default"),
+    g_param_spec_int ("unscaled-font-dpi", NULL, NULL,
                       -1, 1024 * 1024,
                       -1,
                       CLUTTER_PARAM_WRITABLE);
@@ -891,9 +855,7 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    * it; and a value of -1 will use the system's default.
    */
   obj_props[PROP_FONT_HINTING] =
-    g_param_spec_int ("font-hinting",
-                      P_("Font Hinting"),
-                      P_("Whether to use hinting (1 to enable, 0 to disable and -1 to use the default)"),
+    g_param_spec_int ("font-hinting", NULL, NULL,
                       -1, 1,
                       -1,
                       CLUTTER_PARAM_READWRITE);
@@ -910,9 +872,7 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    *   - hintfull
    */
   obj_props[PROP_FONT_HINT_STYLE] =
-    g_param_spec_string ("font-hint-style",
-                         P_("Font Hint Style"),
-                         P_("The style of hinting (hintnone, hintslight, hintmedium, hintfull)"),
+    g_param_spec_string ("font-hint-style", NULL, NULL,
                          NULL,
                          CLUTTER_PARAM_READWRITE);
 
@@ -929,9 +889,7 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    *   - vbgr
    */
   obj_props[PROP_FONT_RGBA] =
-    g_param_spec_string ("font-subpixel-order",
-                         P_("Font Subpixel Order"),
-                         P_("The type of subpixel antialiasing (none, rgb, bgr, vrgb, vbgr)"),
+    g_param_spec_string ("font-subpixel-order", NULL, NULL,
                          NULL,
                          CLUTTER_PARAM_READWRITE);
 
@@ -944,17 +902,13 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    * See also [property@ClickAction:long-press-duration].
    */
   obj_props[PROP_LONG_PRESS_DURATION] =
-    g_param_spec_int ("long-press-duration",
-                      P_("Long Press Duration"),
-                      P_("The minimum duration for a long press gesture to be recognized"),
+    g_param_spec_int ("long-press-duration", NULL, NULL,
                       0, G_MAXINT,
                       500,
                       CLUTTER_PARAM_READWRITE);
 
   obj_props[PROP_FONTCONFIG_TIMESTAMP] =
-    g_param_spec_uint ("fontconfig-timestamp",
-                       P_("Fontconfig configuration timestamp"),
-                       P_("Timestamp of the current fontconfig configuration"),
+    g_param_spec_uint ("fontconfig-timestamp", NULL, NULL,
                        0, G_MAXUINT,
                        0,
                        CLUTTER_PARAM_WRITABLE);
@@ -968,9 +922,7 @@ clutter_settings_class_init (ClutterSettingsClass *klass)
    * enabling the hint.
    */
   obj_props[PROP_PASSWORD_HINT_TIME] =
-    g_param_spec_uint ("password-hint-time",
-                       P_("Password Hint Time"),
-                       P_("How long to show the last input character in hidden entries"),
+    g_param_spec_uint ("password-hint-time", NULL, NULL,
                        0, G_MAXUINT,
                        0,
                        CLUTTER_PARAM_READWRITE);

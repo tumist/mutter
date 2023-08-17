@@ -19,10 +19,9 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_CONSTRAINT_PRIVATE_H__
-#define __CLUTTER_CONSTRAINT_PRIVATE_H__
+#pragma once
 
-#include "clutter-constraint.h"
+#include "clutter/clutter-constraint.h"
 
 G_BEGIN_DECLS
 
@@ -31,5 +30,3 @@ gboolean clutter_constraint_update_allocation (ClutterConstraint *constraint,
                                                ClutterActorBox   *allocation);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_CONSTRAINT_PRIVATE_H__ */

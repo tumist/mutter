@@ -28,10 +28,9 @@
  *
  */
 
-#ifndef __COGL_BITMAP_GL_PRIVATE_H
-#define __COGL_BITMAP_GL_PRIVATE_H
+#pragma once
 
-#include "cogl-bitmap-private.h"
+#include "cogl/cogl-bitmap-private.h"
 
 /* These two are replacements for map and unmap that should used when
  * the pointer is going to be passed to GL for pixel packing or
@@ -48,5 +47,3 @@ _cogl_bitmap_gl_bind (CoglBitmap *bitmap,
 
 void
 _cogl_bitmap_gl_unbind (CoglBitmap *bitmap);
-
-#endif /* __COGL_BITMAP_GL_PRIVATE_H */

@@ -22,15 +22,14 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_OFFSCREEN_EFFECT_H__
-#define __CLUTTER_OFFSCREEN_EFFECT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <cogl/cogl.h>
-#include <clutter/clutter-effect.h>
+#include "cogl/cogl.h"
+#include "clutter/clutter-effect.h"
 
 G_BEGIN_DECLS
 
@@ -74,15 +73,6 @@ struct _ClutterOffscreenEffectClass
   void       (* paint_target)   (ClutterOffscreenEffect *effect,
                                  ClutterPaintNode       *node,
                                  ClutterPaintContext    *paint_context);
-
-  /*< private >*/
-  void (* _clutter_offscreen1) (void);
-  void (* _clutter_offscreen2) (void);
-  void (* _clutter_offscreen3) (void);
-  void (* _clutter_offscreen4) (void);
-  void (* _clutter_offscreen5) (void);
-  void (* _clutter_offscreen6) (void);
-  void (* _clutter_offscreen7) (void);
 };
 
 CLUTTER_EXPORT
@@ -109,5 +99,3 @@ gboolean        clutter_offscreen_effect_get_target_size        (ClutterOffscree
                                                                  gfloat                 *height);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_OFFSCREEN_EFFECT_H__ */

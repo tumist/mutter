@@ -28,15 +28,15 @@
  * can be used to tween a property of a [iface@Animatable] instance.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-property-transition.h"
+#include "clutter/clutter-property-transition.h"
 
-#include "clutter-animatable.h"
-#include "clutter-debug.h"
-#include "clutter-interval.h"
-#include "clutter-private.h"
-#include "clutter-transition.h"
+#include "clutter/clutter-animatable.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-interval.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-transition.h"
 
 struct _ClutterPropertyTransitionPrivate
 {
@@ -259,9 +259,7 @@ clutter_property_transition_class_init (ClutterPropertyTransitionClass *klass)
    * The name of the property of a [iface@Animatable] to animate.
    */
   obj_props[PROP_PROPERTY_NAME] =
-    g_param_spec_string ("property-name",
-                         P_("Property Name"),
-                         P_("The name of the property to animate"),
+    g_param_spec_string ("property-name", NULL, NULL,
                          NULL,
                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 

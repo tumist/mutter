@@ -23,13 +23,13 @@
  */
 
 /**
- * SECTION:meta-renderer
- * @title: MetaRenderer
- * @short_description: Keeps track of the different renderer views.
+ * MetaRenderer:
+ *
+ * Keeps track of the different renderer views.
  *
  * A MetaRenderer object has 2 functions:
  *
- * 1) Keeping a list of #MetaRendererView<!-- -->s, each responsible for
+ * 1) Keeping a list of `MetaRendererView`s, each responsible for
  * rendering a part of the stage, corresponding to each #MetaLogicalMonitor. It
  * keeps track of this list by querying the list of logical monitors in the
  * #MetaBackend's #MetaMonitorManager, and creating a renderer view for each
@@ -398,9 +398,7 @@ meta_renderer_class_init (MetaRendererClass *klass)
   klass->get_views_for_monitor = meta_renderer_real_get_views_for_monitor;
 
   obj_props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "backend",
-                         "MetaBackend",
+    g_param_spec_object ("backend", NULL, NULL,
                          META_TYPE_BACKEND,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY |

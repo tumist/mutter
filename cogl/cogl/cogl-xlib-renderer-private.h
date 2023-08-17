@@ -28,16 +28,15 @@
  *
  */
 
-#ifndef __COGL_RENDERER_XLIB_PRIVATE_H
-#define __COGL_RENDERER_XLIB_PRIVATE_H
+#pragma once
 
 #include <X11/Xutil.h>
 
-#include "cogl-object-private.h"
-#include "cogl-xlib-private.h"
-#include "cogl-x11-renderer-private.h"
-#include "cogl-context.h"
-#include "cogl-output.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-xlib-private.h"
+#include "cogl/cogl-x11-renderer-private.h"
+#include "cogl/cogl-context.h"
+#include "cogl/cogl-output.h"
 
 typedef struct _CoglXlibRenderer
 {
@@ -98,5 +97,3 @@ _cogl_xlib_renderer_output_for_rectangle (CoglRenderer *renderer,
                                           int y,
                                           int width,
                                           int height);
-
-#endif /* __COGL_RENDERER_XLIB_PRIVATE_H */

@@ -23,13 +23,12 @@
  * SOFTWARE.
  */
 
-#ifndef COGL_ONSCREEN_GLX_H
-#define COGL_ONSCREEN_GLX_H
+#pragma once
 
 #include <GL/glx.h>
 #include <X11/Xlib.h>
 
-#include "cogl-onscreen.h"
+#include "cogl/cogl-onscreen.h"
 
 #define COGL_TYPE_ONSCREEN_GLX (cogl_onscreen_glx_get_type ())
 G_DECLARE_FINAL_TYPE (CoglOnscreenGlx, cogl_onscreen_glx,
@@ -55,5 +54,3 @@ cogl_onscreen_glx_notify_swap_buffers (CoglOnscreen          *onscreen,
 gboolean
 cogl_onscreen_glx_is_for_window (CoglOnscreen *onscreen,
                                  Window        window);
-
-#endif /* COGL_ONSCREEN_GLX_H */

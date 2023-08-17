@@ -34,13 +34,13 @@
  * control how far along the path the [class@Actor] should be..
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-path-constraint.h"
+#include "clutter/clutter-path-constraint.h"
 
-#include "clutter-debug.h"
-#include "clutter-marshal.h"
-#include "clutter-private.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-marshal.h"
+#include "clutter/clutter-private.h"
 
 #define CLUTTER_PATH_CONSTRAINT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), CLUTTER_TYPE_PATH_CONSTRAINT, ClutterPathConstraintClass))
 #define CLUTTER_IS_PATH_CONSTRAINT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), CLUTTER_TYPE_PATH_CONSTRAINT))
@@ -202,9 +202,7 @@ clutter_path_constraint_class_init (ClutterPathConstraintClass *klass)
    * The #ClutterPath used to constrain the position of an actor.
    */
   path_properties[PROP_PATH] =
-    g_param_spec_object ("path",
-                         P_("Path"),
-                         P_("The path used to constrain an actor"),
+    g_param_spec_object ("path", NULL, NULL,
                          CLUTTER_TYPE_PATH,
                          CLUTTER_PARAM_READWRITE);
 
@@ -214,9 +212,7 @@ clutter_path_constraint_class_init (ClutterPathConstraintClass *klass)
    * The offset along the #ClutterPathConstraint:path, between -1.0 and 2.0.
    */
   path_properties[PROP_OFFSET] =
-    g_param_spec_float ("offset",
-                        P_("Offset"),
-                        P_("The offset along the path, between -1.0 and 2.0"),
+    g_param_spec_float ("offset", NULL, NULL,
                         -1.0, 2.0,
                         0.0,
                         CLUTTER_PARAM_READWRITE);

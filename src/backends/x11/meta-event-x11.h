@@ -21,14 +21,11 @@
  *      Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef META_EVENT_X11_H
-#define META_EVENT_X11_H
+#pragma once
 
 #include <X11/Xlib.h>
 
-#include "backends/x11/meta-clutter-backend-x11.h"
+#include "backends/x11/meta-backend-x11.h"
 
-MetaX11FilterReturn meta_x11_handle_event (MetaBackend *backend,
-                                           XEvent      *xevent);
-
-#endif /* META_EVENT_X11_H */
+void meta_backend_x11_handle_event (MetaBackend *backend,
+                                    XEvent      *xevent);

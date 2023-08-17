@@ -350,7 +350,17 @@ static void
 on_stream_closed (MetaScreenCastStream  *stream,
                   MetaScreenCastSession *session)
 {
-  meta_dbus_session_close (META_DBUS_SESSION (session));
+  session->streams = g_list_remove (session->streams, stream);
+  g_object_unref (stream);
+
+  switch (session->session_type)
+    {
+    case META_SCREEN_CAST_SESSION_TYPE_NORMAL:
+      meta_dbus_session_close (META_DBUS_SESSION (session));
+      break;
+    case META_SCREEN_CAST_SESSION_TYPE_REMOTE_DESKTOP:
+      break;
+    }
 }
 
 static gboolean
@@ -854,9 +864,7 @@ meta_screen_cast_session_class_init (MetaScreenCastSessionClass *klass)
   object_class->get_property = meta_screen_cast_session_get_property;
 
   obj_props[PROP_SESSION_TYPE] =
-    g_param_spec_enum ("session-type",
-                       "session type",
-                       "The type of screen cast session",
+    g_param_spec_enum ("session-type", NULL, NULL,
                        META_TYPE_SCREEN_CAST_SESSION_TYPE,
                        META_SCREEN_CAST_SESSION_TYPE_NORMAL,
                        G_PARAM_READWRITE |

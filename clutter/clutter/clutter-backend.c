@@ -37,19 +37,19 @@
  * and settings.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-backend-private.h"
-#include "clutter-debug.h"
-#include "clutter-event-private.h"
-#include "clutter-marshal.h"
-#include "clutter-mutter.h"
-#include "clutter-private.h"
-#include "clutter-stage-manager-private.h"
-#include "clutter-stage-private.h"
-#include "clutter-stage-window.h"
+#include "clutter/clutter-backend-private.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-event-private.h"
+#include "clutter/clutter-marshal.h"
+#include "clutter/clutter-mutter.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-stage-manager-private.h"
+#include "clutter/clutter-stage-private.h"
+#include "clutter/clutter-stage-window.h"
 
-#include <cogl/cogl.h>
+#include "cogl/cogl.h"
 
 #define DEFAULT_FONT_NAME       "Sans 10"
 
@@ -282,7 +282,7 @@ static const struct {
   const char *driver_desc;
   CoglDriver driver_id;
 } all_known_drivers[] = {
-  { "gl3", "OpenGL 3.2 core profile", COGL_DRIVER_GL3 },
+  { "gl3", "OpenGL 3.1 core profile", COGL_DRIVER_GL3 },
   { "gles2", "OpenGL ES 2.0", COGL_DRIVER_GLES2 },
   { "any", "Default Cogl driver", COGL_DRIVER_ANY },
 };
@@ -624,16 +624,6 @@ gint32
 _clutter_backend_get_units_serial (ClutterBackend *backend)
 {
   return backend->units_serial;
-}
-
-gboolean
-_clutter_backend_translate_event (ClutterBackend *backend,
-                                  gpointer        native,
-                                  ClutterEvent   *event)
-{
-  return CLUTTER_BACKEND_GET_CLASS (backend)->translate_event (backend,
-                                                               native,
-                                                               event);
 }
 
 /**

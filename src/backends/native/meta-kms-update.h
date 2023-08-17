@@ -17,8 +17,7 @@
  * 02111-1307, USA.
  */
 
-#ifndef META_KMS_UPDATE_H
-#define META_KMS_UPDATE_H
+#pragma once
 
 #include <glib-object.h>
 #include <glib.h>
@@ -78,8 +77,11 @@ typedef struct _MetaKmsPlaneFeedback
   GError *error;
 } MetaKmsPlaneFeedback;
 
-typedef void (* MetaKmsResultListenerFunc) (const MetaKmsFeedback *feedback,
-                                            gpointer               user_data);
+typedef struct _MetaKmsResultListenerVtable
+{
+  void (* feedback) (const MetaKmsFeedback *feedback,
+                     gpointer               user_data);
+} MetaKmsResultListenerVtable;
 
 MetaKmsFeedback * meta_kms_feedback_ref (MetaKmsFeedback *feedback);
 
@@ -88,10 +90,13 @@ void meta_kms_feedback_unref (MetaKmsFeedback *feedback);
 
 MetaKmsFeedbackResult meta_kms_feedback_get_result (const MetaKmsFeedback *feedback);
 
+gboolean meta_kms_feedback_did_pass (const MetaKmsFeedback *feedback);
+
 GList * meta_kms_feedback_get_failed_planes (const MetaKmsFeedback *feedback);
 
 const GError * meta_kms_feedback_get_error (const MetaKmsFeedback *feedback);
 
+META_EXPORT_TEST
 void meta_kms_feedback_dispatch_result (MetaKmsFeedback *feedback,
                                         MetaKms         *kms,
                                         GList           *result_listeners);
@@ -101,6 +106,9 @@ MetaKmsUpdate * meta_kms_update_new (MetaKmsDevice *device);
 
 META_EXPORT_TEST
 void meta_kms_update_free (MetaKmsUpdate *update);
+
+void meta_kms_update_set_flushing (MetaKmsUpdate *update,
+                                   MetaKmsCrtc   *crtc);
 
 META_EXPORT_TEST
 MetaKmsDevice * meta_kms_update_get_device (MetaKmsUpdate *update);
@@ -168,6 +176,7 @@ void meta_kms_update_add_page_flip_listener (MetaKmsUpdate                      
                                              MetaKmsCrtc                         *crtc,
                                              const MetaKmsPageFlipListenerVtable *vtable,
                                              MetaKmsPageFlipListenerFlag          flags,
+                                             GMainContext                        *main_context,
                                              gpointer                             user_data,
                                              GDestroyNotify                       destroy_notify);
 
@@ -181,9 +190,11 @@ void meta_kms_plane_assignment_set_cursor_hotspot (MetaKmsPlaneAssignment *plane
                                                    int                     y);
 
 META_EXPORT_TEST
-void meta_kms_update_add_result_listener (MetaKmsUpdate             *update,
-                                          MetaKmsResultListenerFunc  func,
-                                          gpointer                   user_data);
+void meta_kms_update_add_result_listener (MetaKmsUpdate                     *update,
+                                          const MetaKmsResultListenerVtable *vtable,
+                                          GMainContext                      *main_context,
+                                          gpointer                           user_data,
+                                          GDestroyNotify                     destroy_notify);
 
 META_EXPORT_TEST
 void meta_kms_update_merge_from (MetaKmsUpdate *update,
@@ -229,5 +240,3 @@ meta_fixed_16_rectangle_to_rectangle (MetaFixed16Rectangle fixed_rect)
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (MetaKmsFeedback, meta_kms_feedback_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (MetaKmsUpdate, meta_kms_update_free)
-
-#endif /* META_KMS_UPDATE_H */

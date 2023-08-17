@@ -35,18 +35,17 @@
 #define CLUTTER_IS_BRIGHTNESS_CONTRAST_EFFECT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), CLUTTER_TYPE_BRIGHTNESS_CONTRAST_EFFECT))
 #define CLUTTER_BRIGHTNESS_CONTRAST_EFFECT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), CLUTTER_TYPE_BRIGHTNESS_CONTRAST_EFFECT, ClutterBrightnessContrastEffectClass))
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <math.h>
 
-#include "clutter-brightness-contrast-effect.h"
+#include "cogl/cogl.h"
 
-#include <cogl/cogl.h>
-
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-offscreen-effect.h"
-#include "clutter-private.h"
+#include "clutter/clutter-brightness-contrast-effect.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-offscreen-effect.h"
+#include "clutter/clutter-private.h"
 
 struct _ClutterBrightnessContrastEffect
 {
@@ -268,9 +267,7 @@ clutter_brightness_contrast_effect_class_init (ClutterBrightnessContrastEffectCl
    * brightness.
    */
   obj_props[PROP_BRIGHTNESS] =
-    clutter_param_spec_color ("brightness",
-                              P_("Brightness"),
-                              P_("The brightness change to apply"),
+    clutter_param_spec_color ("brightness", NULL, NULL,
                               &no_brightness_change,
                               CLUTTER_PARAM_READWRITE);
 
@@ -286,9 +283,7 @@ clutter_brightness_contrast_effect_class_init (ClutterBrightnessContrastEffectCl
    * contrast.
    */
   obj_props[PROP_CONTRAST] =
-    clutter_param_spec_color ("contrast",
-                              P_("Contrast"),
-                              P_("The contrast change to apply"),
+    clutter_param_spec_color ("contrast", NULL, NULL,
                               &no_contrast_change,
                               CLUTTER_PARAM_READWRITE);
 

@@ -23,14 +23,13 @@
  *   Tomeu Vizoso <tomeu.vizoso@collabora.co.uk>
  */
 
-#ifndef __CLUTTER_GESTURE_ACTION_H__
-#define __CLUTTER_GESTURE_ACTION_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-action.h>
+#include "clutter/clutter-action.h"
 
 G_BEGIN_DECLS
 
@@ -70,14 +69,6 @@ struct _ClutterGestureActionClass
                                  ClutterActor          *actor);
   gboolean (* gesture_prepare)  (ClutterGestureAction  *action,
                                  ClutterActor          *actor);
-
-  /*< private >*/
-  void (* _clutter_gesture_action1) (void);
-  void (* _clutter_gesture_action2) (void);
-  void (* _clutter_gesture_action3) (void);
-  void (* _clutter_gesture_action4) (void);
-  void (* _clutter_gesture_action5) (void);
-  void (* _clutter_gesture_action6) (void);
 };
 
 CLUTTER_EXPORT
@@ -151,5 +142,3 @@ void                            clutter_gesture_action_get_threshold_trigger_dis
                                                                                          float                *y);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_GESTURE_ACTION_H__ */

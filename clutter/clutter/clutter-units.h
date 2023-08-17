@@ -24,8 +24,7 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_UNITS_H__
-#define __CLUTTER_UNITS_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
@@ -33,7 +32,7 @@
 
 #include <glib-object.h>
 
-#include <cogl/cogl.h>
+#include "cogl/cogl.h"
 
 G_BEGIN_DECLS
 
@@ -56,10 +55,6 @@ struct _ClutterUnits
 
   /* the serial coming from the backend, used to evict the cache */
   gint32 serial;
-
-  /* padding for eventual expansion */
-  gint32 __padding_1;
-  gint64 __padding_2;
 };
 
 CLUTTER_EXPORT
@@ -168,5 +163,3 @@ CLUTTER_EXPORT
 const ClutterUnits *    clutter_value_get_units  (const GValue       *value);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_UNITS_H__ */

@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_CANVAS_H__
-#define __CLUTTER_CANVAS_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-types.h>
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -69,9 +68,6 @@ struct _ClutterCanvasClass
                      cairo_t       *cr,
                      int            width,
                      int            height);
-
-  /*< private >*/
-  gpointer _padding[16];
 };
 
 CLUTTER_EXPORT
@@ -91,5 +87,3 @@ CLUTTER_EXPORT
 float                   clutter_canvas_get_scale_factor         (ClutterCanvas *canvas);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_CANVAS_H__ */

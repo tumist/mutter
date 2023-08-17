@@ -35,18 +35,18 @@
 
 #include <glib.h>
 
-#include "cogl-clip-stack.h"
-#include "cogl-context-private.h"
-#include "cogl-framebuffer-private.h"
-#include "cogl-journal-private.h"
-#include "cogl-util.h"
-#include "cogl-primitives-private.h"
-#include "cogl-private.h"
-#include "cogl-attribute-private.h"
-#include "cogl-primitive-private.h"
-#include "cogl1-context.h"
-#include "cogl-offscreen.h"
-#include "cogl-matrix-stack.h"
+#include "cogl/cogl-clip-stack.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-framebuffer-private.h"
+#include "cogl/cogl-journal-private.h"
+#include "cogl/cogl-util.h"
+#include "cogl/cogl-primitives-private.h"
+#include "cogl/cogl-private.h"
+#include "cogl/cogl-attribute-private.h"
+#include "cogl/cogl-primitive-private.h"
+#include "cogl/cogl1-context.h"
+#include "cogl/cogl-offscreen.h"
+#include "cogl/cogl-matrix-stack.h"
 
 static void *
 _cogl_clip_stack_push_entry (CoglClipStack *clip_stack,
@@ -125,27 +125,6 @@ _cogl_clip_stack_entry_set_bounds (CoglClipStack *entry,
   entry->bounds_x1 = ceilf (max_x);
   entry->bounds_y0 = floorf (min_y);
   entry->bounds_y1 = ceilf (max_y);
-}
-
-CoglClipStack *
-_cogl_clip_stack_push_window_rectangle (CoglClipStack *stack,
-                                        int x_offset,
-                                        int y_offset,
-                                        int width,
-                                        int height)
-{
-  CoglClipStack *entry;
-
-  entry = _cogl_clip_stack_push_entry (stack,
-                                       sizeof (CoglClipStackWindowRect),
-                                       COGL_CLIP_STACK_WINDOW_RECT);
-
-  entry->bounds_x0 = x_offset;
-  entry->bounds_x1 = x_offset + width;
-  entry->bounds_y0 = y_offset;
-  entry->bounds_y1 = y_offset + height;
-
-  return entry;
 }
 
 CoglClipStack *
@@ -344,9 +323,6 @@ _cogl_clip_stack_unref (CoglClipStack *entry)
             g_free (entry);
             break;
           }
-        case COGL_CLIP_STACK_WINDOW_RECT:
-          g_free (entry);
-          break;
         case COGL_CLIP_STACK_PRIMITIVE:
           {
             CoglClipStackPrimitive *primitive_entry =

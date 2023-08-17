@@ -20,13 +20,14 @@
  *     Jasper St. Pierre <jstpierre@mecheye.net>
  */
 
-#ifndef META_WAYLAND_H
-#define META_WAYLAND_H
+#pragma once
 
 #include "clutter/clutter.h"
 #include "core/meta-context-private.h"
 #include "core/util-private.h"
 #include "meta/types.h"
+#include "meta/meta-wayland-compositor.h"
+#include "wayland/meta-wayland-text-input.h"
 #include "wayland/meta-wayland-types.h"
 
 META_EXPORT_TEST
@@ -35,9 +36,6 @@ void                    meta_wayland_override_display_name (const char *display_
 MetaWaylandCompositor * meta_wayland_compositor_new             (MetaContext *context);
 
 void                    meta_wayland_compositor_prepare_shutdown (MetaWaylandCompositor *compositor);
-
-void                    meta_wayland_compositor_init_display    (MetaWaylandCompositor *compositor,
-                                                                 MetaDisplay           *display);
 
 void                    meta_wayland_compositor_update          (MetaWaylandCompositor *compositor,
                                                                  const ClutterEvent    *event);
@@ -72,10 +70,12 @@ GQueue                 *meta_wayland_compositor_get_committed_transactions (Meta
 META_EXPORT_TEST
 const char             *meta_wayland_get_wayland_display_name   (MetaWaylandCompositor *compositor);
 
+#ifdef HAVE_XWAYLAND
 META_EXPORT_TEST
 const char             *meta_wayland_get_public_xwayland_display_name  (MetaWaylandCompositor *compositor);
 
 const char             *meta_wayland_get_private_xwayland_display_name (MetaWaylandCompositor *compositor);
+#endif
 
 void                    meta_wayland_compositor_restore_shortcuts      (MetaWaylandCompositor *compositor,
                                                                         ClutterInputDevice    *source);
@@ -89,6 +89,8 @@ void                    meta_wayland_compositor_schedule_surface_association (Me
                                                                               int                    id,
                                                                               MetaWindow            *window);
 
+MetaWaylandTextInput *  meta_wayland_compositor_get_text_input (MetaWaylandCompositor *compositor);
+
 #ifdef HAVE_XWAYLAND
 void                    meta_wayland_compositor_notify_surface_id (MetaWaylandCompositor *compositor,
                                                                    int                    id,
@@ -96,18 +98,12 @@ void                    meta_wayland_compositor_notify_surface_id (MetaWaylandCo
 
 META_EXPORT_TEST
 MetaXWaylandManager *   meta_wayland_compositor_get_xwayland_manager (MetaWaylandCompositor *compositor);
-
 #endif
 
 META_EXPORT_TEST
 MetaContext * meta_wayland_compositor_get_context (MetaWaylandCompositor *compositor);
 
-META_EXPORT_TEST
-struct wl_display * meta_wayland_compositor_get_wayland_display (MetaWaylandCompositor *compositor);
-
 gboolean meta_wayland_compositor_is_grabbed (MetaWaylandCompositor *compositor);
 
 META_EXPORT_TEST
 MetaWaylandFilterManager * meta_wayland_compositor_get_filter_manager (MetaWaylandCompositor *compositor);
-
-#endif

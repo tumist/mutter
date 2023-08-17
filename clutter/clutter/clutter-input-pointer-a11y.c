@@ -23,16 +23,16 @@
  * mousetweaks Copyright (C) 2007-2010 Gerd Kohlberger <gerdko gmail com>
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-backend-private.h"
-#include "clutter-enum-types.h"
-#include "clutter-input-device.h"
-#include "clutter-input-device-private.h"
-#include "clutter-input-pointer-a11y-private.h"
-#include "clutter-main.h"
-#include "clutter-private.h"
-#include "clutter-virtual-input-device.h"
+#include "clutter/clutter-backend-private.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-input-device.h"
+#include "clutter/clutter-input-device-private.h"
+#include "clutter/clutter-input-pointer-a11y-private.h"
+#include "clutter/clutter-main.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-virtual-input-device.h"
 
 static gboolean
 is_secondary_click_enabled (ClutterInputDevice *device)
@@ -736,13 +736,14 @@ clutter_input_pointer_a11y_update (ClutterInputDevice *device,
 
   ClutterMainContext *clutter_context;
   ClutterBackend *backend;
+  ClutterEventType event_type;
 
   g_return_if_fail (clutter_event_get_device (event) == device);
 
   if (!_clutter_is_input_pointer_a11y_enabled (device))
     return;
 
-  if ((event->any.flags & CLUTTER_EVENT_FLAG_SYNTHETIC) != 0)
+  if ((clutter_event_get_flags (event) & CLUTTER_EVENT_FLAG_SYNTHETIC) != 0)
     return;
 
   clutter_context = _clutter_context_get_default ();
@@ -751,18 +752,20 @@ clutter_input_pointer_a11y_update (ClutterInputDevice *device,
   if (!clutter_backend_is_display_server (backend))
     return;
 
-  if (event->type == CLUTTER_MOTION)
+  event_type = clutter_event_type (event);
+
+  if (event_type == CLUTTER_MOTION)
     {
       float x, y;
 
       clutter_event_get_coords (event, &x, &y);
       _clutter_input_pointer_a11y_on_motion_event (device, x, y);
     }
-  else if (event->type == CLUTTER_BUTTON_PRESS ||
-           event->type == CLUTTER_BUTTON_RELEASE)
+  else if (event_type == CLUTTER_BUTTON_PRESS ||
+           event_type == CLUTTER_BUTTON_RELEASE)
     {
       _clutter_input_pointer_a11y_on_button_event (device,
-                                                   event->button.button,
-                                                   event->type == CLUTTER_BUTTON_PRESS);
+                                                   clutter_event_get_button (event),
+                                                   event_type == CLUTTER_BUTTON_PRESS);
     }
 }

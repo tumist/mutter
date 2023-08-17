@@ -64,12 +64,12 @@
  * and #ClutterContainerIface.get_child_meta().
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-child-meta.h"
-#include "clutter-container.h"
-#include "clutter-debug.h"
-#include "clutter-private.h"
+#include "clutter/clutter-child-meta.h"
+#include "clutter/clutter-container.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-private.h"
 
 G_DEFINE_ABSTRACT_TYPE (ClutterChildMeta, clutter_child_meta, G_TYPE_OBJECT);
 
@@ -147,9 +147,7 @@ clutter_child_meta_class_init (ClutterChildMetaClass *klass)
    * The #ClutterContainer that created this #ClutterChildMeta.
    */
   obj_props[PROP_CONTAINER] =
-    g_param_spec_object ("container",
-                         P_("Container"),
-                         P_("The container that created this data"),
+    g_param_spec_object ("container", NULL, NULL,
                          CLUTTER_TYPE_CONTAINER,
                          G_PARAM_CONSTRUCT_ONLY |
                          CLUTTER_PARAM_READWRITE);
@@ -160,9 +158,7 @@ clutter_child_meta_class_init (ClutterChildMetaClass *klass)
    * The #ClutterActor being wrapped by this #ClutterChildMeta
    */
   obj_props[PROP_ACTOR] =
-    g_param_spec_object ("actor",
-                         P_("Actor"),
-                         P_("The actor wrapped by this data"),
+    g_param_spec_object ("actor", NULL, NULL,
                          CLUTTER_TYPE_ACTOR,
                          G_PARAM_CONSTRUCT_ONLY |
                          CLUTTER_PARAM_READWRITE);

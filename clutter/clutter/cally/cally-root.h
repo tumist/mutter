@@ -18,15 +18,15 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CALLY_ROOT_H__
-#define __CALLY_ROOT_H__
+#pragma once
 
 #if !defined(__CALLY_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <cally/cally.h> can be included directly."
 #endif
 
 #include <atk/atk.h>
-#include <clutter/clutter.h>
+
+#include "clutter/clutter.h"
 
 G_BEGIN_DECLS
 
@@ -59,9 +59,6 @@ struct _CallyRootClass
 {
   /*< private >*/
   AtkGObjectAccessibleClass parent_class;
-
-  /* padding for future expansion */
-  gpointer _padding_dummy[16];
 };
 
 CLUTTER_EXPORT
@@ -70,5 +67,3 @@ CLUTTER_EXPORT
 AtkObject *cally_root_new      (void);
 
 G_END_DECLS
-
-#endif /* __CALLY_ROOT_H__ */

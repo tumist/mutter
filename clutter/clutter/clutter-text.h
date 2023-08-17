@@ -22,15 +22,14 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_TEXT_H__
-#define __CLUTTER_TEXT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-actor.h>
-#include <clutter/clutter-text-buffer.h>
+#include "clutter/clutter-actor.h"
+#include "clutter/clutter-text-buffer.h"
 #include <pango/pango.h>
 
 G_BEGIN_DECLS
@@ -75,16 +74,6 @@ struct _ClutterTextClass
   void (* cursor_event)   (ClutterText           *self,
                            const graphene_rect_t *rect);
   void (* cursor_changed) (ClutterText           *self);
-
-  /*< private >*/
-  /* padding for future expansion */
-  void (* _clutter_reserved1) (void);
-  void (* _clutter_reserved2) (void);
-  void (* _clutter_reserved3) (void);
-  void (* _clutter_reserved4) (void);
-  void (* _clutter_reserved5) (void);
-  void (* _clutter_reserved6) (void);
-  void (* _clutter_reserved7) (void);
 };
 
 CLUTTER_EXPORT
@@ -308,5 +297,3 @@ CLUTTER_EXPORT
 gboolean              clutter_text_has_preedit (ClutterText *self);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_TEXT_H__ */

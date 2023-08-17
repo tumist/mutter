@@ -27,10 +27,9 @@
  *
  */
 
-#ifndef _COGL_TEXTURE_GL_PRIVATE_H_
-#define _COGL_TEXTURE_GL_PRIVATE_H_
+#pragma once
 
-#include "cogl-context.h"
+#include "cogl/cogl-context.h"
 
 void
 _cogl_texture_gl_prep_alignment_for_pixels_upload (CoglContext *ctx,
@@ -68,5 +67,3 @@ _cogl_texture_min_filter_get_lod_bias (GLenum min_filter)
   return (min_filter == GL_NEAREST_MIPMAP_NEAREST ||
           min_filter == GL_LINEAR_MIPMAP_NEAREST) ? -0.5f : 0.0f;
 }
-
-#endif /* _COGL_TEXTURE_GL_PRIVATE_H_ */

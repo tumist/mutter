@@ -15,13 +15,12 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CLUTTER_PICK_STACK_PRIVATE_H
-#define CLUTTER_PICK_STACK_PRIVATE_H
+#pragma once
 
 #include <glib-object.h>
 
-#include "clutter-macros.h"
-#include "clutter-stage-view.h"
+#include "clutter/clutter-macros.h"
+#include "clutter/clutter-stage-view.h"
 
 G_BEGIN_DECLS
 
@@ -67,5 +66,3 @@ clutter_pick_stack_search_actor (ClutterPickStack          *pick_stack,
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (ClutterPickStack, clutter_pick_stack_unref)
 
 G_END_DECLS
-
-#endif /* CLUTTER_PICK_STACK_PRIVATE_H */

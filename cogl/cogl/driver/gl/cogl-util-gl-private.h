@@ -30,12 +30,12 @@
  *  Robert Bragg   <robert@linux.intel.com>
  */
 
-#ifndef _COGL_UTIL_GL_PRIVATE_H_
+#pragma once
 
-#include "cogl-types.h"
-#include "cogl-context.h"
-#include "cogl-gl-header.h"
-#include "cogl-texture.h"
+#include "cogl/cogl-types.h"
+#include "cogl/cogl-context.h"
+#include "cogl/cogl-gl-header.h"
+#include "cogl/cogl-texture.h"
 
 /* In OpenGL ES context, GL_CONTEXT_LOST has a _KHR prefix */
 #ifndef GL_CONTEXT_LOST
@@ -253,5 +253,3 @@ cogl_gl_get_gpu_time_ns (CoglContext *context);
 #ifndef GL_TEXTURE_LOD_BIAS
 #define GL_TEXTURE_LOD_BIAS 0x8501
 #endif
-
-#endif /* _COGL_UTIL_GL_PRIVATE_H_ */

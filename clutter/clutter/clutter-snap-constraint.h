@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_SNAP_CONSTRAINT_H__
-#define __CLUTTER_SNAP_CONSTRAINT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-constraint.h>
+#include "clutter/clutter-constraint.h"
 
 G_BEGIN_DECLS
 
@@ -69,5 +68,3 @@ CLUTTER_EXPORT
 gfloat                  clutter_snap_constraint_get_offset      (ClutterSnapConstraint *constraint);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_SNAP_CONSTRAINT_H__ */

@@ -17,8 +17,7 @@
  * 02111-1307, USA.
  */
 
-#ifndef META_KMS_IMPL_TYPES_H
-#define META_KMS_IMPL_TYPES_H
+#pragma once
 
 #include <stdint.h>
 
@@ -42,6 +41,8 @@ typedef enum _MetaKmsPageFlipListenerFlag MetaKmsPageFlipListenerFlag;
 
 typedef struct _MetaKmsImpl MetaKmsImpl;
 typedef struct _MetaKmsImplDevice MetaKmsImplDevice;
+
+typedef struct _MetaKmsCursorManager MetaKmsCursorManager;
 
 /* 16:16 fixed point */
 typedef int32_t MetaFixed16;
@@ -80,6 +81,7 @@ typedef enum _MetaKmsUpdateFlag
 {
   META_KMS_UPDATE_FLAG_NONE = 0,
   META_KMS_UPDATE_FLAG_TEST_ONLY = 1 << 0,
+  META_KMS_UPDATE_FLAG_MODE_SET = 1 << 1,
 } MetaKmsUpdateFlag;
 
 typedef enum _MetaKmsPlaneType MetaKmsPlaneType;
@@ -96,5 +98,3 @@ typedef struct _MetaKmsRange
   uint64_t min_value;
   uint64_t max_value;
 } MetaKmsRange;
-
-#endif /* META_KMS_IMPL_TYPES_H */

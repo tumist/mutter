@@ -18,8 +18,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_BACKGROUND_H
-#define META_BACKGROUND_H
+#pragma once
 
 #include <gdesktop-enums.h>
 
@@ -30,7 +29,8 @@
  * MetaBackground:
  *
  * This class handles tracking and painting the root window background.
- * By integrating with #MetaWindowGroup we can avoid painting parts of
+ *
+ * By integrating with [class@Meta.WindowGroup] we can avoid painting parts of
  * the background that are obscured by other windows.
  */
 
@@ -70,5 +70,3 @@ void meta_background_set_blend    (MetaBackground            *self,
                                    GFile                     *file2,
                                    double                     blend_factor,
                                    GDesktopBackgroundStyle    style);
-
-#endif /* META_BACKGROUND_H */

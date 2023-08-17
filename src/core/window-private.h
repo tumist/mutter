@@ -29,8 +29,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_WINDOW_PRIVATE_H
-#define META_WINDOW_PRIVATE_H
+#pragma once
 
 #include <X11/Xutil.h>
 #include <cairo.h>
@@ -168,6 +167,7 @@ struct _MetaWindow
   uint64_t id;
   guint64 stamp;
   MetaLogicalMonitor *monitor;
+  MetaLogicalMonitor *highest_scale_monitor;
   MetaWorkspace *workspace;
   MetaWindowClientType client_type;
   Window xwindow;
@@ -828,6 +828,7 @@ MetaLogicalMonitor * meta_window_find_monitor_from_frame_rect (MetaWindow *windo
 MetaLogicalMonitor * meta_window_find_monitor_from_id (MetaWindow *window);
 
 MetaLogicalMonitor * meta_window_get_main_logical_monitor (MetaWindow *window);
+MetaLogicalMonitor * meta_window_get_highest_scale_monitor (MetaWindow *window);
 void meta_window_update_monitor (MetaWindow                   *window,
                                  MetaWindowUpdateMonitorFlags  flags);
 
@@ -890,5 +891,3 @@ void meta_window_set_frame_xwindow (MetaWindow *window,
 
 void meta_window_maybe_apply_size_hints (MetaWindow    *window,
                                          MetaRectangle *target_rect);
-
-#endif

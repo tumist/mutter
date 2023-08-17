@@ -28,12 +28,12 @@
  *
  */
 
-#ifndef __COGL_RENDERER_GLX_PRIVATE_H
-#define __COGL_RENDERER_GLX_PRIVATE_H
+#pragma once
 
 #include <gmodule.h>
-#include "cogl-object-private.h"
-#include "cogl-xlib-renderer-private.h"
+
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-xlib-renderer-private.h"
 
 typedef struct _CoglGLXRenderer
 {
@@ -95,11 +95,9 @@ typedef struct _CoglGLXRenderer
 
 #define COGL_WINSYS_FEATURE_END()
 
-#include "winsys/cogl-winsys-glx-feature-functions.h"
+#include "cogl/winsys/cogl-winsys-glx-feature-functions.h"
 
 #undef COGL_WINSYS_FEATURE_BEGIN
 #undef COGL_WINSYS_FEATURE_FUNCTION
 #undef COGL_WINSYS_FEATURE_END
 } CoglGLXRenderer;
-
-#endif /* __COGL_RENDERER_GLX_PRIVATE_H */

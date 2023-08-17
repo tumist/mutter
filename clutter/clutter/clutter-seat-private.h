@@ -20,8 +20,7 @@
  *
  */
 
-#ifndef CLUTTER_SEAT_PRIVATE_H
-#define CLUTTER_SEAT_PRIVATE_H
+#pragma once
 
 #include "clutter/clutter-types.h"
 
@@ -33,4 +32,7 @@ ClutterGrabState clutter_seat_grab (ClutterSeat *seat,
 void clutter_seat_ungrab (ClutterSeat *seat,
                           uint32_t     time);
 
-#endif /* CLUTTER_SEAT_PRIVATE_H */
+CLUTTER_EXPORT
+void clutter_seat_init_pointer_position (ClutterSeat *seat,
+                                         float        x,
+                                         float        y);

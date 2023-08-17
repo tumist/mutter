@@ -61,16 +61,17 @@ update_cursor_sprite_texture (MetaWaylandCursorSurface *cursor_surface)
   MetaWaylandSurface *surface =
     meta_wayland_surface_role_get_surface (META_WAYLAND_SURFACE_ROLE (cursor_surface));
   MetaCursorSprite *cursor_sprite = META_CURSOR_SPRITE (priv->cursor_sprite);
-  CoglTexture *texture;
+  MetaMultiTexture *texture;
 
   if (!priv->cursor_renderer)
     return;
 
   texture = meta_wayland_surface_get_texture (surface);
-  if (texture)
+
+  if (texture && meta_multi_texture_is_simple (texture))
     {
       meta_cursor_sprite_set_texture (cursor_sprite,
-                                      texture,
+                                      meta_multi_texture_get_plane (texture, 0),
                                       priv->hot_x * surface->scale,
                                       priv->hot_y * surface->scale);
     }
@@ -92,8 +93,7 @@ cursor_sprite_prepare_at (MetaCursorSprite         *cursor_sprite,
   MetaWaylandSurfaceRole *role = META_WAYLAND_SURFACE_ROLE (cursor_surface);
   MetaWaylandSurface *surface = meta_wayland_surface_role_get_surface (role);
 
-#ifdef HAVE_XWAYLAND
-  if (!meta_xwayland_is_xwayland_surface (surface))
+  if (!meta_wayland_surface_is_xwayland (surface))
     {
       MetaWaylandSurfaceRole *surface_role =
         META_WAYLAND_SURFACE_ROLE (cursor_surface);
@@ -123,7 +123,6 @@ cursor_sprite_prepare_at (MetaCursorSprite         *cursor_sprite,
                                                     surface->buffer_transform);
         }
     }
-#endif
 
   meta_wayland_surface_update_outputs (surface);
 }

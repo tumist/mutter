@@ -20,24 +20,23 @@
  *
  */
 
-#ifndef __CLUTTER_MUTTER_H__
-#define __CLUTTER_MUTTER_H__
+#pragma once
 
 #define __CLUTTER_H_INSIDE__
 
-#include "clutter-backend.h"
-#include "clutter-backend-private.h"
-#include "clutter-damage-history.h"
-#include "clutter-event-private.h"
-#include "clutter-frame-private.h"
-#include "clutter-input-device-private.h"
-#include "clutter-input-pointer-a11y-private.h"
-#include "clutter-macros.h"
-#include "clutter-private.h"
-#include "clutter-stage-private.h"
-#include "clutter-stage-view.h"
-#include "clutter-stage-view-private.h"
-#include "clutter.h"
+#include "clutter/clutter-backend.h"
+#include "clutter/clutter-backend-private.h"
+#include "clutter/clutter-damage-history.h"
+#include "clutter/clutter-event-private.h"
+#include "clutter/clutter-frame-private.h"
+#include "clutter/clutter-input-device-private.h"
+#include "clutter/clutter-input-pointer-a11y-private.h"
+#include "clutter/clutter-macros.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-stage-private.h"
+#include "clutter/clutter-stage-view.h"
+#include "clutter/clutter-stage-view-private.h"
+#include "clutter/clutter.h"
 
 /* An epsilon larger than FLT_EPSILON that is useful when comparing coordinates
  * while ignoring floating point precision loss that might happen during
@@ -132,6 +131,12 @@ void clutter_get_debug_flags (ClutterDebugFlag     *debug_flags,
                               ClutterDrawDebugFlag *draw_flags,
                               ClutterPickDebugFlag *pick_flags);
 
-#undef __CLUTTER_H_INSIDE__
+CLUTTER_EXPORT
+void clutter_actor_notify_transform_invalid (ClutterActor *self);
 
-#endif /* __CLUTTER_MUTTER_H__ */
+CLUTTER_EXPORT
+void clutter_actor_get_relative_transformation_matrix (ClutterActor      *self,
+                                                       ClutterActor      *ancestor,
+                                                       graphene_matrix_t *matrix);
+
+#undef __CLUTTER_H_INSIDE__

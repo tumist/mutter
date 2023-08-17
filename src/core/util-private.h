@@ -22,10 +22,10 @@
  * 02111-1307, USA.
  */
 
-#ifndef META_UTIL_PRIVATE_H
-#define META_UTIL_PRIVATE_H
+#pragma once
 
 #include <glib/gi18n-lib.h>
+#include <sys/time.h>
 
 #include "meta/util.h"
 #include "meta/common.h"
@@ -44,6 +44,12 @@ char *   meta_generate_random_id (GRand *rand,
 
 void meta_init_debug_utils (void);
 
+static inline int64_t
+meta_timeval_to_microseconds (const struct timeval *tv)
+{
+  return ((int64_t) tv->tv_sec) * G_USEC_PER_SEC + tv->tv_usec;
+}
+
 #define META_POINT_IN_RECT(xcoord, ycoord, rect) \
   ((xcoord) >= (rect).x &&                   \
    (xcoord) <  ((rect).x + (rect).width) &&  \
@@ -52,5 +58,3 @@ void meta_init_debug_utils (void);
 
 #define META_CONTAINER_OF(ptr, type, member) \
   (type *) ((uint8_t *) (ptr) - G_STRUCT_OFFSET (type, member))
-
-#endif

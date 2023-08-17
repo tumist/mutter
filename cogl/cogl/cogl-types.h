@@ -28,18 +28,18 @@
  *
  */
 
+#pragma once
+
 #if !defined(__COGL_H_INSIDE__) && !defined(COGL_COMPILATION)
 #error "Only <cogl/cogl.h> can be included directly."
 #endif
 
-#ifndef __COGL_TYPES_H__
-#define __COGL_TYPES_H__
 
 #include <stdint.h>
 #include <stddef.h>
 
-#include <cogl/cogl-defines.h>
-#include <cogl/cogl-macros.h>
+#include "cogl/cogl-defines.h"
+#include "cogl/cogl-macros.h"
 #include <graphene.h>
 
 #include <glib.h>
@@ -148,14 +148,8 @@ struct _CoglColor
   uint8_t COGL_PRIVATE (blue);
 
   uint8_t COGL_PRIVATE (alpha);
-
-  /* padding in case we want to change to floats at
-   * some point */
-  uint32_t COGL_PRIVATE (padding0);
-  uint32_t COGL_PRIVATE (padding1);
-  uint32_t COGL_PRIVATE (padding2);
 };
-COGL_STRUCT_SIZE_ASSERT (CoglColor, 16);
+COGL_STRUCT_SIZE_ASSERT (CoglColor, 4);
 
 /**
  * CoglTextureVertex:
@@ -176,7 +170,7 @@ struct _CoglTextureVertex
 
   CoglColor color;
 };
-COGL_STRUCT_SIZE_ASSERT (CoglTextureVertex, 36);
+COGL_STRUCT_SIZE_ASSERT (CoglTextureVertex, 24);
 
 /**
  * COGL_BLEND_STRING_ERROR:
@@ -475,5 +469,3 @@ typedef enum
 } CoglStereoMode;
 
 G_END_DECLS
-
-#endif /* __COGL_TYPES_H__ */

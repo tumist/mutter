@@ -18,8 +18,7 @@
  *
  */
 
-#ifndef META_ONSCREEN_NATIVE_H
-#define META_ONSCREEN_NATIVE_H
+#pragma once
 
 #include <glib.h>
 
@@ -38,6 +37,9 @@ G_DECLARE_FINAL_TYPE (MetaOnscreenNative, meta_onscreen_native,
 void meta_renderer_native_release_onscreen (CoglOnscreen *onscreen);
 
 void meta_onscreen_native_prepare_frame (CoglOnscreen *onscreen,
+                                         ClutterFrame *frame);
+
+void meta_onscreen_native_before_redraw (CoglOnscreen *onscreen,
                                          ClutterFrame *frame);
 
 void meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
@@ -65,5 +67,3 @@ MetaCrtc * meta_onscreen_native_get_crtc (MetaOnscreenNative *onscreen_native);
 void meta_onscreen_native_invalidate (MetaOnscreenNative *onscreen_native);
 
 void meta_onscreen_native_detach (MetaOnscreenNative *onscreen_native);
-
-#endif /* META_ONSCREEN_NATIVE_H */

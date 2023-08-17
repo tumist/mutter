@@ -21,14 +21,14 @@
 
 #include "config.h"
 
-#ifndef __CLUTTER_TEST_UTILS_H__
-#define __CLUTTER_TEST_UTILS_H__
+#pragma once
 
 #define __CLUTTER_H_INSIDE__
 
 #include "clutter/clutter-types.h"
 #include "clutter/clutter-actor.h"
 #include "clutter/clutter-color.h"
+#include "clutter/clutter-event-private.h"
 #include "clutter/clutter-private.h"
 #include "meta/common.h"
 #include "meta-test/meta-context-test.h"
@@ -174,5 +174,3 @@ gboolean        clutter_test_check_color_at_point       (ClutterActor           
                                                          ClutterColor           *result);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_TEST_UTILS_H__ */

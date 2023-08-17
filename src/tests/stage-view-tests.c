@@ -969,6 +969,7 @@ meta_test_actor_stage_views_parent_views_changed (void)
   g_assert_nonnull (timeline_frame_clock);
   g_assert (timeline_frame_clock == second_view_frame_clock);
 
+  g_object_unref (timeline);
   clutter_actor_destroy (test_actor);
   clutter_actor_destroy (container);
 }
@@ -1068,6 +1069,7 @@ meta_test_actor_stage_views_and_frame_clocks_freed (void)
 
   timeline_frame_clock = clutter_timeline_get_frame_clock (timeline);
 
+  g_object_unref (timeline);
   g_assert_null (timeline_frame_clock);
   g_assert_null (first_view);
   g_assert_null (first_view_frame_clock);
@@ -1241,6 +1243,9 @@ meta_test_timeline_actor_destroyed (void)
                     G_CALLBACK (on_stage_views_changed),
                     &did_stage_views_changed);
 
+  stage_views = clutter_stage_peek_stage_views (CLUTTER_STAGE (stage));
+  g_assert_cmpint (g_list_length (stage_views), ==, 0);
+
   clutter_actor_destroy (actor);
   g_object_unref (timeline);
 
@@ -1249,7 +1254,7 @@ meta_test_timeline_actor_destroyed (void)
   stage_views = clutter_stage_peek_stage_views (CLUTTER_STAGE (stage));
   g_assert_cmpint (g_list_length (stage_views), ==, 1);
 
-  g_assert_false (did_stage_views_changed);
+  g_assert_true (did_stage_views_changed);
   clutter_actor_queue_redraw (persistent_actor);
   clutter_stage_schedule_update (CLUTTER_STAGE (stage));
   wait_for_paint (stage);

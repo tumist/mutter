@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_LAYOUT_MANAGER_H__
-#define __CLUTTER_LAYOUT_MANAGER_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-types.h>
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -46,8 +45,6 @@ struct _ClutterLayoutManager
 {
   /*< private >*/
   GInitiallyUnowned parent_instance;
-
-  gpointer CLUTTER_PRIVATE_FIELD (dummy);
 };
 
 /**
@@ -116,17 +113,6 @@ struct _ClutterLayoutManagerClass
                                                  ClutterActor           *actor);
 
   void               (* layout_changed)         (ClutterLayoutManager   *manager);
-
-  /*< private >*/
-  /* padding for future expansion */
-  void (* _clutter_padding_1) (void);
-  void (* _clutter_padding_2) (void);
-  void (* _clutter_padding_3) (void);
-  void (* _clutter_padding_4) (void);
-  void (* _clutter_padding_5) (void);
-  void (* _clutter_padding_6) (void);
-  void (* _clutter_padding_7) (void);
-  void (* _clutter_padding_8) (void);
 };
 
 CLUTTER_EXPORT
@@ -193,5 +179,3 @@ void               clutter_layout_manager_child_get_property    (ClutterLayoutMa
                                                                  GValue                 *value);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_LAYOUT_MANAGER_H__ */

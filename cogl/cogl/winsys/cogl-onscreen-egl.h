@@ -23,11 +23,10 @@
  * SOFTWARE.
  */
 
-#ifndef COGL_ONSCREEN_EGL_H
-#define COGL_ONSCREEN_EGL_H
+#pragma once
 
-#include "cogl-onscreen.h"
-#include "winsys/cogl-winsys-egl-private.h"
+#include "cogl/cogl-onscreen.h"
+#include "cogl/winsys/cogl-winsys-egl-private.h"
 
 #define COGL_TYPE_ONSCREEN_EGL (cogl_onscreen_egl_get_type ())
 COGL_EXPORT
@@ -52,5 +51,3 @@ gboolean
 cogl_onscreen_egl_choose_config (CoglOnscreenEgl  *onscreen_egl,
                                  EGLConfig        *out_egl_config,
                                  GError          **error);
-
-#endif /* COGL_ONSCREEN_EGL_H */

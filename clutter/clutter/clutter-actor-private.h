@@ -19,11 +19,10 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_ACTOR_PRIVATE_H__
-#define __CLUTTER_ACTOR_PRIVATE_H__
+#pragma once
 
-#include <clutter/clutter-actor.h>
-#include <clutter/clutter-grab.h>
+#include "clutter/clutter-actor.h"
+#include "clutter/clutter-grab.h"
 
 G_BEGIN_DECLS
 
@@ -266,10 +265,6 @@ void clutter_actor_queue_immediate_relayout (ClutterActor *self);
 
 gboolean clutter_actor_is_painting_unmapped (ClutterActor *self);
 
-gboolean clutter_actor_get_redraw_clip (ClutterActor       *self,
-                                        ClutterPaintVolume *dst_old_pv,
-                                        ClutterPaintVolume *dst_new_pv);
-
 void clutter_actor_attach_grab (ClutterActor *actor,
                                 ClutterGrab  *grab);
 void clutter_actor_detach_grab (ClutterActor *actor,
@@ -285,5 +280,3 @@ void clutter_actor_set_implicitly_grabbed (ClutterActor *actor,
                                            gboolean      is_implicitly_grabbed);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_ACTOR_PRIVATE_H__ */

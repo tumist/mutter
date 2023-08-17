@@ -15,8 +15,7 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CLUTTER_PAINT_CONTEXT_H
-#define CLUTTER_PAINT_CONTEXT_H
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
@@ -24,8 +23,8 @@
 
 #include <glib-object.h>
 
-#include "clutter-macros.h"
-#include "clutter-stage-view.h"
+#include "clutter/clutter-macros.h"
+#include "clutter/clutter-stage-view.h"
 
 typedef struct _ClutterPaintContext ClutterPaintContext;
 
@@ -77,5 +76,3 @@ ClutterPaintFlag clutter_paint_context_get_paint_flags (ClutterPaintContext *pai
 
 CLUTTER_EXPORT
 ClutterFrame * clutter_paint_context_get_frame (ClutterPaintContext *paint_context);
-
-#endif /* CLUTTER_PAINT_CONTEXT_H */

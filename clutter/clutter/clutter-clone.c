@@ -36,14 +36,14 @@
  * implementation.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-actor-private.h"
-#include "clutter-clone.h"
-#include "clutter-debug.h"
-#include "clutter-main.h"
-#include "clutter-paint-volume-private.h"
-#include "clutter-private.h"
+#include "clutter/clutter-actor-private.h"
+#include "clutter/clutter-clone.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-main.h"
+#include "clutter/clutter-paint-volume-private.h"
+#include "clutter/clutter-private.h"
 
 #include "cogl/cogl.h"
 
@@ -355,9 +355,7 @@ clutter_clone_class_init (ClutterCloneClass *klass)
    * This property specifies the source actor being cloned.
    */
   obj_props[PROP_SOURCE] =
-    g_param_spec_object ("source",
-                         P_("Source"),
-                         P_("Specifies the actor to be cloned"),
+    g_param_spec_object ("source", NULL, NULL,
                          CLUTTER_TYPE_ACTOR,
                          G_PARAM_CONSTRUCT |
                          CLUTTER_PARAM_READWRITE);

@@ -1,6 +1,5 @@
-/* meta-cogl-utils.h
- *
- * Copyright 2020 Georges Basile Stavracas Neto <georges.stavracas@gmail.com>
+/*
+ * Copyright (C) 2021 Red Hat Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -17,22 +16,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.
  *
- * SPDX-License-Identifier: GPL-2.0-or-later
- *
  */
 
-#ifndef META_COGL_UTILS_H
-#define META_COGL_UTILS_H
+#pragma once
 
-#include "cogl/cogl.h"
+#include "backends/native/meta-thread.h"
 
-G_BEGIN_DECLS
-
-gboolean
-meta_cogl_pixel_format_from_drm_format (uint32_t               drm_format,
-                                        CoglPixelFormat       *out_format,
-                                        CoglTextureComponents *out_components);
-
-G_END_DECLS
-
-#endif /* META_COGL_UTILS_H */
+#define META_TYPE_THREAD_TEST (meta_thread_test_get_type ())
+G_DECLARE_FINAL_TYPE (MetaThreadTest, meta_thread_test,
+                      META, THREAD_TEST,
+                      MetaThread)

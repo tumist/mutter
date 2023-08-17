@@ -32,17 +32,17 @@
 
 #include <string.h>
 
-#include "cogl-private.h"
-#include "cogl-context-private.h"
-#include "cogl-feature-private.h"
-#include "cogl-renderer-private.h"
-#include "driver/gl/cogl-util-gl-private.h"
-#include "driver/gl/cogl-framebuffer-gl-private.h"
-#include "driver/gl/cogl-texture-2d-gl-private.h"
-#include "driver/gl/cogl-attribute-gl-private.h"
-#include "driver/gl/cogl-clip-stack-gl-private.h"
-#include "driver/gl/cogl-buffer-gl-private.h"
-#include "driver/gl/cogl-pipeline-opengl-private.h"
+#include "cogl/cogl-private.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-feature-private.h"
+#include "cogl/cogl-renderer-private.h"
+#include "cogl/driver/gl/cogl-util-gl-private.h"
+#include "cogl/driver/gl/cogl-framebuffer-gl-private.h"
+#include "cogl/driver/gl/cogl-texture-2d-gl-private.h"
+#include "cogl/driver/gl/cogl-attribute-gl-private.h"
+#include "cogl/driver/gl/cogl-clip-stack-gl-private.h"
+#include "cogl/driver/gl/cogl-buffer-gl-private.h"
+#include "cogl/driver/gl/cogl-pipeline-opengl-private.h"
 
 static gboolean
 _cogl_driver_gl_real_context_init (CoglContext *context)
@@ -190,10 +190,20 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       glformat = GL_BGR;
       gltype = GL_UNSIGNED_BYTE;
       break;
+    case COGL_PIXEL_FORMAT_RGBX_8888:
+      glintformat = GL_RGB;
+      glformat = GL_RGBA;
+      gltype = GL_UNSIGNED_BYTE;
+      break;
     case COGL_PIXEL_FORMAT_RGBA_8888:
     case COGL_PIXEL_FORMAT_RGBA_8888_PRE:
       glintformat = GL_RGBA;
       glformat = GL_RGBA;
+      gltype = GL_UNSIGNED_BYTE;
+      break;
+    case COGL_PIXEL_FORMAT_BGRX_8888:
+      glintformat = GL_RGB;
+      glformat = GL_BGRA;
       gltype = GL_UNSIGNED_BYTE;
       break;
     case COGL_PIXEL_FORMAT_BGRA_8888:
@@ -206,6 +216,15 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       /* The following two types of channel ordering
        * have no GL equivalent unless defined using
        * system word byte ordering */
+    case COGL_PIXEL_FORMAT_XRGB_8888:
+      glintformat = GL_RGB;
+      glformat = GL_BGRA;
+#if G_BYTE_ORDER == G_LITTLE_ENDIAN
+      gltype = GL_UNSIGNED_INT_8_8_8_8;
+#else
+      gltype = GL_UNSIGNED_INT_8_8_8_8_REV;
+#endif
+      break;
     case COGL_PIXEL_FORMAT_ARGB_8888:
     case COGL_PIXEL_FORMAT_ARGB_8888_PRE:
       glintformat = GL_RGBA;
@@ -217,6 +236,15 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
 #endif
       break;
 
+    case COGL_PIXEL_FORMAT_XBGR_8888:
+      glintformat = GL_RGB;
+      glformat = GL_RGBA;
+#if G_BYTE_ORDER == G_LITTLE_ENDIAN
+      gltype = GL_UNSIGNED_INT_8_8_8_8;
+#else
+      gltype = GL_UNSIGNED_INT_8_8_8_8_REV;
+#endif
+      break;
     case COGL_PIXEL_FORMAT_ABGR_8888:
     case COGL_PIXEL_FORMAT_ABGR_8888_PRE:
       glintformat = GL_RGBA;
@@ -243,6 +271,10 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       break;
 
     case COGL_PIXEL_FORMAT_XBGR_2101010:
+      glintformat = GL_RGB;
+      glformat = GL_RGBA;
+      gltype = GL_UNSIGNED_INT_2_10_10_10_REV;
+      break;
     case COGL_PIXEL_FORMAT_ABGR_2101010:
     case COGL_PIXEL_FORMAT_ABGR_2101010_PRE:
       glintformat = GL_RGBA;
@@ -251,6 +283,10 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       break;
 
     case COGL_PIXEL_FORMAT_XRGB_2101010:
+      glintformat = GL_RGB;
+      glformat = GL_BGRA;
+      gltype = GL_UNSIGNED_INT_2_10_10_10_REV;
+      break;
     case COGL_PIXEL_FORMAT_ARGB_2101010:
     case COGL_PIXEL_FORMAT_ARGB_2101010_PRE:
       glintformat = GL_RGBA;
@@ -279,10 +315,20 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       gltype = GL_UNSIGNED_SHORT_5_5_5_1;
       break;
 
+    case COGL_PIXEL_FORMAT_RGBX_FP_16161616:
+      glintformat = GL_RGB;
+      glformat = GL_RGBA;
+      gltype = GL_HALF_FLOAT;
+      break;
     case COGL_PIXEL_FORMAT_RGBA_FP_16161616:
     case COGL_PIXEL_FORMAT_RGBA_FP_16161616_PRE:
       glintformat = GL_RGBA;
       glformat = GL_RGBA;
+      gltype = GL_HALF_FLOAT;
+      break;
+    case COGL_PIXEL_FORMAT_BGRX_FP_16161616:
+      glintformat = GL_RGB;
+      glformat = GL_BGRA;
       gltype = GL_HALF_FLOAT;
       break;
     case COGL_PIXEL_FORMAT_BGRA_FP_16161616:
@@ -292,6 +338,10 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       gltype = GL_HALF_FLOAT;
       break;
     case COGL_PIXEL_FORMAT_XRGB_FP_16161616:
+      glintformat = GL_RGB;
+      glformat = GL_BGRA;
+      gltype = GL_HALF_FLOAT;
+      break;
     case COGL_PIXEL_FORMAT_ARGB_FP_16161616:
     case COGL_PIXEL_FORMAT_ARGB_FP_16161616_PRE:
       glintformat = GL_RGBA;
@@ -299,6 +349,10 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       gltype = GL_HALF_FLOAT;
       break;
     case COGL_PIXEL_FORMAT_XBGR_FP_16161616:
+      glintformat = GL_RGB;
+      glformat = GL_RGBA;
+      gltype = GL_HALF_FLOAT;
+      break;
     case COGL_PIXEL_FORMAT_ABGR_FP_16161616:
     case COGL_PIXEL_FORMAT_ABGR_FP_16161616_PRE:
       glintformat = GL_RGBA;

@@ -40,17 +40,17 @@
  * for an example of how to use #ClutterScrollActor..
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-scroll-actor.h"
+#include "clutter/clutter-scroll-actor.h"
 
-#include "clutter-actor-private.h"
-#include "clutter-animatable.h"
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-private.h"
-#include "clutter-property-transition.h"
-#include "clutter-transition.h"
+#include "clutter/clutter-actor-private.h"
+#include "clutter/clutter-animatable.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-property-transition.h"
+#include "clutter/clutter-transition.h"
 
 struct _ClutterScrollActorPrivate
 {
@@ -175,9 +175,7 @@ clutter_scroll_actor_class_init (ClutterScrollActorClass *klass)
    * The scrolling direction.
    */
   obj_props[PROP_SCROLL_MODE] =
-    g_param_spec_flags ("scroll-mode",
-                        P_("Scroll Mode"),
-                        P_("The scrolling direction"),
+    g_param_spec_flags ("scroll-mode", NULL, NULL,
                         CLUTTER_TYPE_SCROLL_MODE,
                         CLUTTER_SCROLL_BOTH,
                         G_PARAM_READWRITE |
@@ -242,9 +240,7 @@ clutter_animatable_iface_init (ClutterAnimatableInterface *iface)
   parent_animatable_iface = g_type_interface_peek_parent (iface);
 
   animatable_props[ANIM_PROP_SCROLL_TO] =
-    g_param_spec_boxed ("scroll-to",
-                        "Scroll To",
-                        "The point to scroll the actor to",
+    g_param_spec_boxed ("scroll-to", NULL, NULL,
                         GRAPHENE_TYPE_POINT,
                         G_PARAM_READWRITE |
                         G_PARAM_STATIC_STRINGS |

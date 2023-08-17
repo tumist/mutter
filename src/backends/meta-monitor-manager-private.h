@@ -21,10 +21,9 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_MONITOR_MANAGER_PRIVATE_H
-#define META_MONITOR_MANAGER_PRIVATE_H
+#pragma once
 
-#include <cogl/cogl.h>
+#include "cogl/cogl.h"
 #include <graphene.h>
 
 #ifdef HAVE_GNOME_DESKTOP
@@ -293,6 +292,9 @@ MetaLogicalMonitor *meta_monitor_manager_get_logical_monitor_at (MetaMonitorMana
 MetaLogicalMonitor *meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
                                                                         MetaRectangle      *rect);
 
+MetaLogicalMonitor *meta_monitor_manager_get_highest_scale_monitor_from_rect (MetaMonitorManager *manager,
+                                                                              MetaRectangle      *rect);
+
 MetaLogicalMonitor *meta_monitor_manager_get_logical_monitor_neighbor (MetaMonitorManager  *manager,
                                                                        MetaLogicalMonitor  *logical_monitor,
                                                                        MetaDisplayDirection direction);
@@ -432,5 +434,3 @@ MetaViewportInfo * meta_monitor_manager_get_viewports (MetaMonitorManager *manag
 GList * meta_monitor_manager_get_virtual_monitors (MetaMonitorManager *manager);
 
 void meta_monitor_manager_maybe_emit_privacy_screen_change (MetaMonitorManager *manager);
-
-#endif /* META_MONITOR_MANAGER_PRIVATE_H */

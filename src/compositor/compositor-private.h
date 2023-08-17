@@ -1,7 +1,6 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
 
-#ifndef META_COMPOSITOR_PRIVATE_H
-#define META_COMPOSITOR_PRIVATE_H
+#pragma once
 
 #include <X11/extensions/Xfixes.h>
 
@@ -66,8 +65,6 @@ MetaInhibitShortcutsDialog * meta_compositor_create_inhibit_shortcuts_dialog (Me
                                                                               MetaWindow     *window);
 
 void meta_compositor_locate_pointer (MetaCompositor *compositor);
-
-void meta_compositor_redirect_x11_windows (MetaCompositor *compositor);
 
 gboolean meta_compositor_is_unredirect_inhibited (MetaCompositor *compositor);
 
@@ -184,5 +181,3 @@ meta_translate_to_high_res_xserver_time (int64_t time_us)
 
   return ms2us (ms & 0xffffffff) + us;
 }
-
-#endif /* META_COMPOSITOR_PRIVATE_H */

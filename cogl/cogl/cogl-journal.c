@@ -30,19 +30,19 @@
 
 #include "cogl-config.h"
 
-#include "cogl-debug.h"
-#include "cogl-context-private.h"
-#include "cogl-graphene.h"
-#include "cogl-journal-private.h"
-#include "cogl-texture-private.h"
-#include "cogl-texture-2d-private.h"
-#include "cogl-pipeline-private.h"
-#include "cogl-framebuffer-private.h"
-#include "cogl-profile.h"
-#include "cogl-attribute-private.h"
-#include "cogl-point-in-poly-private.h"
-#include "cogl-private.h"
-#include "cogl1-context.h"
+#include "cogl/cogl-debug.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-graphene.h"
+#include "cogl/cogl-journal-private.h"
+#include "cogl/cogl-texture-private.h"
+#include "cogl/cogl-texture-2d-private.h"
+#include "cogl/cogl-pipeline-private.h"
+#include "cogl/cogl-framebuffer-private.h"
+#include "cogl/cogl-profile.h"
+#include "cogl/cogl-attribute-private.h"
+#include "cogl/cogl-point-in-poly-private.h"
+#include "cogl/cogl-private.h"
+#include "cogl/cogl1-context.h"
 
 #include <string.h>
 #include <gmodule.h>
@@ -1733,7 +1733,6 @@ try_checking_point_hits_entry_after_clipping (CoglFramebuffer *framebuffer,
                                               float y,
                                               gboolean *hit)
 {
-  gboolean can_software_clip = TRUE;
   gboolean needs_software_clip = FALSE;
   CoglClipStack *clip_entry;
 
@@ -1754,15 +1753,7 @@ try_checking_point_hits_entry_after_clipping (CoglFramebuffer *framebuffer,
           return TRUE;
         }
 
-      if (clip_entry->type == COGL_CLIP_STACK_WINDOW_RECT)
-        {
-          /* XXX: technically we could still run the software clip in
-           * this case because for our purposes we know this clip
-           * can be ignored now, but [can_]sofware_clip_entry() doesn't
-           * know this and will bail out. */
-          can_software_clip = FALSE;
-        }
-      else if (clip_entry->type == COGL_CLIP_STACK_RECT)
+      if (clip_entry->type == COGL_CLIP_STACK_RECT)
         {
           CoglClipStackRect *rect_entry = (CoglClipStackRect *)entry;
 
@@ -1780,9 +1771,6 @@ try_checking_point_hits_entry_after_clipping (CoglFramebuffer *framebuffer,
     {
       ClipBounds clip_bounds;
       float poly[16];
-
-      if (!can_software_clip)
-        return FALSE;
 
       if (!can_software_clip_entry (entry, NULL,
                                     entry->clip_stack, &clip_bounds))
