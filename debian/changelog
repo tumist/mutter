@@ -1,3 +1,17 @@
+mutter (44.3-4) UNRELEASED; urgency=medium
+
+  * d/patches: Update to upstream gnome-44 branch commit 44.3-7-g5d0354035b,
+    excluding CI-only changes
+    - Make the choice of preferred video mode consistent between code
+      paths, fixing choice of video mode on some monitors (mutter!3055)
+    - Fix the configuration option to allow byteswapped X11 clients so
+      that it is possible to allow them (mutter#2938)
+    - Fix a crash if a window is destroyed by a Wayland protocol error
+      while it is being moved (mutter#2853)
+    - Translation update: fa
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 17 Aug 2023 09:12:27 +0100
+
 mutter (44.3-3) experimental; urgency=medium
 
   * debian/control.in: Build-Depend on libgtk-4-dev & libsysprof-4-dev
