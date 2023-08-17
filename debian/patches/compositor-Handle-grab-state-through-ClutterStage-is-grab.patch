@@ -1,0 +1,109 @@
+From: Carlos Garnacho <carlosg@gnome.org>
+Date: Wed, 16 Aug 2023 13:46:05 +0200
+Subject: compositor: Handle grab state through ClutterStage::is-grabbed
+ handler
+
+This is something the compositor could now track by itself, instead of
+being pushed through events. It also makes more sense to do this directly
+when the grabbing conditions change, as opposed to the next event.
+
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2690
+Bug-Debian: https://bugs.debian.org/1035092
+Bug-Debian: https://bugs.debian.org/1049934
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
+Applied-upstream: 45, commit:90a00dae9938c092d9ef520dabcc2d35dbda0dc6
+---
+ src/compositor/compositor.c | 18 ++++++++++++++++++
+ src/core/display-private.h  |  1 -
+ src/core/events.c           | 16 ----------------
+ 3 files changed, 18 insertions(+), 17 deletions(-)
+
+diff --git a/src/compositor/compositor.c b/src/compositor/compositor.c
+index f8ea427..4a91779 100644
+--- a/src/compositor/compositor.c
++++ b/src/compositor/compositor.c
+@@ -109,6 +109,7 @@ typedef struct _MetaCompositorPrivate
+   gulong after_paint_handler_id;
+   gulong window_visibility_updated_id;
+   gulong monitors_changed_internal_id;
++  gulong grabbed_notify_handler_id;
+ 
+   int64_t server_time_query_time;
+   int64_t server_time_offset;
+@@ -1190,6 +1191,17 @@ on_monitors_changed_internal (MetaMonitorManager *monitor_manager,
+   meta_compositor_ensure_compositor_views (compositor);
+ }
+ 
++static void
++on_is_grabbed_changed_cb (ClutterStage   *stage,
++                          GParamSpec     *pspec,
++                          MetaCompositor *compositor)
++{
++  if (clutter_stage_get_grab_actor (stage) != NULL)
++    meta_compositor_grab_begin (compositor);
++  else
++    meta_compositor_grab_end (compositor);
++}
++
+ static void
+ meta_compositor_set_property (GObject      *object,
+                               guint         prop_id,
+@@ -1266,6 +1278,11 @@ meta_compositor_constructed (GObject *object)
+                             "after-paint",
+                             G_CALLBACK (on_after_paint),
+                             compositor);
++  priv->grabbed_notify_handler_id =
++    g_signal_connect (stage,
++                      "notify::is-grabbed",
++                      G_CALLBACK (on_is_grabbed_changed_cb),
++                      compositor);
+ 
+   priv->window_visibility_updated_id =
+     g_signal_connect (priv->display,
+@@ -1299,6 +1316,7 @@ meta_compositor_dispose (GObject *object)
+   g_clear_signal_handler (&priv->stage_presented_id, stage);
+   g_clear_signal_handler (&priv->before_paint_handler_id, stage);
+   g_clear_signal_handler (&priv->after_paint_handler_id, stage);
++  g_clear_signal_handler (&priv->grabbed_notify_handler_id, stage);
+   g_clear_signal_handler (&priv->window_visibility_updated_id, priv->display);
+ 
+   g_clear_pointer (&priv->windows, g_list_free);
+diff --git a/src/core/display-private.h b/src/core/display-private.h
+index 78e51f2..aba8b2e 100644
+--- a/src/core/display-private.h
++++ b/src/core/display-private.h
+@@ -191,7 +191,6 @@ struct _MetaDisplay
+ 
+   /* Opening the display */
+   unsigned int display_opening : 1;
+-  unsigned int grabbed_in_clutter : 1;
+ 
+   /* Closing down the display */
+   int closing;
+diff --git a/src/core/events.c b/src/core/events.c
+index b3da428..259c21a 100644
+--- a/src/core/events.c
++++ b/src/core/events.c
+@@ -240,22 +240,6 @@ meta_display_handle_event (MetaDisplay        *display,
+ 
+   has_grab = stage_has_grab (display);
+ 
+-  if (display->grabbed_in_clutter != has_grab)
+-    {
+-      MetaCompositor *compositor = meta_display_get_compositor (display);
+-
+-      if (!display->grabbed_in_clutter && has_grab)
+-        {
+-          display->grabbed_in_clutter = TRUE;
+-          meta_compositor_grab_begin (compositor);
+-        }
+-      else if (display->grabbed_in_clutter && !has_grab)
+-        {
+-          display->grabbed_in_clutter = FALSE;
+-          meta_compositor_grab_end (compositor);
+-        }
+-    }
+-
+   device = clutter_event_get_device (event);
+   clutter_input_pointer_a11y_update (device, event);
+ 
