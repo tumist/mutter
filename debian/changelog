@@ -1,5 +1,6 @@
-mutter (44.3-4) UNRELEASED; urgency=medium
+mutter (44.3-4) experimental; urgency=medium
 
+  * Team upload
   * d/patches: Update to upstream gnome-44 branch commit 44.3-7-g5d0354035b,
     excluding CI-only changes
     - Make the choice of preferred video mode consistent between code
@@ -23,7 +24,7 @@ mutter (44.3-4) UNRELEASED; urgency=medium
     Ignore removal of meta_test_get_plugin_name(): this is a private
     symbol and is not declared in any headers.
 
- -- Simon McVittie <smcv@debian.org>  Thu, 17 Aug 2023 09:12:27 +0100
+ -- Simon McVittie <smcv@debian.org>  Thu, 17 Aug 2023 10:44:06 +0100
 
 mutter (44.3-3) experimental; urgency=medium
 
