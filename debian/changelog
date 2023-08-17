@@ -9,6 +9,16 @@ mutter (44.3-4) UNRELEASED; urgency=medium
     - Fix a crash if a window is destroyed by a Wayland protocol error
       while it is being moved (mutter#2853)
     - Translation update: fa
+  * d/p/clutter-stage-Add-is-grabbed-property.patch,
+    d/p/window-Postpone-focusing-until-grab-ended-if-uninteractab.patch,
+    d/p/compositor-Handle-grab-state-through-ClutterStage-is-grab.patch:
+    Add patches from upstream to give focus to new app windows when
+    launched from the gnome-shell overview (Closes: #1035092, #1049934)
+  * d/p/tests-Introduce-and-use-a-custom-test-shell.patch,
+    d/p/tests-test-shell-Emulate-overview-grabs.patch,
+    d/p/tests-test-runner-Add-toggle_overview-command.patch,
+    d/p/tests-Add-test-case-for-restoring-focus-after-overview.patch:
+    Add patches from upstream adding test coverage for #1035092
 
  -- Simon McVittie <smcv@debian.org>  Thu, 17 Aug 2023 09:12:27 +0100
 

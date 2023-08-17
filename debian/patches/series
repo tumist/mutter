@@ -4,6 +4,13 @@ settings-Remove-stray-new-line.patch
 settings-Use-appropriate-type-for-xwayland-allow-byte-swa.patch
 settings-Set-xwayland_allow_byte_swapped_clients-at-start.patch
 wayland-Unset-keyboard-focus-if-surface-is-destroyed.patch
+tests-Introduce-and-use-a-custom-test-shell.patch
+tests-test-shell-Emulate-overview-grabs.patch
+tests-test-runner-Add-toggle_overview-command.patch
+clutter-stage-Add-is-grabbed-property.patch
+window-Postpone-focusing-until-grab-ended-if-uninteractab.patch
+tests-Add-test-case-for-restoring-focus-after-overview.patch
+compositor-Handle-grab-state-through-ClutterStage-is-grab.patch
 meson-add-back-default_driver-option.patch
 tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
 debian/meson-Do-not-mark-CI-test-tools-as-required.patch
