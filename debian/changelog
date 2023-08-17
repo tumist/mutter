@@ -19,6 +19,9 @@ mutter (44.3-4) UNRELEASED; urgency=medium
     d/p/tests-test-runner-Add-toggle_overview-command.patch,
     d/p/tests-Add-test-case-for-restoring-focus-after-overview.patch:
     Add patches from upstream adding test coverage for #1035092
+  * d/libmutter-test-12.symbols: Update for #1035092 changes.
+    Ignore removal of meta_test_get_plugin_name(): this is a private
+    symbol and is not declared in any headers.
 
  -- Simon McVittie <smcv@debian.org>  Thu, 17 Aug 2023 09:12:27 +0100
 
