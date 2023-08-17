@@ -18,8 +18,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_BACKEND_TYPE_H
-#define META_BACKEND_TYPE_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -92,4 +91,8 @@ typedef struct _MetaGammaLut
   size_t size;
 } MetaGammaLut;
 
-#endif /* META_BACKEND_TYPE_H */
+typedef struct _MetaInputCapture MetaInputCapture;
+typedef struct _MetaInputCaptureSession MetaInputCaptureSession;
+
+typedef struct _MetaEis MetaEis;
+typedef struct _MetaEisClient MetaEisClient;

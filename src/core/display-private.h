@@ -22,8 +22,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_DISPLAY_PRIVATE_H
-#define META_DISPLAY_PRIVATE_H
+#pragma once
 
 #include "meta/display.h"
 
@@ -91,15 +90,6 @@ struct _MetaDisplay
    * !mouse_mode means "keynav mode")
    */
   guint mouse_mode : 1;
-
-  /* Helper var used when focus_new_windows setting is 'strict'; only
-   * relevant in 'strict' mode and if the focus window is a terminal.
-   * In that case, we don't allow new windows to take focus away from
-   * a terminal, but if the user explicitly did something that should
-   * allow a different window to gain focus (e.g. global keybinding or
-   * clicking on a dock), then we will allow the transfer.
-   */
-  guint allow_terminal_deactivation : 1;
 
   /*< private-ish >*/
   GHashTable *stamps;
@@ -190,7 +180,10 @@ struct _MetaDisplayClass
 MetaDisplay * meta_display_new (MetaContext  *context,
                                 GError      **error);
 
+#ifdef HAVE_X11_CLIENT
 void meta_display_manage_all_xwindows (MetaDisplay *display);
+#endif
+
 void meta_display_unmanage_windows   (MetaDisplay *display,
                                       guint32      timestamp);
 
@@ -269,9 +262,9 @@ void meta_display_queue_autoraise_callback  (MetaDisplay *display,
 void meta_display_remove_autoraise_callback (MetaDisplay *display);
 
 void meta_display_overlay_key_activate (MetaDisplay *display);
-void meta_display_accelerator_activate (MetaDisplay     *display,
-                                        guint            action,
-                                        ClutterKeyEvent *event);
+void meta_display_accelerator_activate (MetaDisplay           *display,
+                                        guint                  action,
+                                        const ClutterKeyEvent *event);
 gboolean meta_display_modifiers_accelerator_activate (MetaDisplay *display);
 
 void meta_display_sync_wayland_input_focus (MetaDisplay *display);
@@ -354,4 +347,7 @@ void meta_display_flush_queued_window (MetaDisplay   *display,
                                        MetaWindow    *window,
                                        MetaQueueType  queue_types);
 
-#endif
+gboolean meta_display_process_captured_input (MetaDisplay        *display,
+                                              const ClutterEvent *event);
+
+void meta_display_cancel_input_capture (MetaDisplay *display);

@@ -23,21 +23,14 @@
  *
  */
 
-#ifndef META_STAGE_VIEW_PRIVATE_H
-#define META_STAGE_VIEW_PRIVATE_H
+#pragma once
 
 #include <cairo.h>
 
-#include "clutter/clutter-mutter.h"
+#include "backends/meta-stage-view.h"
 
 G_BEGIN_DECLS
 
-#define META_TYPE_STAGE_VIEW (meta_stage_view_get_type ())
-
-G_DECLARE_DERIVABLE_TYPE (MetaStageView,
-                          meta_stage_view,
-                          META, STAGE_VIEW,
-                          ClutterStageView)
 
 struct _MetaStageViewClass
 {
@@ -47,5 +40,3 @@ struct _MetaStageViewClass
 ClutterDamageHistory * meta_stage_view_get_damage_history (MetaStageView *view);
 void meta_stage_view_perform_fake_swap (MetaStageView *view,
                                         int64_t        counter);
-
-#endif /* META_STAGE_VIEW_PRIVATE_H */

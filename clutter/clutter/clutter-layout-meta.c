@@ -34,11 +34,11 @@
  * using a [class@LayoutManager].
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-layout-meta.h"
-#include "clutter-debug.h"
-#include "clutter-private.h"
+#include "clutter/clutter-layout-meta.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-private.h"
 
 G_DEFINE_ABSTRACT_TYPE (ClutterLayoutMeta,
                         clutter_layout_meta,
@@ -109,9 +109,7 @@ clutter_layout_meta_class_init (ClutterLayoutMetaClass *klass)
    *
    * The [class@LayoutManager] that created this #ClutterLayoutMeta.
    */
-  pspec = g_param_spec_object ("manager",
-                               P_("Manager"),
-                               P_("The manager that created this data"),
+  pspec = g_param_spec_object ("manager", NULL, NULL,
                                CLUTTER_TYPE_LAYOUT_MANAGER,
                                G_PARAM_CONSTRUCT_ONLY |
                                CLUTTER_PARAM_READWRITE);

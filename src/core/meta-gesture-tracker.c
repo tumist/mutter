@@ -20,9 +20,9 @@
  */
 
 /**
- * SECTION:gesture-tracker
- * @Title: MetaGestureTracker
- * @Short_Description: Manages gestures on windows/desktop
+ * MetaGestureTracker:
+ *
+ * Manages gestures on windows/desktop
  *
  * Forwards touch events to clutter actors, and accepts/rejects touch sequences
  * based on the outcome of those.
@@ -157,9 +157,7 @@ meta_gesture_tracker_class_init (MetaGestureTrackerClass *klass)
   object_class->set_property = meta_gesture_tracker_set_property;
   object_class->get_property = meta_gesture_tracker_get_property;
 
-  obj_props[PROP_AUTODENY_TIMEOUT] = g_param_spec_uint ("autodeny-timeout",
-                                                        "Auto-deny timeout",
-                                                        "Auto-deny timeout",
+  obj_props[PROP_AUTODENY_TIMEOUT] = g_param_spec_uint ("autodeny-timeout", NULL, NULL,
                                                         0, G_MAXUINT, DEFAULT_AUTODENY_TIMEOUT,
                                                         G_PARAM_STATIC_STRINGS |
                                                         G_PARAM_READWRITE |
@@ -203,7 +201,7 @@ meta_sequence_info_new (MetaGestureTracker *tracker,
 
   info = g_new0 (MetaSequenceInfo, 1);
   info->tracker = tracker;
-  info->sequence = event->touch.sequence;
+  info->sequence = clutter_event_get_event_sequence (event);
   info->state = META_SEQUENCE_NONE;
   info->autodeny_timeout_id = g_timeout_add (ms, autodeny_sequence, info);
 
@@ -423,13 +421,13 @@ meta_gesture_tracker_untrack_stage (MetaGestureTracker *tracker)
 
 gboolean
 meta_gesture_tracker_handle_event (MetaGestureTracker *tracker,
+                                   ClutterStage       *stage,
 				   const ClutterEvent *event)
 {
   MetaGestureTrackerPrivate *priv;
   ClutterEventSequence *sequence;
   MetaSequenceState state;
   MetaSequenceInfo *info;
-  ClutterActor *stage;
   gfloat x, y;
 
   sequence = clutter_event_get_event_sequence (event);
@@ -438,13 +436,12 @@ meta_gesture_tracker_handle_event (MetaGestureTracker *tracker,
     return FALSE;
 
   priv = meta_gesture_tracker_get_instance_private (tracker);
-  stage = CLUTTER_ACTOR (clutter_event_get_stage (event));
 
-  switch (event->type)
+  switch (clutter_event_type (event))
     {
     case CLUTTER_TOUCH_BEGIN:
       if (g_hash_table_size (priv->sequences) == 0)
-        meta_gesture_tracker_track_stage (tracker, stage);
+        meta_gesture_tracker_track_stage (tracker, CLUTTER_ACTOR (stage));
 
       info = meta_sequence_info_new (tracker, event);
       g_hash_table_insert (priv->sequences, sequence, info);

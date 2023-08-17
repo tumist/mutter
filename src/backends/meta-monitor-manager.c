@@ -25,9 +25,9 @@
  */
 
 /**
- * SECTION:meta-monitor-manager
- * @title: MetaMonitorManager
- * @short_description: A manager for multiple monitors
+ * MetaMonitorManager:
+ *
+ * A manager for multiple monitors
  *
  * #MetaMonitorManager is an abstract class which contains methods to handle
  * multiple monitors (both #MetaMonitor and #MetaLogicalMonitor) and GPU's
@@ -551,7 +551,7 @@ ensure_hdr_settings (MetaMonitorManager *manager)
  * @manager: A #MetaMonitorManager object
  *
  * Returns whether the monitor manager is headless, i.e. without
- * any #MetaLogicalMonitor<!-- -->s attached to it.
+ * any `MetaLogicalMonitor`s attached to it.
  *
  * Returns: %TRUE if no monitors are attached, %FALSE otherwise.
  */
@@ -1500,45 +1500,35 @@ meta_monitor_manager_class_init (MetaMonitorManagerClass *klass)
                   G_TYPE_NONE, 2, META_TYPE_LOGICAL_MONITOR, G_TYPE_BOOLEAN);
 
   obj_props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "backend",
-                         "MetaBackend",
+    g_param_spec_object ("backend", NULL, NULL,
                          META_TYPE_BACKEND,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY |
                          G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_PANEL_ORIENTATION_MANAGED] =
-    g_param_spec_boolean ("panel-orientation-managed",
-                          "Panel orientation managed",
-                          "Panel orientation is managed",
+    g_param_spec_boolean ("panel-orientation-managed", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE |
                           G_PARAM_EXPLICIT_NOTIFY |
                           G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_HAS_BUILTIN_PANEL] =
-    g_param_spec_boolean ("has-builtin-panel",
-                          "Has builtin panel",
-                          "The system has a built in panel",
+    g_param_spec_boolean ("has-builtin-panel", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE |
                           G_PARAM_EXPLICIT_NOTIFY |
                           G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_NIGHT_LIGHT_SUPPORTED] =
-    g_param_spec_boolean ("night-light-supported",
-                          "Night light supported",
-                          "Night light is supported",
+    g_param_spec_boolean ("night-light-supported", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE |
                           G_PARAM_EXPLICIT_NOTIFY |
                           G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_EXPERIMENTAL_HDR] =
-    g_param_spec_string ("experimental-hdr",
-                         "Experimental HDR",
-                         "Experimental HDR settings string",
+    g_param_spec_string ("experimental-hdr", NULL, NULL,
                          NULL,
                          G_PARAM_READWRITE |
                          G_PARAM_STATIC_STRINGS);
@@ -3188,10 +3178,10 @@ initialize_dbus_interface (MetaMonitorManager *manager)
  * meta_monitor_manager_get_num_logical_monitors:
  * @manager: A #MetaMonitorManager object
  *
- * Returns the number of #MetaLogicalMonitor<!-- -->s (can be 0 in case of a
+ * Returns the number of `MetaLogicalMonitor`s (can be 0 in case of a
  * headless setup).
  *
- * Returns: the total number of #MetaLogicalMonitor<!-- -->s.
+ * Returns: the total number of `MetaLogicalMonitor`s.
  */
 int
 meta_monitor_manager_get_num_logical_monitors (MetaMonitorManager *manager)
@@ -3203,7 +3193,7 @@ meta_monitor_manager_get_num_logical_monitors (MetaMonitorManager *manager)
  * meta_monitor_manager_get_logical_monitors:
  * @manager: A #MetaMonitorManager object
  *
- * Returns the list of #MetaLogicalMonitor<!-- -->s that is handled. See also
+ * Returns the list of `MetaLogicalMonitor`s that is handled. See also
  * meta_monitor_manager_get_num_logical_monitors() if you only need the size of
  * the list.
  *
@@ -3399,6 +3389,47 @@ meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
   return best_logical_monitor;
 }
 
+/**
+ * meta_monitor_manager_get_highest_scale_from_rect:
+ * @manager: A #MetaMonitorManager object
+ * @rect: The rectangle
+ *
+ * Finds the #MetaLogicalMonitor with the highest scale intersecting @rect.
+ *
+ * Returns: (transfer none) (nullable): the #MetaLogicalMonitor with the
+ *          highest scale intersecting with @rect, or %NULL if none.
+ */
+MetaLogicalMonitor *
+meta_monitor_manager_get_highest_scale_monitor_from_rect (MetaMonitorManager *manager,
+                                                          MetaRectangle      *rect)
+{
+  MetaLogicalMonitor *best_logical_monitor = NULL;
+  GList *l;
+  float best_scale = 0.0;
+
+  for (l = manager->logical_monitors; l; l = l->next)
+    {
+      MetaLogicalMonitor *logical_monitor = l->data;
+      MetaRectangle intersection;
+      float scale;
+
+      if (!meta_rectangle_intersect (&logical_monitor->rect,
+                                     rect,
+                                     &intersection))
+        continue;
+
+      scale = meta_logical_monitor_get_scale (logical_monitor);
+
+      if (scale > best_scale)
+        {
+          best_scale = scale;
+          best_logical_monitor = logical_monitor;
+        }
+    }
+
+  return best_logical_monitor;
+}
+
 MetaLogicalMonitor *
 meta_monitor_manager_get_logical_monitor_neighbor (MetaMonitorManager  *manager,
                                                    MetaLogicalMonitor  *logical_monitor,
@@ -3421,11 +3452,11 @@ meta_monitor_manager_get_logical_monitor_neighbor (MetaMonitorManager  *manager,
  * meta_monitor_manager_get_monitors:
  * @manager: A #MetaMonitorManager object
  *
- * Returns the list of #MetaMonitor<!-- -->s. See also
+ * Returns the list of [class@Meta.Monitor]s. See also
  * meta_monitor_manager_get_logical_monitors() for a list of
- * #MetaLogicalMonitor<!-- -->s.
+ * `MetaLogicalMonitor`s.
  *
- * Returns: (transfer none) (nullable): the list of #MetaMonitor<!-- -->s.
+ * Returns: (transfer none) (nullable): the list of [class@Meta.Monitor]s.
  */
 GList *
 meta_monitor_manager_get_monitors (MetaMonitorManager *manager)

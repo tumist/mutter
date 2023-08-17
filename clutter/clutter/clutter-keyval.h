@@ -20,14 +20,14 @@
  * 
  * The code is a modified version of the GDK implementation
  */
-#ifndef __CLUTTER_KEYVAL_H__
-#define __CLUTTER_KEYVAL_H__
+
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/keyval.h> can be included directly."
 #endif
 
-#include <clutter/clutter-types.h>
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -40,5 +40,3 @@ CLUTTER_EXPORT
 char * clutter_keyval_name       (unsigned int keyval);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_KEYVAL_H__ */

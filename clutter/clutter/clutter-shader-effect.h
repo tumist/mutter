@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_SHADER_EFFECT_H__
-#define __CLUTTER_SHADER_EFFECT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-offscreen-effect.h>
+#include "clutter/clutter-offscreen-effect.h"
 
 G_BEGIN_DECLS
 
@@ -70,14 +69,6 @@ struct _ClutterShaderEffectClass
 
   /*< public >*/
   gchar * (* get_static_shader_source) (ClutterShaderEffect *effect);
-
-  /*< private >*/
-  /* padding */
-  void (*_clutter_shader1) (void);
-  void (*_clutter_shader2) (void);
-  void (*_clutter_shader3) (void);
-  void (*_clutter_shader4) (void);
-  void (*_clutter_shader5) (void);
 };
 
 CLUTTER_EXPORT
@@ -107,5 +98,3 @@ CLUTTER_EXPORT
 CoglHandle      clutter_shader_effect_get_program       (ClutterShaderEffect *effect);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_SHADER_EFFECT_H__ */

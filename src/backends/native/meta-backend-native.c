@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:meta-backend-native
- * @title: MetaBackendNative
- * @short_description: A native (KMS/evdev) MetaBackend
+ * MetaBackendNative:
+ *
+ * A native (KMS/evdev) MetaBackend
  *
  * MetaBackendNative is an implementation of #MetaBackend that uses "native"
  * technologies like DRM/KMS and libinput/evdev to perform the necessary
@@ -155,6 +155,7 @@ meta_backend_native_create_default_seat (MetaBackend  *backend,
   return CLUTTER_SEAT (g_object_new (META_TYPE_SEAT_NATIVE,
                                      "backend", backend,
                                      "seat-id", seat_id,
+                                     "name", seat_id,
                                      "flags", flags,
                                      NULL));
 }
@@ -592,9 +593,6 @@ add_drm_device (MetaBackendNative  *backend_native,
   if (meta_is_udev_device_disable_modifiers (device))
     flags |= META_KMS_DEVICE_FLAG_DISABLE_MODIFIERS;
 
-  if (meta_is_udev_device_disable_client_modifiers (device))
-    flags |= META_KMS_DEVICE_FLAG_DISABLE_CLIENT_MODIFIERS;
-
   if (meta_is_udev_device_preferred_primary (device))
     flags |= META_KMS_DEVICE_FLAG_PREFERRED_PRIMARY;
 
@@ -759,6 +757,17 @@ init_gpus (MetaBackendNative  *native,
   return TRUE;
 }
 
+static void
+on_started (MetaContext *context,
+            MetaBackend *backend)
+{
+  ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
+  ClutterSeat *seat;
+
+  seat = clutter_backend_get_default_seat (clutter_backend);
+  meta_seat_native_start (META_SEAT_NATIVE (seat));
+}
+
 static gboolean
 meta_backend_native_initable_init (GInitable     *initable,
                                    GCancellable  *cancellable,
@@ -806,6 +815,11 @@ meta_backend_native_initable_init (GInitable     *initable,
 
   if (!init_gpus (native, error))
     return FALSE;
+
+  g_signal_connect (meta_backend_get_context (backend),
+                    "started",
+                    G_CALLBACK (on_started),
+                    backend);
 
   return initable_parent_iface->init (initable, cancellable, error);
 }
@@ -871,9 +885,7 @@ meta_backend_native_class_init (MetaBackendNativeClass *klass)
   backend_class->is_headless = meta_backend_native_is_headless;
 
   obj_props[PROP_MODE] =
-    g_param_spec_enum ("mode",
-                       "mode",
-                       "mode",
+    g_param_spec_enum ("mode", NULL, NULL,
                        META_TYPE_BACKEND_NATIVE_MODE,
                        META_BACKEND_NATIVE_MODE_DEFAULT,
                        G_PARAM_WRITABLE |

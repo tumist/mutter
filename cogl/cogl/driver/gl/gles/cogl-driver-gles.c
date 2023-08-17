@@ -32,17 +32,17 @@
 
 #include <string.h>
 
-#include "cogl-context-private.h"
-#include "cogl-feature-private.h"
-#include "cogl-renderer-private.h"
-#include "cogl-private.h"
-#include "driver/gl/cogl-util-gl-private.h"
-#include "driver/gl/cogl-framebuffer-gl-private.h"
-#include "driver/gl/cogl-texture-2d-gl-private.h"
-#include "driver/gl/cogl-attribute-gl-private.h"
-#include "driver/gl/cogl-clip-stack-gl-private.h"
-#include "driver/gl/cogl-buffer-gl-private.h"
-#include "driver/gl/cogl-pipeline-opengl-private.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-feature-private.h"
+#include "cogl/cogl-renderer-private.h"
+#include "cogl/cogl-private.h"
+#include "cogl/driver/gl/cogl-util-gl-private.h"
+#include "cogl/driver/gl/cogl-framebuffer-gl-private.h"
+#include "cogl/driver/gl/cogl-texture-2d-gl-private.h"
+#include "cogl/driver/gl/cogl-attribute-gl-private.h"
+#include "cogl/driver/gl/cogl-clip-stack-gl-private.h"
+#include "cogl/driver/gl/cogl-buffer-gl-private.h"
+#include "cogl/driver/gl/cogl-pipeline-opengl-private.h"
 
 #ifndef GL_UNSIGNED_INT_24_8
 #define GL_UNSIGNED_INT_24_8 0x84FA
@@ -178,6 +178,17 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
 #endif
 
       G_GNUC_FALLTHROUGH;
+
+    case COGL_PIXEL_FORMAT_BGRX_8888:
+    case COGL_PIXEL_FORMAT_RGBX_8888:
+    case COGL_PIXEL_FORMAT_XRGB_8888:
+    case COGL_PIXEL_FORMAT_XBGR_8888:
+      glintformat = GL_RGBA;
+      glformat = GL_RGBA;
+      gltype = GL_UNSIGNED_BYTE;
+      required_format = COGL_PIXEL_FORMAT_RGBA_8888_PRE;
+      break;
+
     case COGL_PIXEL_FORMAT_RGBA_8888:
     case COGL_PIXEL_FORMAT_RGBA_8888_PRE:
     case COGL_PIXEL_FORMAT_ARGB_8888:
@@ -212,6 +223,7 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       gltype = GL_UNSIGNED_SHORT_5_5_5_1;
       break;
 
+    case COGL_PIXEL_FORMAT_BGRX_FP_16161616:
     case COGL_PIXEL_FORMAT_BGRA_FP_16161616:
     case COGL_PIXEL_FORMAT_XRGB_FP_16161616:
     case COGL_PIXEL_FORMAT_ARGB_FP_16161616:
@@ -223,6 +235,7 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
       g_warning ("Unhandled 16 bpc pixel format used");
 
       G_GNUC_FALLTHROUGH;
+    case COGL_PIXEL_FORMAT_RGBX_FP_16161616:
     case COGL_PIXEL_FORMAT_RGBA_FP_16161616:
     case COGL_PIXEL_FORMAT_RGBA_FP_16161616_PRE:
       if (!_cogl_has_private_feature

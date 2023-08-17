@@ -41,6 +41,15 @@
 #include "backends/native/meta-kms-private.h"
 #include "backends/native/meta-kms-update-private.h"
 
+enum
+{
+  CRTC_NEEDS_FLUSH,
+
+  N_SIGNALS
+};
+
+static int signals[N_SIGNALS];
+
 struct _MetaKmsDevice
 {
   GObject parent;
@@ -61,6 +70,9 @@ struct _MetaKmsDevice
   MetaKmsDeviceCaps caps;
 
   GList *fallback_modes;
+
+  GHashTable *needs_flush_crtcs;
+  GMutex needs_flush_mutex;
 };
 
 G_DEFINE_TYPE (MetaKmsDevice, meta_kms_device, G_TYPE_OBJECT);
@@ -232,9 +244,9 @@ meta_kms_device_get_fallback_modes (MetaKmsDevice *device)
 }
 
 static gpointer
-disable_device_in_impl (MetaKmsImpl  *impl,
-                        gpointer      user_data,
-                        GError      **error)
+disable_device_in_impl (MetaThreadImpl  *thread_impl,
+                        gpointer         user_data,
+                        GError         **error)
 {
   MetaKmsImplDevice *impl_device = user_data;
 
@@ -289,9 +301,9 @@ typedef struct
 } PostUpdateData;
 
 static gpointer
-process_update_in_impl (MetaKmsImpl  *impl,
-                        gpointer      user_data,
-                        GError      **error)
+process_sync_update_in_impl (MetaThreadImpl  *thread_impl,
+                             gpointer         user_data,
+                             GError         **error)
 {
   PostUpdateData *data = user_data;
   MetaKmsUpdate *update = data->update;
@@ -309,14 +321,115 @@ meta_kms_device_process_update_sync (MetaKmsDevice     *device,
   MetaKms *kms = META_KMS (meta_kms_device_get_kms (device));
   PostUpdateData data;
 
-  meta_kms_update_seal (update);
-
   data = (PostUpdateData) {
     .update = update,
     .flags = flags,
   };
-  return meta_kms_run_impl_task_sync (kms, process_update_in_impl,
+  return meta_kms_run_impl_task_sync (kms, process_sync_update_in_impl,
                                       &data, NULL);
+}
+
+static gpointer
+process_async_update_in_impl (MetaThreadImpl  *thread_impl,
+                              gpointer         user_data,
+                              GError         **error)
+{
+  PostUpdateData *data = user_data;
+  MetaKmsUpdate *update = data->update;
+  MetaKmsDevice *device = meta_kms_update_get_device (update);
+  MetaKmsImplDevice *impl_device = meta_kms_device_get_impl_device (device);
+
+  meta_kms_impl_device_handle_update (impl_device, update, data->flags);
+
+  return GINT_TO_POINTER (TRUE);
+}
+
+void
+meta_kms_device_post_update (MetaKmsDevice       *device,
+                             MetaKmsUpdate       *update,
+                             MetaKmsUpdateFlag    flags)
+{
+  MetaKms *kms = META_KMS (meta_kms_device_get_kms (device));
+  PostUpdateData *data;
+
+  g_return_if_fail (meta_kms_update_get_device (update) == device);
+
+  data = g_new0 (PostUpdateData, 1);
+  *data = (PostUpdateData) {
+    .update = update,
+    .flags = flags,
+  };
+
+  meta_thread_post_impl_task (META_THREAD (kms),
+                              process_async_update_in_impl,
+                              data, g_free,
+                              NULL, NULL);
+}
+
+static gpointer
+await_flush_in_impl (MetaThreadImpl  *thread_impl,
+                     gpointer         user_data,
+                     GError         **error)
+{
+  MetaKmsCrtc *crtc = META_KMS_CRTC (user_data);
+  MetaKmsDevice *device = meta_kms_crtc_get_device (crtc);
+  MetaKmsImplDevice *impl_device = meta_kms_device_get_impl_device (device);
+
+  meta_kms_impl_device_await_flush (impl_device, crtc);
+
+  return NULL;
+}
+
+void
+meta_kms_device_await_flush (MetaKmsDevice *device,
+                             MetaKmsCrtc   *crtc)
+{
+  MetaKms *kms = meta_kms_device_get_kms (device);
+
+  meta_thread_post_impl_task (META_THREAD (kms),
+                              await_flush_in_impl,
+                              crtc, NULL,
+                              NULL, NULL);
+}
+
+static void
+emit_crtc_needs_flush_in_main (MetaThread *thread,
+                               gpointer    user_data)
+{
+  MetaKmsCrtc *crtc = user_data;
+
+  g_signal_emit (meta_kms_crtc_get_device (crtc),
+                 signals[CRTC_NEEDS_FLUSH], 0, crtc);
+}
+
+void
+meta_kms_device_set_needs_flush (MetaKmsDevice *device,
+                                 MetaKmsCrtc   *crtc)
+{
+  gboolean needs_flush;
+
+  g_mutex_lock (&device->needs_flush_mutex);
+  needs_flush = g_hash_table_add (device->needs_flush_crtcs, crtc);
+  g_mutex_unlock (&device->needs_flush_mutex);
+
+  if (needs_flush)
+    {
+      meta_kms_queue_callback (meta_kms_device_get_kms (device),
+                               NULL, emit_crtc_needs_flush_in_main, crtc, NULL);
+    }
+}
+
+gboolean
+meta_kms_device_handle_flush (MetaKmsDevice *device,
+                              MetaKmsCrtc   *crtc)
+{
+  gboolean needs_flush;
+
+  g_mutex_lock (&device->needs_flush_mutex);
+  needs_flush = g_hash_table_remove (device->needs_flush_crtcs, crtc);
+  g_mutex_unlock (&device->needs_flush_mutex);
+
+  return needs_flush;
 }
 
 void
@@ -484,10 +597,11 @@ meta_create_kms_impl_device (MetaKmsDevice      *device,
 }
 
 static gpointer
-create_impl_device_in_impl (MetaKmsImpl  *impl,
-                            gpointer      user_data,
-                            GError      **error)
+create_impl_device_in_impl (MetaThreadImpl  *thread_impl,
+                            gpointer         user_data,
+                            GError         **error)
 {
+  MetaKmsImpl *impl = META_KMS_IMPL (thread_impl);
   CreateImplDeviceData *data = user_data;
   MetaKmsImplDevice *impl_device;
 
@@ -561,9 +675,9 @@ meta_kms_device_new (MetaKms            *kms,
 }
 
 static gpointer
-free_impl_device_in_impl (MetaKmsImpl  *impl,
-                          gpointer      user_data,
-                          GError      **error)
+free_impl_device_in_impl (MetaThreadImpl  *thread_impl,
+                          gpointer         user_data,
+                          GError         **error)
 {
   MetaKmsImplDevice *impl_device = user_data;
 
@@ -592,12 +706,17 @@ meta_kms_device_finalize (GObject *object)
                                    NULL);
     }
 
+  g_mutex_clear (&device->needs_flush_mutex);
+  g_hash_table_unref (device->needs_flush_crtcs);
+
   G_OBJECT_CLASS (meta_kms_device_parent_class)->finalize (object);
 }
 
 static void
 meta_kms_device_init (MetaKmsDevice *device)
 {
+  device->needs_flush_crtcs = g_hash_table_new (NULL, NULL);
+  g_mutex_init (&device->needs_flush_mutex);
 }
 
 static void
@@ -606,4 +725,13 @@ meta_kms_device_class_init (MetaKmsDeviceClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = meta_kms_device_finalize;
+
+  signals[CRTC_NEEDS_FLUSH] =
+    g_signal_new ("crtc-needs-flush",
+                  G_TYPE_FROM_CLASS (klass),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 1,
+                  META_TYPE_KMS_CRTC);
 }

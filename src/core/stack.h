@@ -18,12 +18,12 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_STACK_H
-#define META_STACK_H
+#pragma once
 
 /**
- * SECTION:stack
- * @short_description: Which windows cover which other windows
+ * stack:
+ *
+ * Which windows cover which other windows
  *
  * There are two factors that determine window position.
  *
@@ -337,5 +337,3 @@ void meta_stack_set_positions (MetaStack *stack,
 
 void meta_stack_update_window_tile_matches (MetaStack     *stack,
                                             MetaWorkspace *workspace);
-
-#endif

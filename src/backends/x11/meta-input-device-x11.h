@@ -17,8 +17,7 @@
  * Author: Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef META_INPUT_DEVICE_X11_H
-#define META_INPUT_DEVICE_X11_H
+#pragma once
 
 #include <X11/extensions/XInput2.h>
 
@@ -43,10 +42,6 @@ typedef struct _MetaInputDeviceX11Class MetaInputDeviceX11Class;
 
 GType meta_input_device_x11_get_type (void) G_GNUC_CONST;
 
-void  meta_input_device_x11_translate_state (ClutterEvent    *event,
-                                             XIModifierState *modifiers_state,
-                                             XIButtonState   *buttons_state,
-                                             XIGroupState    *group_state);
 void  meta_input_device_x11_update_tool     (ClutterInputDevice     *device,
                                              ClutterInputDeviceTool *tool);
 ClutterInputDeviceTool * meta_input_device_x11_get_current_tool (ClutterInputDevice *device);
@@ -98,5 +93,3 @@ gboolean meta_input_device_x11_get_scroll_delta (ClutterInputDevice     *device,
 void meta_input_device_x11_reset_scroll_info (ClutterInputDevice *device);
 
 G_END_DECLS
-
-#endif /* META_INPUT_DEVICE_X11_H */

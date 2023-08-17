@@ -22,6 +22,7 @@
 
 #include <dlfcn.h>
 
+#include "backends/native/meta-backend-native.h"
 #include "backends/native/meta-kms-connector.h"
 #include "backends/native/meta-kms-crtc.h"
 #include "backends/native/meta-kms-device.h"
@@ -32,6 +33,12 @@
 #include "tests/meta-kms-test-utils.h"
 
 static MetaContext *test_context;
+
+typedef enum
+{
+  POPULATE_UPDATE_FLAG_PLANE = 1 << 0,
+  POPULATE_UPDATE_FLAG_MODE = 1 << 1,
+} PopulateUpdateFlags;
 
 const MetaKmsCrtcState *
 meta_kms_crtc_get_current_state (MetaKmsCrtc *crtc)
@@ -55,6 +62,46 @@ meta_kms_crtc_get_current_state (MetaKmsCrtc *crtc)
 }
 
 static void
+populate_update (MetaKmsUpdate        *update,
+                 MetaDrmBuffer       **buffer,
+                 PopulateUpdateFlags   flags)
+{
+  MetaKmsDevice *device;
+  MetaKmsCrtc *crtc;
+  MetaKmsConnector *connector;
+  MetaKmsMode *mode;
+
+  device = meta_get_test_kms_device (test_context);
+  crtc = meta_get_test_kms_crtc (device);
+  connector = meta_get_test_kms_connector (device);
+  mode = meta_kms_connector_get_preferred_mode (connector);
+
+  if (flags & POPULATE_UPDATE_FLAG_MODE)
+    {
+      meta_kms_update_mode_set (update, crtc,
+                                g_list_append (NULL, connector),
+                                mode);
+    }
+
+  if (flags & (POPULATE_UPDATE_FLAG_PLANE |
+               POPULATE_UPDATE_FLAG_MODE))
+    {
+      MetaKmsPlane *primary_plane;
+
+      *buffer = meta_create_test_mode_dumb_buffer (device, mode);
+
+      primary_plane = meta_kms_device_get_primary_plane_for (device, crtc);
+      meta_kms_update_assign_plane (update,
+                                    crtc,
+                                    primary_plane,
+                                    *buffer,
+                                    meta_get_mode_fixed_rect_16 (mode),
+                                    meta_get_mode_rect (mode),
+                                    META_KMS_ASSIGN_PLANE_FLAG_NONE);
+    }
+}
+
+static void
 meta_test_kms_update_sanity (void)
 {
   MetaKmsDevice *device;
@@ -66,7 +113,6 @@ meta_test_kms_update_sanity (void)
 
   update = meta_kms_update_new (device);
   g_assert (meta_kms_update_get_device (update) == device);
-  g_assert_false (meta_kms_update_is_sealed (update));
   g_assert_null (meta_kms_update_get_primary_plane_assignment (update, crtc));
   g_assert_null (meta_kms_update_get_plane_assignments (update));
   g_assert_null (meta_kms_update_get_mode_sets (update));
@@ -322,7 +368,6 @@ meta_test_kms_update_page_flip (void)
   g_autoptr (MetaDrmBuffer) primary_buffer2 = NULL;
   MetaKmsPlane *primary_plane;
   PageFlipData data = {};
-  MetaKmsFeedback *feedback;
 
   device = meta_get_test_kms_device (test_context);
   crtc = meta_get_test_kms_crtc (device);
@@ -351,13 +396,12 @@ meta_test_kms_update_page_flip (void)
   meta_kms_update_add_page_flip_listener (update, crtc,
                                           &page_flip_listener_vtable,
                                           META_KMS_PAGE_FLIP_LISTENER_FLAG_NONE,
+                                          NULL,
                                           &data,
                                           page_flip_data_destroy);
 
-  feedback =
-    meta_kms_device_process_update_sync (device, update,
-                                         META_KMS_UPDATE_FLAG_NONE);
-  meta_kms_feedback_unref (feedback);
+  meta_kms_device_post_update (device, update,
+                               META_KMS_UPDATE_FLAG_NONE);
 
   g_main_loop_run (data.loop);
   g_assert_cmpint (data.state, ==, DESTROYED);
@@ -375,13 +419,12 @@ meta_test_kms_update_page_flip (void)
   meta_kms_update_add_page_flip_listener (update, crtc,
                                           &page_flip_listener_vtable,
                                           META_KMS_PAGE_FLIP_LISTENER_FLAG_NONE,
+                                          NULL,
                                           &data,
                                           page_flip_data_destroy);
 
-  feedback =
-    meta_kms_device_process_update_sync (device, update,
-                                         META_KMS_UPDATE_FLAG_NONE);
-  meta_kms_feedback_unref (feedback);
+  meta_kms_device_post_update (device, update,
+                               META_KMS_UPDATE_FLAG_NONE);
 
   g_main_loop_run (data.loop);
   g_assert_cmpint (data.state, ==, DESTROYED);
@@ -594,6 +637,218 @@ meta_test_kms_update_merge (void)
   meta_kms_update_free (update1);
 }
 
+typedef struct _ThreadData
+{
+  GMutex init_mutex;
+  GMainContext *main_context;
+  GMainLoop *main_thread_loop;
+  GThread *thread;
+} ThreadData;
+
+static gpointer
+off_thread_page_flip_thread_func (gpointer user_data)
+{
+  ThreadData *data = user_data;
+  MetaKmsDevice *device;
+  MetaKms *kms;
+  MetaKmsUpdate *update;
+  MetaKmsCrtc *crtc;
+  g_autoptr (MetaDrmBuffer) primary_buffer1 = NULL;
+  g_autoptr (MetaDrmBuffer) primary_buffer2 = NULL;
+  PageFlipData page_flip_data = {};
+
+  g_mutex_lock (&data->init_mutex);
+  g_mutex_unlock (&data->init_mutex);
+
+  device = meta_get_test_kms_device (test_context);
+  kms = meta_kms_device_get_kms (device);
+  crtc = meta_get_test_kms_crtc (device);
+
+  meta_thread_register_callback_context (META_THREAD (kms),
+                                         data->main_context);
+
+  update = meta_kms_update_new (device);
+  populate_update (update, &primary_buffer1, POPULATE_UPDATE_FLAG_MODE);
+
+  page_flip_data.loop = g_main_loop_new (data->main_context, FALSE);
+  page_flip_data.thread = g_thread_self ();
+  meta_kms_update_add_page_flip_listener (update, crtc,
+                                          &page_flip_listener_vtable,
+                                          META_KMS_PAGE_FLIP_LISTENER_FLAG_NONE,
+                                          data->main_context,
+                                          &page_flip_data,
+                                          page_flip_data_destroy);
+
+  meta_kms_device_post_update (device, update,
+                               META_KMS_UPDATE_FLAG_NONE);
+
+  g_main_loop_run (page_flip_data.loop);
+  g_assert_cmpint (page_flip_data.state, ==, DESTROYED);
+
+  page_flip_data.state = INIT;
+
+  update = meta_kms_update_new (device);
+  populate_update (update, &primary_buffer2, POPULATE_UPDATE_FLAG_PLANE);
+
+  meta_kms_update_add_page_flip_listener (update, crtc,
+                                          &page_flip_listener_vtable,
+                                          META_KMS_PAGE_FLIP_LISTENER_FLAG_NONE,
+                                          data->main_context,
+                                          &page_flip_data,
+                                          page_flip_data_destroy);
+
+  meta_kms_device_post_update (device, update,
+                               META_KMS_UPDATE_FLAG_NONE);
+
+  g_main_loop_run (page_flip_data.loop);
+  g_assert_cmpint (page_flip_data.state, ==, DESTROYED);
+
+  g_main_loop_unref (page_flip_data.loop);
+
+  g_main_loop_quit (data->main_thread_loop);
+
+  meta_thread_unregister_callback_context (META_THREAD (kms),
+                                           data->main_context);
+
+  return GINT_TO_POINTER (TRUE);
+}
+
+static void
+meta_test_kms_update_off_thread_page_flip (void)
+{
+  ThreadData data = {};
+
+  g_mutex_init (&data.init_mutex);
+  g_mutex_lock (&data.init_mutex);
+  data.main_context = g_main_context_new ();
+  data.main_thread_loop = g_main_loop_new (NULL, FALSE);
+  data.thread = g_thread_new ("Off-thread page flip test",
+                              off_thread_page_flip_thread_func,
+                              &data);
+  g_mutex_unlock (&data.init_mutex);
+
+  g_main_loop_run (data.main_thread_loop);
+  g_assert_cmpint (GPOINTER_TO_INT (g_thread_join (data.thread)), ==, TRUE);
+  g_main_loop_unref (data.main_thread_loop);
+  g_main_context_unref (data.main_context);
+  g_mutex_clear (&data.init_mutex);
+}
+
+typedef struct
+{
+  GMutex init_mutex;
+  GCond init_cond;
+  gboolean initialized;
+
+  GMainContext *thread_main_context;
+  GMainLoop *thread_loop;
+  GThread *thread;
+
+  GMainLoop *main_thread_loop;
+} CallbackData;
+
+static gpointer
+off_thread_callback_thread_func (gpointer user_data)
+{
+  CallbackData *data = user_data;
+  MetaBackend *backend = meta_context_get_backend (test_context);
+  MetaBackendNative *backend_native = META_BACKEND_NATIVE (backend);
+  MetaKms *kms = meta_backend_native_get_kms (backend_native);
+
+  meta_thread_register_callback_context (META_THREAD (kms),
+                                         data->thread_main_context);
+
+  data->thread_loop = g_main_loop_new (data->thread_main_context, FALSE);
+
+  g_mutex_lock (&data->init_mutex);
+  data->initialized = TRUE;
+  g_cond_signal (&data->init_cond);
+  g_mutex_unlock (&data->init_mutex);
+
+  g_assert (data->thread == g_thread_self ());
+
+  g_main_loop_run (data->thread_loop);
+  g_main_loop_unref (data->thread_loop);
+
+  meta_thread_unregister_callback_context (META_THREAD (kms),
+                                           data->thread_main_context);
+
+  return GINT_TO_POINTER (TRUE);
+}
+
+static void
+main_thread_result_feedback (const MetaKmsFeedback *feedback,
+                             gpointer               user_data)
+{
+  CallbackData *data = user_data;
+
+  g_main_loop_quit (data->main_thread_loop);
+}
+
+static const MetaKmsResultListenerVtable main_thread_result_listener_vtable = {
+  .feedback = main_thread_result_feedback,
+};
+
+static void
+callback_thread_result_feedback (const MetaKmsFeedback *feedback,
+                                 gpointer               user_data)
+{
+  CallbackData *data = user_data;
+
+  g_main_loop_quit (data->thread_loop);
+}
+
+static const MetaKmsResultListenerVtable callback_thread_result_listener_vtable = {
+  .feedback = callback_thread_result_feedback,
+};
+
+static void
+meta_test_kms_update_feedback (void)
+{
+  CallbackData data = {};
+  MetaKmsDevice *device;
+  MetaKmsUpdate *update;
+  g_autoptr (MetaDrmBuffer) buffer = NULL;
+
+  data.main_thread_loop = g_main_loop_new (NULL, FALSE);
+
+  g_mutex_init (&data.init_mutex);
+  g_cond_init (&data.init_cond);
+  g_mutex_lock (&data.init_mutex);
+  data.thread_main_context = g_main_context_new ();
+  data.thread = g_thread_new ("Callback test thread",
+                              off_thread_callback_thread_func,
+                              &data);
+  while (!data.initialized)
+    g_cond_wait (&data.init_cond, &data.init_mutex);
+  g_mutex_unlock (&data.init_mutex);
+
+  device = meta_get_test_kms_device (test_context);
+  update = meta_kms_update_new (device);
+  populate_update (update, &buffer, POPULATE_UPDATE_FLAG_MODE);
+
+  meta_kms_update_add_result_listener (update,
+                                       &main_thread_result_listener_vtable,
+                                       NULL,
+                                       &data,
+                                       NULL);
+  meta_kms_update_add_result_listener (update,
+                                       &callback_thread_result_listener_vtable,
+                                       data.thread_main_context,
+                                       &data,
+                                       NULL);
+
+  meta_kms_device_post_update (device, update,
+                               META_KMS_UPDATE_FLAG_NONE);
+
+  g_main_loop_run (data.main_thread_loop);
+
+  g_assert_cmpint (GPOINTER_TO_INT (g_thread_join (data.thread)), ==, TRUE);
+  g_main_context_unref (data.thread_main_context);
+  g_mutex_clear (&data.init_mutex);
+  g_cond_clear (&data.init_cond);
+}
+
 static void
 init_tests (void)
 {
@@ -609,6 +864,10 @@ init_tests (void)
                    meta_test_kms_update_page_flip);
   g_test_add_func ("/backends/native/kms/update/merge",
                    meta_test_kms_update_merge);
+  g_test_add_func ("/backends/native/kms/update/off-thread-page-flip",
+                   meta_test_kms_update_off_thread_page_flip);
+  g_test_add_func ("/backends/native/kms/update/feedback",
+                   meta_test_kms_update_feedback);
 }
 
 int

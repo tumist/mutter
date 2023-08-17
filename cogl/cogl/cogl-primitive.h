@@ -31,21 +31,20 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
+#pragma once
+
 #if !defined(__COGL_H_INSIDE__) && !defined(COGL_COMPILATION)
 #error "Only <cogl/cogl.h> can be included directly."
 #endif
-
-#ifndef __COGL_PRIMITIVE_H__
-#define __COGL_PRIMITIVE_H__
 
 /* We forward declare the CoglPrimitive type here to avoid some circular
  * dependency issues with the following headers.
  */
 typedef struct _CoglPrimitive CoglPrimitive;
 
-#include <cogl/cogl-types.h> /* for CoglVerticesMode */
-#include <cogl/cogl-attribute.h>
-#include <cogl/cogl-framebuffer.h>
+#include "cogl/cogl-types.h" /* for CoglVerticesMode */
+#include "cogl/cogl-attribute.h"
+#include "cogl/cogl-framebuffer.h"
 
 #include <glib-object.h>
 
@@ -849,6 +848,3 @@ cogl_primitive_draw (CoglPrimitive *primitive,
 
 
 G_END_DECLS
-
-#endif /* __COGL_PRIMITIVE_H__ */
-

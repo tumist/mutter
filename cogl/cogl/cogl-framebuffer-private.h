@@ -29,16 +29,15 @@
  *
  */
 
-#ifndef __COGL_FRAMEBUFFER_PRIVATE_H
-#define __COGL_FRAMEBUFFER_PRIVATE_H
+#pragma once
 
-#include "cogl-framebuffer-driver.h"
-#include "cogl-object-private.h"
-#include "cogl-matrix-stack-private.h"
-#include "cogl-journal-private.h"
-#include "winsys/cogl-winsys-private.h"
-#include "cogl-attribute-private.h"
-#include "cogl-clip-stack.h"
+#include "cogl/cogl-framebuffer-driver.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-matrix-stack-private.h"
+#include "cogl/cogl-journal-private.h"
+#include "cogl/winsys/cogl-winsys-private.h"
+#include "cogl/cogl-attribute-private.h"
+#include "cogl/cogl-clip-stack.h"
 
 typedef enum
 {
@@ -313,5 +312,3 @@ cogl_framebuffer_get_driver (CoglFramebuffer *framebuffer);
  */
 gboolean
 cogl_framebuffer_is_y_flipped (CoglFramebuffer *framebuffer);
-
-#endif /* __COGL_FRAMEBUFFER_PRIVATE_H */

@@ -1,5 +1,5 @@
-clutter_clutter_includesubdir = join_paths(clutter_includesubdir, 'clutter')
-clutter_clutter_includedir = join_paths(clutter_includedir, 'clutter')
+clutter_clutter_includesubdir = clutter_includesubdir / 'clutter'
+clutter_clutter_includedir = clutter_includedir / 'clutter'
 
 clutter_headers = [
   'clutter.h',
@@ -140,6 +140,8 @@ clutter_sources = [
   'clutter-input-focus.c',
   'clutter-input-method.c',
   'clutter-input-pointer-a11y.c',
+  'clutter-input-only-action.c',
+  'clutter-input-only-actor.c',
   'clutter-virtual-input-device.c',
   'clutter-interval.c',
   'clutter-keyframe-transition.c',
@@ -203,14 +205,13 @@ clutter_private_headers = [
   'clutter-flatten-effect.h',
   'clutter-frame-private.h',
   'clutter-graphene.h',
-  'clutter-gesture-action-private.h',
-  'clutter-id-pool.h',
   'clutter-input-device-private.h',
   'clutter-input-focus-private.h',
   'clutter-input-method-private.h',
   'clutter-input-pointer-a11y-private.h',
+  'clutter-input-only-action.h',
+  'clutter-input-only-actor.h',
   'clutter-keymap-private.h',
-  'clutter-offscreen-effect-private.h',
   'clutter-paint-context-private.h',
   'clutter-paint-node-private.h',
   'clutter-paint-volume-private.h',
@@ -226,11 +227,9 @@ clutter_private_headers = [
 
 clutter_nonintrospected_sources = [
   'clutter-easing.c',
-  'clutter-id-pool.c',
 ]
 
 clutter_deprecated_headers = [
-  'deprecated/clutter-box-layout.h',
   'deprecated/clutter-container.h',
   'deprecated/clutter-timeline.h',
 ]
@@ -338,7 +337,7 @@ libmutter_clutter_dep = declare_dependency(
 
 if have_introspection
   clutter_introspection_args = introspection_args + [
-    '-DCLUTTER_SYSCONFDIR="@0@"'.format(join_paths(prefix, sysconfdir)),
+    '-DCLUTTER_SYSCONFDIR="@0@"'.format(prefix / sysconfdir),
     '-DCLUTTER_COMPILATION=1',
     '-DCOGL_DISABLE_DEPRECATION_WARNINGS',
     '-DG_LOG_DOMAIN="Clutter"'
@@ -395,17 +394,17 @@ install_headers(clutter_headers,
   subdir: clutter_clutter_includesubdir)
 
 install_headers(cally_headers,
-  subdir: join_paths(clutter_includesubdir, 'cally'))
+  subdir: clutter_includesubdir / 'cally')
 
 install_headers(clutter_deprecated_headers,
-  subdir: join_paths(clutter_clutter_includesubdir, 'deprecated'))
+  subdir: clutter_clutter_includesubdir / 'deprecated')
 
 pkg.generate(libmutter_clutter,
   name: 'Mutters Clutter',
   filebase: libmutter_clutter_name,
   description: 'Mutters Clutter Private Library',
   libraries: [m_dep],
-  subdirs: join_paths(pkgname, 'clutter'),
+  subdirs: pkgname / 'clutter',
   requires: [clutter_pkg_deps, libmutter_cogl_name],
   version: meson.project_version(),
   variables: [

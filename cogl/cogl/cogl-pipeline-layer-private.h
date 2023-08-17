@@ -31,16 +31,15 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_PIPELINE_LAYER_PRIVATE_H
-#define __COGL_PIPELINE_LAYER_PRIVATE_H
+#pragma once
 
-#include "cogl-private.h"
-#include "cogl-pipeline.h"
-#include "cogl-node-private.h"
-#include "cogl-texture.h"
-#include "cogl-pipeline-layer-state.h"
-#include "cogl-pipeline-snippet-private.h"
-#include "cogl-sampler-cache-private.h"
+#include "cogl/cogl-private.h"
+#include "cogl/cogl-pipeline.h"
+#include "cogl/cogl-node-private.h"
+#include "cogl/cogl-texture.h"
+#include "cogl/cogl-pipeline-layer-state.h"
+#include "cogl/cogl-pipeline-snippet-private.h"
+#include "cogl/cogl-sampler-cache-private.h"
 
 #include <glib.h>
 
@@ -362,5 +361,3 @@ _cogl_pipeline_layer_get_unit_index (CoglPipelineLayer *layer);
 gboolean
 _cogl_pipeline_layer_needs_combine_separate
                                        (CoglPipelineLayer *combine_authority);
-
-#endif /* __COGL_PIPELINE_LAYER_PRIVATE_H */

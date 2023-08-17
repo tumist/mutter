@@ -43,13 +43,13 @@
  * actor content is in pq or not, and things like that
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-color-state.h"
+#include "clutter/clutter-color-state.h"
 
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-private.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-private.h"
 
 enum
 {
@@ -150,9 +150,7 @@ clutter_color_state_class_init (ClutterColorStateClass *klass)
    * defaults to sRGB colorspace
    */
   obj_props[PROP_COLORSPACE] =
-    g_param_spec_enum ("colorspace",
-                       P_("Colorspace"),
-                       P_("Colorspace information of the color state"),
+    g_param_spec_enum ("colorspace", NULL, NULL,
                        CLUTTER_TYPE_COLORSPACE,
                        CLUTTER_COLORSPACE_SRGB,
                        CLUTTER_PARAM_READWRITE |

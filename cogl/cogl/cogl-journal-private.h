@@ -28,13 +28,12 @@
  *
  */
 
-#ifndef __COGL_JOURNAL_PRIVATE_H
-#define __COGL_JOURNAL_PRIVATE_H
+#pragma once
 
-#include "cogl-texture.h"
-#include "cogl-object-private.h"
-#include "cogl-clip-stack.h"
-#include "cogl-fence-private.h"
+#include "cogl/cogl-texture.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-clip-stack.h"
+#include "cogl/cogl-fence-private.h"
 
 #define COGL_JOURNAL_VBO_POOL_SIZE 8
 
@@ -120,5 +119,3 @@ _cogl_journal_try_read_pixel (CoglJournal *journal,
 
 gboolean
 _cogl_is_journal (void *object);
-
-#endif /* __COGL_JOURNAL_PRIVATE_H */

@@ -28,21 +28,20 @@
  *
  */
 
+#pragma once
+
 #if !defined(__COGL_H_INSIDE__) && !defined(COGL_COMPILATION)
 #error "Only <cogl/cogl.h> can be included directly."
 #endif
-
-#ifndef __COGL_PIPELINE_H__
-#define __COGL_PIPELINE_H__
 
 /* We forward declare the CoglPipeline type here to avoid some circular
  * dependency issues with the following headers.
  */
 typedef struct _CoglPipeline CoglPipeline;
 
-#include <cogl/cogl-types.h>
-#include <cogl/cogl-context.h>
-#include <cogl/cogl-snippet.h>
+#include "cogl/cogl-types.h"
+#include "cogl/cogl-context.h"
+#include "cogl/cogl-snippet.h"
 
 #include <glib-object.h>
 
@@ -164,5 +163,3 @@ cogl_pipeline_get_uniform_location (CoglPipeline *pipeline,
                                     const char *uniform_name);
 
 G_END_DECLS
-
-#endif /* __COGL_PIPELINE_H__ */

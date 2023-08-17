@@ -28,14 +28,13 @@
  *
  */
 
-#ifndef __COGL_BITMAP_H
-#define __COGL_BITMAP_H
+#pragma once
 
 #include <glib.h>
 
-#include "cogl-object-private.h"
-#include "cogl-buffer.h"
-#include "cogl-bitmap.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-buffer.h"
+#include "cogl/cogl-bitmap.h"
 
 struct _CoglBitmap
 {
@@ -176,5 +175,3 @@ _cogl_bitmap_unmap (CoglBitmap *bitmap);
 
 CoglContext *
 _cogl_bitmap_get_context (CoglBitmap *bitmap);
-
-#endif /* __COGL_BITMAP_H */

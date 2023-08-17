@@ -25,15 +25,14 @@
  *   Colin Walters <walters@verbum.org>
  */
 
-#ifndef __CLUTTER_CLICK_ACTION_H__
-#define __CLUTTER_CLICK_ACTION_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-action.h>
-#include <clutter/clutter-event.h>
+#include "clutter/clutter-action.h"
+#include "clutter/clutter-event.h"
 
 G_BEGIN_DECLS
 
@@ -65,15 +64,6 @@ struct _ClutterClickActionClass
   gboolean (* long_press) (ClutterClickAction    *action,
                            ClutterActor          *actor,
                            ClutterLongPressState  state);
-
-  /*< private >*/
-  void (* _clutter_click_action1) (void);
-  void (* _clutter_click_action2) (void);
-  void (* _clutter_click_action3) (void);
-  void (* _clutter_click_action4) (void);
-  void (* _clutter_click_action5) (void);
-  void (* _clutter_click_action6) (void);
-  void (* _clutter_click_action7) (void);
 };
 
 CLUTTER_EXPORT
@@ -92,5 +82,3 @@ CLUTTER_EXPORT
 void                   clutter_click_action_release    (ClutterClickAction *action);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_CLICK_ACTION_H__ */

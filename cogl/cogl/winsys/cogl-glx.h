@@ -28,8 +28,7 @@
  *
  */
 
-#ifndef __COGL_GLX_H__
-#define __COGL_GLX_H__
+#pragma once
 
 /* NB: this is a top-level header that can be included directly but we
  * want to be careful not to define __COGL_H_INSIDE__ when this is
@@ -56,7 +55,8 @@
 
 
 #include <GL/glx.h>
-#include <cogl/cogl-types.h>
+
+#include "cogl/cogl-types.h"
 
 /* The gobject introspection scanner seems to parse public headers in
  * isolation which means we need to be extra careful about how we
@@ -72,5 +72,3 @@
 #undef __COGL_GLX_H_INSIDE__
 #undef __COGL_MUST_UNDEF_COGL_H_INSIDE_COGL_GLX_
 #endif
-
-#endif /* __COGL_GLX_H__ */

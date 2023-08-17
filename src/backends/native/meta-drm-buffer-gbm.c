@@ -32,9 +32,9 @@
 #include <xf86drmMode.h>
 
 #include "backends/meta-backend-private.h"
-#include "backends/native/meta-cogl-utils.h"
 #include "backends/native/meta-device-pool.h"
 #include "backends/native/meta-drm-buffer-private.h"
+#include "common/meta-cogl-drm-formats.h"
 
 struct _MetaDrmBufferGbm
 {

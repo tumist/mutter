@@ -19,15 +19,14 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_SCROLL_ACTOR_H__
-#define __CLUTTER_SCROLL_ACTOR_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-types.h>
-#include <clutter/clutter-actor.h>
+#include "clutter/clutter-types.h"
+#include "clutter/clutter-actor.h"
 
 G_BEGIN_DECLS
 
@@ -59,8 +58,6 @@ struct _ClutterScrollActorClass
 {
   /*< private >*/
   ClutterActorClass parent_instance;
-
-  gpointer _padding[8];
 };
 
 CLUTTER_EXPORT
@@ -83,5 +80,3 @@ void                    clutter_scroll_actor_scroll_to_rect     (ClutterScrollAc
                                                                  const graphene_rect_t *rect);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_SCROLL_ACTOR_H__ */

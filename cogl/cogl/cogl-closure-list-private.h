@@ -27,11 +27,10 @@
  *
  */
 
-#ifndef _COGL_CLOSURE_LIST_PRIVATE_H_
-#define _COGL_CLOSURE_LIST_PRIVATE_H_
+#pragma once
 
-#include "cogl-object.h"
-#include "cogl-list.h"
+#include "cogl/cogl-object.h"
+#include "cogl/cogl-list.h"
 
 /*
  * This implements a list of callbacks that can be used a bit like
@@ -114,5 +113,3 @@ _cogl_closure_list_add (CoglList *list,
         _cb (_c->user_data);                            \
       }                                                 \
   } G_STMT_END
-
-#endif /* _COGL_CLOSURE_LIST_PRIVATE_H_ */

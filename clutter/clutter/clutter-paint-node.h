@@ -22,15 +22,14 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_PAINT_NODE_H__
-#define __CLUTTER_PAINT_NODE_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <cogl/cogl.h>
-#include <clutter/clutter-types.h>
+#include "cogl/cogl.h"
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -117,5 +116,3 @@ CLUTTER_EXPORT
 gpointer                clutter_value_dup_paint_node                    (const GValue          *value);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_PAINT_NODE_H__ */

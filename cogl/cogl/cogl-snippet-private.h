@@ -31,13 +31,12 @@
  *   Neil Roberts <neil@linux.intel.com>
  */
 
-#ifndef __COGL_SNIPPET_PRIVATE_H
-#define __COGL_SNIPPET_PRIVATE_H
+#pragma once
 
 #include <glib.h>
 
-#include "cogl-snippet.h"
-#include "cogl-object-private.h"
+#include "cogl/cogl-snippet.h"
+#include "cogl/cogl-object-private.h"
 
 /* These values are also used in the enum for CoglSnippetHook. They
    are copied here because we don't really want these names to be part
@@ -72,6 +71,3 @@ struct _CoglSnippet
 
 void
 _cogl_snippet_make_immutable (CoglSnippet *snippet);
-
-#endif /* __COGL_SNIPPET_PRIVATE_H */
-

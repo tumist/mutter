@@ -31,12 +31,11 @@
  *   Neil Roberts <neil@linux.intel.com>
  */
 
-#ifndef __COGL_PIPELINE_SNIPPET_PRIVATE_H
-#define __COGL_PIPELINE_SNIPPET_PRIVATE_H
+#pragma once
 
 #include <glib.h>
 
-#include "cogl-snippet.h"
+#include "cogl/cogl-snippet.h"
 
 typedef struct
 {
@@ -111,6 +110,3 @@ _cogl_pipeline_snippet_list_hash (CoglPipelineSnippetList *list,
 gboolean
 _cogl_pipeline_snippet_list_equal (CoglPipelineSnippetList *list0,
                                    CoglPipelineSnippetList *list1);
-
-#endif /* __COGL_PIPELINE_SNIPPET_PRIVATE_H */
-

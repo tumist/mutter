@@ -21,17 +21,16 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_STAGE_H__
-#define __CLUTTER_STAGE_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-actor.h>
-#include <clutter/clutter-grab.h>
-#include <clutter/clutter-types.h>
-#include <clutter/clutter-stage-view.h>
+#include "clutter/clutter-actor.h"
+#include "clutter/clutter-grab.h"
+#include "clutter/clutter-types.h"
+#include "clutter/clutter-stage-view.h"
 
 G_BEGIN_DECLS
 
@@ -79,10 +78,6 @@ struct _ClutterStageClass
                        ClutterStageView     *view,
                        const cairo_region_t *redraw_clip,
                        ClutterFrame         *frame);
-
-  /*< private >*/
-  /* padding for future expansion */
-  gpointer _padding_dummy[31];
 };
 
 /**
@@ -248,5 +243,3 @@ CLUTTER_EXPORT
 ClutterActor * clutter_stage_get_grab_actor (ClutterStage *stage);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_STAGE_H__ */

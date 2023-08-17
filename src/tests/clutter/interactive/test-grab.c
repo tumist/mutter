@@ -16,18 +16,21 @@ debug_event_cb (ClutterActor *actor,
 {
   gchar keybuf[9], *source = (gchar*)data;
   ClutterActor *target;
-  int   len = 0;
+  uint32_t keyval;
+  int len = 0;
 
-  switch (event->type)
+  switch (clutter_event_type (event))
     {
     case CLUTTER_KEY_PRESS:
-      len = g_unichar_to_utf8 (clutter_keysym_to_unicode (event->key.keyval),
+      keyval = clutter_event_get_key_symbol (event);
+      len = g_unichar_to_utf8 (clutter_keysym_to_unicode (keyval),
                                keybuf);
       keybuf[len] = '\0';
       printf ("[%s] KEY PRESS '%s'", source, keybuf);
       break;
     case CLUTTER_KEY_RELEASE:
-      len = g_unichar_to_utf8 (clutter_keysym_to_unicode (event->key.keyval),
+      keyval = clutter_event_get_key_symbol (event);
+      len = g_unichar_to_utf8 (clutter_keysym_to_unicode (keyval),
                                keybuf);
       keybuf[len] = '\0';
       printf ("[%s] KEY RELEASE '%s'", source, keybuf);
@@ -94,7 +97,7 @@ debug_event_cb (ClutterActor *actor,
       return FALSE;
     }
 
-  target = clutter_stage_get_device_actor (clutter_event_get_stage (event),
+  target = clutter_stage_get_device_actor (CLUTTER_STAGE (clutter_actor_get_stage (actor)),
                                            clutter_event_get_device (event),
                                            clutter_event_get_event_sequence (event));
   if (target == actor)
@@ -149,7 +152,7 @@ toggle_grab_pointer_cb (ClutterActor    *actor,
   ClutterActor *target;
 
   /* we only deal with the event if the source is ourself */
-  target = clutter_stage_get_device_actor (clutter_event_get_stage (event),
+  target = clutter_stage_get_device_actor (CLUTTER_STAGE (clutter_actor_get_stage (actor)),
                                            clutter_event_get_device (event),
                                            clutter_event_get_event_sequence (event));
 

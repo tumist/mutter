@@ -20,8 +20,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_UTIL_H
-#define META_UTIL_H
+#pragma once
 
 #include <glib.h>
 #include <glib-object.h>
@@ -75,6 +74,8 @@ void meta_fatal      (const char *format,
  * @META_DEBUG_BACKEND: backend
  * @META_DEBUG_RENDER: native backend rendering
  * @META_DEBUG_COLOR: color management
+ * @META_DEBUG_INPUT_EVENTS: input events
+ * @META_DEBUG_EIS: eis state
  */
 typedef enum
 {
@@ -106,6 +107,8 @@ typedef enum
   META_DEBUG_BACKEND         = 1 << 24,
   META_DEBUG_RENDER          = 1 << 25,
   META_DEBUG_COLOR           = 1 << 26,
+  META_DEBUG_INPUT_EVENTS    = 1 << 27,
+  META_DEBUG_EIS             = 1 << 28,
 } MetaDebugTopic;
 
 /**
@@ -226,5 +229,3 @@ MetaDebugPaintFlag meta_get_debug_paint_flags (void);
 META_EXPORT
 char * meta_accelerator_name (ClutterModifierType accelerator_mods,
                               unsigned int        accelerator_key);
-
-#endif /* META_UTIL_H */

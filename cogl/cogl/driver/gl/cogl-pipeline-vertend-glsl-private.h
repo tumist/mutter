@@ -31,10 +31,9 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_PIPELINE_VERTEND_GLSL_PRIVATE_H
-#define __COGL_PIPELINE_VERTEND_GLSL_PRIVATE_H
+#pragma once
 
-#include "cogl-pipeline-private.h"
+#include "cogl/cogl-pipeline-private.h"
 
 typedef struct _CoglPipelineVertendShaderState CoglPipelineVertendShaderState;
 
@@ -45,6 +44,3 @@ _cogl_pipeline_vertend_glsl_get_shader (CoglPipeline *pipeline);
 
 COGL_EXPORT_TEST
 CoglPipelineVertendShaderState * cogl_pipeline_vertend_glsl_get_shader_state (CoglPipeline *pipeline);
-
-#endif /* __COGL_PIPELINE_VERTEND_GLSL_PRIVATE_H */
-

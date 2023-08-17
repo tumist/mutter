@@ -15,12 +15,11 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CLUTTER_BLUR_PRIVATE_H
-#define CLUTTER_BLUR_PRIVATE_H
+#pragma once
 
 #include <glib-object.h>
 
-#include <cogl/cogl.h>
+#include "cogl/cogl.h"
 
 G_BEGIN_DECLS
 
@@ -36,5 +35,3 @@ CoglTexture * clutter_blur_get_texture (ClutterBlur *blur);
 void clutter_blur_free (ClutterBlur *blur);
 
 G_END_DECLS
-
-#endif /* CLUTTER_BLUR_PRIVATE_H */

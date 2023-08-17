@@ -21,14 +21,13 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_CLONE_H__
-#define __CLUTTER_CLONE_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-actor.h>
+#include "clutter/clutter-actor.h"
 
 G_BEGIN_DECLS
 
@@ -60,12 +59,6 @@ struct _ClutterCloneClass
 {
   /*< private >*/
   ClutterActorClass parent_class;
-
-  /* padding for future expansion */
-  void (*_clutter_actor_clone1) (void);
-  void (*_clutter_actor_clone2) (void);
-  void (*_clutter_actor_clone3) (void);
-  void (*_clutter_actor_clone4) (void);
 };
 
 CLUTTER_EXPORT
@@ -80,5 +73,3 @@ CLUTTER_EXPORT
 ClutterActor *  clutter_clone_get_source        (ClutterClone *self);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_CLONE_H__ */

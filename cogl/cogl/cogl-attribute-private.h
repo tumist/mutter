@@ -31,14 +31,13 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_ATTRIBUTE_PRIVATE_H
-#define __COGL_ATTRIBUTE_PRIVATE_H
+#pragma once
 
-#include "cogl-object-private.h"
-#include "cogl-attribute.h"
-#include "cogl-framebuffer.h"
-#include "cogl-pipeline-private.h"
-#include "cogl-boxed-value.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-attribute.h"
+#include "cogl/cogl-framebuffer.h"
+#include "cogl/cogl-pipeline-private.h"
+#include "cogl/cogl-boxed-value.h"
 
 typedef enum
 {
@@ -134,6 +133,3 @@ _cogl_flush_attributes_state (CoglFramebuffer *framebuffer,
 
 int
 _cogl_attribute_get_n_components (CoglAttribute *attribute);
-
-#endif /* __COGL_ATTRIBUTE_PRIVATE_H */
-

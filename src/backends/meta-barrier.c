@@ -1,9 +1,9 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; c-basic-offset: 2; -*- */
 
 /**
- * SECTION:barrier
- * @Title: MetaBarrier
- * @Short_Description: Pointer barriers
+ * MetaBarrier:
+ *
+ * Pointer barriers
  */
 
 #include "config.h"
@@ -28,6 +28,7 @@ typedef struct _MetaBarrierPrivate
   MetaBackend *backend;
   MetaBorder border;
   MetaBarrierImpl *impl;
+  MetaBarrierFlags flags;
 } MetaBarrierPrivate;
 
 static void initable_iface_init (GInitableIface *initable_iface);
@@ -60,6 +61,7 @@ enum
   PROP_X2,
   PROP_Y2,
   PROP_DIRECTIONS,
+  PROP_FLAGS,
 
   PROP_LAST,
 };
@@ -125,6 +127,9 @@ meta_barrier_get_property (GObject    *object,
       g_value_set_flags (value,
                          meta_border_get_allows_directions (&priv->border));
       break;
+    case PROP_FLAGS:
+      g_value_set_flags (value, priv->flags);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -169,6 +174,9 @@ meta_barrier_set_property (GObject      *object,
     case PROP_DIRECTIONS:
       meta_border_set_allows_directions (&priv->border,
                                          g_value_get_flags (value));
+      break;
+    case PROP_FLAGS:
+      priv->flags = g_value_get_flags (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -300,17 +308,13 @@ meta_barrier_class_init (MetaBarrierClass *klass)
   object_class->constructed = meta_barrier_constructed;
 
   obj_props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "backend",
-                         "The backend",
+    g_param_spec_object ("backend", NULL, NULL,
                          META_TYPE_BACKEND,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY |
                          G_PARAM_STATIC_STRINGS);
   obj_props[PROP_DISPLAY] =
-    g_param_spec_object ("display",
-                         "Display",
-                         "The display to construct the pointer barrier on",
+    g_param_spec_object ("display", NULL, NULL,
                          META_TYPE_DISPLAY,
                          G_PARAM_DEPRECATED |
                          G_PARAM_READWRITE |
@@ -318,47 +322,46 @@ meta_barrier_class_init (MetaBarrierClass *klass)
                          G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_X1] =
-    g_param_spec_int ("x1",
-                      "X1",
-                      "The first X coordinate of the barrier",
+    g_param_spec_int ("x1", NULL, NULL,
                       0, G_MAXSHORT, 0,
                       G_PARAM_READWRITE |
                       G_PARAM_CONSTRUCT_ONLY |
                       G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_Y1] =
-    g_param_spec_int ("y1",
-                      "Y1",
-                      "The first Y coordinate of the barrier",
+    g_param_spec_int ("y1", NULL, NULL,
                       0, G_MAXSHORT, 0,
                       G_PARAM_READWRITE |
                       G_PARAM_CONSTRUCT_ONLY |
                       G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_X2] =
-    g_param_spec_int ("x2",
-                      "X2",
-                      "The second X coordinate of the barrier",
+    g_param_spec_int ("x2", NULL, NULL,
                       0, G_MAXSHORT, G_MAXSHORT,
                       G_PARAM_READWRITE |
                       G_PARAM_CONSTRUCT_ONLY |
                       G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_Y2] =
-    g_param_spec_int ("y2",
-                      "Y2",
-                      "The second Y coordinate of the barrier",
+    g_param_spec_int ("y2", NULL, NULL,
                       0, G_MAXSHORT, G_MAXSHORT,
                       G_PARAM_READWRITE |
                       G_PARAM_CONSTRUCT_ONLY |
                       G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_DIRECTIONS] =
-    g_param_spec_flags ("directions",
-                        "Directions",
-                        "A set of directions to let the pointer through",
+    g_param_spec_flags ("directions", NULL, NULL,
                         META_TYPE_BARRIER_DIRECTION,
                         0,
+                        G_PARAM_READWRITE |
+                        G_PARAM_CONSTRUCT_ONLY |
+                        G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_FLAGS] =
+    g_param_spec_flags ("flags",
+                        "Flags",
+                        "Flags for manipulating barrier behavior",
+                        META_TYPE_BARRIER_FLAGS,
+                        META_BARRIER_FLAG_NONE,
                         G_PARAM_READWRITE |
                         G_PARAM_CONSTRUCT_ONLY |
                         G_PARAM_STATIC_STRINGS);
@@ -426,6 +429,7 @@ meta_barrier_new (MetaBackend           *backend,
                   int                    x2,
                   int                    y2,
                   MetaBarrierDirection   directions,
+                  MetaBarrierFlags       flags,
                   GError               **error)
 {
   return g_initable_new (META_TYPE_BARRIER,
@@ -436,6 +440,7 @@ meta_barrier_new (MetaBackend           *backend,
                          "x2", x2,
                          "y2", y2,
                          "directions", directions,
+                         "flags", flags,
                          NULL);
 }
 
@@ -467,6 +472,14 @@ meta_barrier_get_border (MetaBarrier *barrier)
   MetaBarrierPrivate *priv = meta_barrier_get_instance_private (barrier);
 
   return &priv->border;
+}
+
+MetaBarrierFlags
+meta_barrier_get_flags (MetaBarrier *barrier)
+{
+  MetaBarrierPrivate *priv = meta_barrier_get_instance_private (barrier);
+
+  return priv->flags;
 }
 
 static void

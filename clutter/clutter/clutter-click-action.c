@@ -87,14 +87,14 @@
  * ```
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-click-action.h"
+#include "clutter/clutter-click-action.h"
 
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-marshal.h"
-#include "clutter-private.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-marshal.h"
+#include "clutter/clutter-private.h"
 
 struct _ClutterClickActionPrivate
 {
@@ -309,7 +309,7 @@ clutter_click_action_handle_event (ClutterAction      *action,
       if (priv->is_held)
         return CLUTTER_EVENT_STOP;
 
-      target = clutter_stage_get_device_actor (clutter_event_get_stage (event),
+      target = clutter_stage_get_device_actor (CLUTTER_STAGE (clutter_actor_get_stage (actor)),
                                                clutter_event_get_device (event),
                                                clutter_event_get_event_sequence (event));
 
@@ -372,7 +372,7 @@ clutter_click_action_handle_event (ClutterAction      *action,
 
       g_clear_handle_id (&priv->long_press_id, g_source_remove);
 
-      target = clutter_stage_get_device_actor (clutter_event_get_stage (event),
+      target = clutter_stage_get_device_actor (CLUTTER_STAGE (clutter_actor_get_stage (actor)),
                                                clutter_event_get_device (event),
                                                clutter_event_get_event_sequence (event));
 
@@ -558,9 +558,7 @@ clutter_click_action_class_init (ClutterClickActionClass *klass)
    * Whether the clickable actor should be in "pressed" state
    */
   obj_props[PROP_PRESSED] =
-    g_param_spec_boolean ("pressed",
-                          P_("Pressed"),
-                          P_("Whether the clickable should be in pressed state"),
+    g_param_spec_boolean ("pressed", NULL, NULL,
                           FALSE,
                           CLUTTER_PARAM_READABLE);
 
@@ -570,9 +568,7 @@ clutter_click_action_class_init (ClutterClickActionClass *klass)
    * Whether the clickable actor has the pointer grabbed
    */
   obj_props[PROP_HELD] =
-    g_param_spec_boolean ("held",
-                          P_("Held"),
-                          P_("Whether the clickable has a grab"),
+    g_param_spec_boolean ("held", NULL, NULL,
                           FALSE,
                           CLUTTER_PARAM_READABLE);
 
@@ -586,9 +582,7 @@ clutter_click_action_class_init (ClutterClickActionClass *klass)
    * the [property@Settings:long-press-duration] property.
    */
   obj_props[PROP_LONG_PRESS_DURATION] =
-    g_param_spec_int ("long-press-duration",
-                      P_("Long Press Duration"),
-                      P_("The minimum duration of a long press to recognize the gesture"),
+    g_param_spec_int ("long-press-duration", NULL, NULL,
                       -1, G_MAXINT,
                       -1,
                       CLUTTER_PARAM_READWRITE);
@@ -603,9 +597,7 @@ clutter_click_action_class_init (ClutterClickActionClass *klass)
    * the [property@Settings:dnd-drag-threshold] property.
    */
   obj_props[PROP_LONG_PRESS_THRESHOLD] =
-    g_param_spec_int ("long-press-threshold",
-                      P_("Long Press Threshold"),
-                      P_("The maximum threshold before a long press is cancelled"),
+    g_param_spec_int ("long-press-threshold", NULL, NULL,
                       -1, G_MAXINT,
                       -1,
                       CLUTTER_PARAM_READWRITE);

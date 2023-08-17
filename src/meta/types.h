@@ -17,8 +17,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_TYPES_H
-#define META_TYPES_H
+#pragma once
 
 typedef struct _MetaBackend     MetaBackend;
 typedef struct _MetaContext     MetaContext;
@@ -29,10 +28,7 @@ typedef struct _MetaFrame       MetaFrame;
 typedef struct _MetaWindow      MetaWindow;
 typedef struct _MetaWorkspace   MetaWorkspace;
 typedef struct _MetaLaters      MetaLaters;
-/**
- * MetaGroup: (skip)
- *
- */
+
 typedef struct _MetaGroup       MetaGroup;
 typedef struct _MetaKeyBinding  MetaKeyBinding;
 typedef struct _MetaCursorTracker MetaCursorTracker;
@@ -42,5 +38,3 @@ typedef struct _MetaSettings    MetaSettings;
 
 typedef struct _MetaWorkspaceManager MetaWorkspaceManager;
 typedef struct _MetaSelection   MetaSelection;
-
-#endif

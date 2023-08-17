@@ -21,10 +21,9 @@
  * OF THIS SOFTWARE.
  */
 
-#ifndef META_WAYLAND_DATA_SOURCE_PRIMARY_H
-#define META_WAYLAND_DATA_SOURCE_PRIMARY_H
+#pragma once
 
-#include "meta-wayland-data-source.h"
+#include "wayland/meta-wayland-data-source.h"
 
 #define META_TYPE_WAYLAND_DATA_SOURCE_PRIMARY (meta_wayland_data_source_primary_get_type ())
 G_DECLARE_FINAL_TYPE (MetaWaylandDataSourcePrimary,
@@ -33,5 +32,3 @@ G_DECLARE_FINAL_TYPE (MetaWaylandDataSourcePrimary,
                       MetaWaylandDataSource);
 
 MetaWaylandDataSource * meta_wayland_data_source_primary_new (struct wl_resource *resource);
-
-#endif /* META_WAYLAND_DATA_SOURCE_PRIMARY_H */

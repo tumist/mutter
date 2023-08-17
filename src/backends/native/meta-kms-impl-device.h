@@ -17,8 +17,7 @@
  * 02111-1307, USA.
  */
 
-#ifndef META_KMS_IMPL_DEVICE_H
-#define META_KMS_IMPL_DEVICE_H
+#pragma once
 
 #include <glib-object.h>
 #include <stdint.h>
@@ -102,19 +101,11 @@ struct _MetaKmsImplDeviceClass
 
 enum
 {
-  META_KMS_ERROR_USER_INHIBITED,
-  META_KMS_ERROR_DENY_LISTED,
-  META_KMS_ERROR_NOT_SUPPORTED,
-};
-
-enum
-{
   META_KMS_DEVICE_FILE_TAG_ATOMIC = 1 << 0,
   META_KMS_DEVICE_FILE_TAG_SIMPLE = 1 << 1,
 };
 
-#define META_KMS_ERROR meta_kms_error_quark ()
-GQuark meta_kms_error_quark (void);
+MetaKmsImpl * meta_kms_impl_device_get_impl (MetaKmsImplDevice *impl_device);
 
 MetaKmsDevice * meta_kms_impl_device_get_device (MetaKmsImplDevice *impl_device);
 
@@ -185,6 +176,17 @@ MetaKmsFeedback * meta_kms_impl_device_process_update (MetaKmsImplDevice *impl_d
                                                        MetaKmsUpdateFlag  flags)
   G_GNUC_WARN_UNUSED_RESULT;
 
+void meta_kms_impl_device_handle_update (MetaKmsImplDevice *impl_device,
+                                         MetaKmsUpdate     *update,
+                                         MetaKmsUpdateFlag  flags);
+
+void meta_kms_impl_device_await_flush (MetaKmsImplDevice *impl_device,
+                                       MetaKmsCrtc       *crtc);
+
+META_EXPORT_TEST
+void meta_kms_impl_device_schedule_process (MetaKmsImplDevice *impl_device,
+                                            MetaKmsCrtc       *crtc);
+
 void meta_kms_impl_device_handle_page_flip_callback (MetaKmsImplDevice   *impl_device,
                                                      MetaKmsPageFlipData *page_flip_data);
 
@@ -197,5 +199,3 @@ void meta_kms_impl_device_prepare_shutdown (MetaKmsImplDevice *impl_device);
 
 uint64_t meta_kms_prop_convert_value (MetaKmsProp *prop,
                                       uint64_t     value);
-
-#endif /* META_KMS_IMPL_DEVICE_H */

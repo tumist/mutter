@@ -20,8 +20,7 @@
  * Author: Jonas Ådahl <jadahl@gmail.com>
  */
 
-#ifndef META_SEAT_NATIVE_H
-#define META_SEAT_NATIVE_H
+#pragma once
 
 #include <libinput.h>
 #include <linux/input-event-codes.h>
@@ -70,6 +69,8 @@ struct _MetaSeatNative
 META_EXPORT_TEST
 G_DECLARE_FINAL_TYPE (MetaSeatNative, meta_seat_native,
                       META, SEAT_NATIVE, ClutterSeat)
+
+void meta_seat_native_start (MetaSeatNative *seat_native);
 
 void meta_seat_native_set_libinput_seat (MetaSeatNative       *seat,
                                          struct libinput_seat *libinput_seat);
@@ -131,4 +132,7 @@ MetaCursorRenderer * meta_seat_native_maybe_ensure_cursor_renderer (MetaSeatNati
 void meta_seat_native_set_viewports (MetaSeatNative   *seat,
                                      MetaViewportInfo *viewports);
 
-#endif /* META_SEAT_NATIVE_H */
+void meta_seat_native_run_impl_task (MetaSeatNative *seat,
+                                     GSourceFunc     dispatch_func,
+                                     gpointer        user_data,
+                                     GDestroyNotify  destroy_notify);

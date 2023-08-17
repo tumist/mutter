@@ -65,7 +65,7 @@ struct _MetaCursorRendererPrivate
   MetaCursorSprite *overlay_cursor;
 
   MetaOverlay *stage_overlay;
-  gboolean handled_by_backend;
+  gboolean needs_overlay;
   gulong after_paint_handler_id;
 
   GList *hw_cursor_inhibitors;
@@ -157,7 +157,7 @@ meta_cursor_renderer_update_stage_overlay (MetaCursorRenderer *renderer,
         meta_cursor_sprite_get_texture_transform (cursor_sprite);
     }
 
-  meta_overlay_set_visible (priv->stage_overlay, !priv->handled_by_backend);
+  meta_overlay_set_visible (priv->stage_overlay, priv->needs_overlay);
   meta_stage_update_cursor_overlay (META_STAGE (stage), priv->stage_overlay,
                                     texture, &rect, buffer_transform);
 }
@@ -171,7 +171,7 @@ meta_cursor_renderer_after_paint (ClutterStage       *stage,
   MetaCursorRendererPrivate *priv =
     meta_cursor_renderer_get_instance_private (renderer);
 
-  if (priv->displayed_cursor && !priv->handled_by_backend)
+  if (priv->displayed_cursor && priv->needs_overlay)
     {
       graphene_rect_t rect;
       MetaRectangle view_layout;
@@ -295,17 +295,13 @@ meta_cursor_renderer_class_init (MetaCursorRendererClass *klass)
   klass->update_cursor = meta_cursor_renderer_real_update_cursor;
 
   obj_props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "backend",
-                         "MetaBackend",
+    g_param_spec_object ("backend", NULL, NULL,
                          META_TYPE_BACKEND,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY |
                          G_PARAM_STATIC_STRINGS);
   obj_props[PROP_DEVICE] =
-    g_param_spec_object ("device",
-                         "device",
-                         "Input device",
+    g_param_spec_object ("device", NULL, NULL,
                          CLUTTER_TYPE_INPUT_DEVICE,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY |
@@ -327,36 +323,52 @@ meta_cursor_renderer_init (MetaCursorRenderer *renderer)
 {
 }
 
-graphene_rect_t
-meta_cursor_renderer_calculate_rect (MetaCursorRenderer *renderer,
-                                     MetaCursorSprite   *cursor_sprite)
+static gboolean
+calculate_sprite_geometry (MetaCursorSprite *cursor_sprite,
+                           graphene_size_t  *size,
+                           graphene_point_t *hotspot)
 {
-  MetaCursorRendererPrivate *priv =
-    meta_cursor_renderer_get_instance_private (renderer);
   CoglTexture *texture;
   int hot_x, hot_y;
   int width, height;
   float texture_scale;
 
+  meta_cursor_sprite_realize_texture (cursor_sprite);
   texture = meta_cursor_sprite_get_cogl_texture (cursor_sprite);
   if (!texture)
-    return (graphene_rect_t) GRAPHENE_RECT_INIT_ZERO;
+    return FALSE;
 
   meta_cursor_sprite_get_hotspot (cursor_sprite, &hot_x, &hot_y);
   texture_scale = meta_cursor_sprite_get_texture_scale (cursor_sprite);
   width = cogl_texture_get_width (texture);
   height = cogl_texture_get_height (texture);
 
-  return (graphene_rect_t) {
-    .origin = {
-      .x = priv->current_x - (hot_x * texture_scale),
-      .y = priv->current_y - (hot_y * texture_scale)
-    },
-    .size = {
-      .width = width * texture_scale,
-      .height = height * texture_scale
-    }
+  *size = (graphene_size_t) {
+    .width = width * texture_scale,
+    .height = height * texture_scale
   };
+  *hotspot = (graphene_point_t) {
+    .x = hot_x * texture_scale,
+    .y = hot_y * texture_scale
+  };
+  return TRUE;
+}
+
+graphene_rect_t
+meta_cursor_renderer_calculate_rect (MetaCursorRenderer *renderer,
+                                     MetaCursorSprite   *cursor_sprite)
+{
+  MetaCursorRendererPrivate *priv =
+    meta_cursor_renderer_get_instance_private (renderer);
+  graphene_rect_t rect = GRAPHENE_RECT_INIT_ZERO;
+  graphene_point_t hotspot;
+
+  if (!calculate_sprite_geometry (cursor_sprite, &rect.size, &hotspot))
+    return GRAPHENE_RECT_INIT_ZERO;
+
+  rect.origin = (graphene_point_t) { .x = -hotspot.x, .y = -hotspot.y };
+  graphene_rect_offset (&rect, priv->current_x, priv->current_y);
+  return rect;
 }
 
 static float
@@ -410,7 +422,7 @@ meta_cursor_renderer_update_cursor (MetaCursorRenderer *renderer,
                                      (int) priv->current_y);
     }
 
-  priv->handled_by_backend =
+  priv->needs_overlay =
     META_CURSOR_RENDERER_GET_CLASS (renderer)->update_cursor (renderer,
                                                               cursor_sprite);
 

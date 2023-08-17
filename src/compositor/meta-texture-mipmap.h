@@ -20,16 +20,17 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_TEXTURE_MIPMAP_H
-#define META_TEXTURE_MIPMAP_H
+#pragma once
 
 #include "clutter/clutter.h"
+#include "meta/meta-multi-texture.h"
 
 G_BEGIN_DECLS
 
 /**
- * SECTION:MetaTextureMipmap
- * @short_description: mipmap handling for textures
+ * MetaTextureMipmap:
+ *
+ * Mipmap handling for textures
  *
  * A #MetaTextureMipmap is used to get GL mipmaps for a texture
  */
@@ -41,14 +42,12 @@ MetaTextureMipmap *meta_texture_mipmap_new (void);
 void meta_texture_mipmap_free (MetaTextureMipmap *mipmap);
 
 void meta_texture_mipmap_set_base_texture (MetaTextureMipmap *mipmap,
-                                           CoglTexture *texture);
+                                           MetaMultiTexture  *texture);
 
-CoglTexture *meta_texture_mipmap_get_paint_texture (MetaTextureMipmap *mipmap);
+MetaMultiTexture *meta_texture_mipmap_get_paint_texture (MetaTextureMipmap *mipmap);
 
 void meta_texture_mipmap_invalidate (MetaTextureMipmap *mipmap);
 
 void meta_texture_mipmap_clear (MetaTextureMipmap *mipmap);
 
 G_END_DECLS
-
-#endif /* META_TEXTURE_MIPMAP_H */

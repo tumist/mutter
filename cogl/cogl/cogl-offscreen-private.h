@@ -25,11 +25,10 @@
  *
  */
 
-#ifndef COGL_OFFSCREEN_PRIVATE_H
-#define COGL_OFFSCREEN_PRIVATE_H
+#pragma once
 
-#include "cogl-gl-header.h"
-#include "cogl-offscreen.h"
+#include "cogl/cogl-gl-header.h"
+#include "cogl/cogl-offscreen.h"
 
 /* Flags to pass to _cogl_offscreen_new_with_texture_full */
 typedef enum
@@ -64,5 +63,3 @@ _cogl_offscreen_new_with_texture_full (CoglTexture        *texture,
 
 int
 cogl_offscreen_get_texture_level (CoglOffscreen *offscreen);
-
-#endif /* COGL_OFFSCREEN_PRIVATE_H */

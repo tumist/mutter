@@ -28,12 +28,11 @@
  *
  */
 
-#ifndef __COGL_BOXED_VALUE_H
-#define __COGL_BOXED_VALUE_H
+#pragma once
 
 #include <glib.h>
 
-#include "cogl-context.h"
+#include "cogl/cogl-context.h"
 
 typedef enum
 {
@@ -114,5 +113,3 @@ void
 _cogl_boxed_value_set_uniform (CoglContext *ctx,
                                int location,
                                const CoglBoxedValue *value);
-
-#endif /* __COGL_BOXED_VALUE_H */

@@ -20,8 +20,7 @@
  *     Carlos Garnacho <carlosg@gnome.org>
  */
 
-#ifndef META_PAD_ACTION_MAPPER_H
-#define META_PAD_ACTION_MAPPER_H
+#pragma once
 
 #include "clutter/clutter.h"
 #include "meta/display.h"
@@ -38,9 +37,13 @@ gboolean meta_pad_action_mapper_is_button_grabbed (MetaPadActionMapper *mapper,
                                                    guint                button);
 gboolean meta_pad_action_mapper_handle_event      (MetaPadActionMapper *mapper,
                                                    const ClutterEvent  *event);
-gchar *  meta_pad_action_mapper_get_action_label  (MetaPadActionMapper *mapper,
-                                                   ClutterInputDevice  *pad,
-                                                   MetaPadActionType    action,
-                                                   guint                number);
 
-#endif /* META_PAD_ACTION_MAPPER_H */
+char * meta_pad_action_mapper_get_button_label (MetaPadActionMapper *mapper,
+                                                ClutterInputDevice  *pad,
+                                                int                  button);
+
+char * meta_pad_action_mapper_get_feature_label (MetaPadActionMapper *mapper,
+                                                 ClutterInputDevice  *pad,
+                                                 MetaPadFeatureType   feature,
+                                                 MetaPadDirection     direction,
+                                                 int                  number);

@@ -21,14 +21,13 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_SCRIPT_H__
-#define __CLUTTER_SCRIPT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-types.h>
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -116,17 +115,6 @@ struct _ClutterScriptClass
   /*< public >*/
   GType (* get_type_from_name) (ClutterScript *script,
                                 const gchar   *type_name);
-
-  /*< private >*/
-  /* padding, for future expansion */
-  void (*_clutter_reserved1) (void);
-  void (*_clutter_reserved2) (void);
-  void (*_clutter_reserved3) (void);
-  void (*_clutter_reserved4) (void);
-  void (*_clutter_reserved5) (void);
-  void (*_clutter_reserved6) (void);
-  void (*_clutter_reserved7) (void);
-  void (*_clutter_reserved8) (void);
 };
 
 CLUTTER_EXPORT
@@ -192,5 +180,3 @@ CLUTTER_EXPORT
 const gchar *   clutter_get_script_id                   (GObject                   *gobject);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_SCRIPT_H__ */

@@ -20,8 +20,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef META_PREFS_H
-#define META_PREFS_H
+#pragma once
 
 /* This header is a "common" one between the UI and core side */
 #include <meta/common.h>
@@ -43,7 +42,6 @@
  * @META_PREF_AUTO_RAISE: auto-raise
  * @META_PREF_AUTO_RAISE_DELAY: auto-raise delay
  * @META_PREF_FOCUS_CHANGE_ON_POINTER_REST: focus change on pointer rest
- * @META_PREF_TITLEBAR_FONT: title-bar font
  * @META_PREF_NUM_WORKSPACES: number of workspaces
  * @META_PREF_DYNAMIC_WORKSPACES: dynamic workspaces
  * @META_PREF_KEYBINDINGS: keybindings
@@ -82,7 +80,6 @@ typedef enum
   META_PREF_AUTO_RAISE,
   META_PREF_AUTO_RAISE_DELAY,
   META_PREF_FOCUS_CHANGE_ON_POINTER_REST,
-  META_PREF_TITLEBAR_FONT,
   META_PREF_NUM_WORKSPACES,
   META_PREF_DYNAMIC_WORKSPACES,
   META_PREF_KEYBINDINGS,
@@ -142,10 +139,6 @@ gboolean                    meta_prefs_get_attach_modal_dialogs (void);
 
 META_EXPORT
 gboolean                    meta_prefs_get_raise_on_click     (void);
-
-/* returns NULL if GTK default should be used */
-META_EXPORT
-const PangoFontDescription* meta_prefs_get_titlebar_font      (void);
 
 META_EXPORT
 int                         meta_prefs_get_num_workspaces     (void);
@@ -434,7 +427,9 @@ typedef enum _MetaKeyBindingAction
  * @META_KEY_BINDING_BUILTIN: built-in
  * @META_KEY_BINDING_IS_REVERSED: is reversed
  * @META_KEY_BINDING_NON_MASKABLE: always active
+ * @META_KEY_BINDING_IGNORE_AUTOREPEAT: ignore autorepeat
  * @META_KEY_BINDING_NO_AUTO_GRAB: not grabbed automatically
+ * @META_KEY_BINDING_CUSTOM_TRIGGER: uses a custom keybinding action
  */
 typedef enum
 {
@@ -445,6 +440,7 @@ typedef enum
   META_KEY_BINDING_NON_MASKABLE = 1 << 3,
   META_KEY_BINDING_IGNORE_AUTOREPEAT = 1 << 4,
   META_KEY_BINDING_NO_AUTO_GRAB = 1 << 5,
+  META_KEY_BINDING_CUSTOM_TRIGGER = 1 << 6,
 } MetaKeyBindingFlags;
 
 /**
@@ -456,11 +452,11 @@ typedef enum
  * @user_data: data passed to the function
  *
  */
-typedef void (* MetaKeyHandlerFunc) (MetaDisplay     *display,
-                                     MetaWindow      *window,
-                                     ClutterKeyEvent *event,
-                                     MetaKeyBinding  *binding,
-                                     gpointer         user_data);
+typedef void (* MetaKeyHandlerFunc) (MetaDisplay           *display,
+                                     MetaWindow            *window,
+                                     const ClutterKeyEvent *event,
+                                     MetaKeyBinding        *binding,
+                                     gpointer               user_data);
 
 META_EXPORT
 GType meta_key_binding_get_type    (void);
@@ -482,5 +478,3 @@ GDesktopVisualBellType meta_prefs_get_visual_bell_type (void);
 
 META_EXPORT
 unsigned int meta_prefs_get_check_alive_timeout (void);
-
-#endif

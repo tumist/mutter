@@ -32,14 +32,13 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_FRAMEBUFFER_H
-#define __COGL_FRAMEBUFFER_H
+#pragma once
 
+#include "cogl/cogl-pipeline.h"
+#include "cogl/cogl-indices.h"
+#include "cogl/cogl-bitmap.h"
+#include "cogl/cogl-texture.h"
 
-#include <cogl/cogl-pipeline.h>
-#include <cogl/cogl-indices.h>
-#include <cogl/cogl-bitmap.h>
-#include <cogl/cogl-texture.h>
 #include <glib-object.h>
 #include <cairo.h>
 
@@ -471,30 +470,6 @@ cogl_framebuffer_set_projection_matrix (CoglFramebuffer         *framebuffer,
                                         const graphene_matrix_t *matrix);
 
 /**
- * cogl_framebuffer_push_scissor_clip:
- * @framebuffer: A #CoglFramebuffer pointer
- * @x: left edge of the clip rectangle in window coordinates
- * @y: top edge of the clip rectangle in window coordinates
- * @width: width of the clip rectangle
- * @height: height of the clip rectangle
- *
- * Specifies a rectangular clipping area for all subsequent drawing
- * operations. Any drawing commands that extend outside the rectangle
- * will be clipped so that only the portion inside the rectangle will
- * be displayed. The rectangle dimensions are not transformed by the
- * current model-view matrix.
- *
- * The rectangle is intersected with the current clip region. To undo
- * the effect of this function, call cogl_framebuffer_pop_clip().
- */
-COGL_EXPORT void
-cogl_framebuffer_push_scissor_clip (CoglFramebuffer *framebuffer,
-                                    int x,
-                                    int y,
-                                    int width,
-                                    int height);
-
-/**
  * cogl_framebuffer_push_rectangle_clip:
  * @framebuffer: A #CoglFramebuffer pointer
  * @x_1: x coordinate for top left corner of the clip rectangle
@@ -561,8 +536,8 @@ cogl_framebuffer_push_region_clip (CoglFramebuffer *framebuffer,
  * @framebuffer: A #CoglFramebuffer pointer
  *
  * Reverts the clipping region to the state before the last call to
- * cogl_framebuffer_push_scissor_clip(), cogl_framebuffer_push_rectangle_clip()
- * cogl_framebuffer_push_path_clip(), or cogl_framebuffer_push_primitive_clip().
+ * cogl_framebuffer_push_rectangle_clip(), or
+ * cogl_framebuffer_push_primitive_clip().
  */
 COGL_EXPORT void
 cogl_framebuffer_pop_clip (CoglFramebuffer *framebuffer);
@@ -1406,5 +1381,3 @@ COGL_EXPORT CoglTimestampQuery *
 cogl_framebuffer_create_timestamp_query (CoglFramebuffer *framebuffer);
 
 G_END_DECLS
-
-#endif /* __COGL_FRAMEBUFFER_H */

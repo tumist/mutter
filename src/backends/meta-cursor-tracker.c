@@ -20,11 +20,10 @@
  */
 
 /**
- * SECTION:cursor-tracker
- * @title: MetaCursorTracker
- * @short_description: Mutter cursor tracking helper. Originally only
- *                     tracking the cursor image, now more of a "core
- *                     pointer abstraction"
+ * MetaCursorTracker:
+ *
+ * Mutter cursor tracking helper. Originally only tracking
+ * the cursor image, now more of a "core pointer abstraction"
  */
 
 #include "config.h"
@@ -284,9 +283,7 @@ meta_cursor_tracker_class_init (MetaCursorTrackerClass *klass)
     meta_cursor_tracker_real_get_sprite;
 
   obj_props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "backend",
-                         "MetaBackend",
+    g_param_spec_object ("backend", NULL, NULL,
                          META_TYPE_BACKEND,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY |

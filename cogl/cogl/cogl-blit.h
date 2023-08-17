@@ -26,13 +26,13 @@
  * SOFTWARE.
  */
 
-#ifndef __COGL_BLIT_H
-#define __COGL_BLIT_H
+#pragma once
 
 #include <glib.h>
-#include "cogl-object-private.h"
-#include "cogl-texture.h"
-#include "cogl-framebuffer.h"
+
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-texture.h"
+#include "cogl/cogl-framebuffer.h"
 
 /* This structures and functions are used when a series of blits needs
    to be performed between two textures. In this case there are
@@ -97,5 +97,3 @@ _cogl_blit (CoglBlitData *data,
 
 void
 _cogl_blit_end (CoglBlitData *data);
-
-#endif /* __COGL_BLIT_H */

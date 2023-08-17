@@ -26,33 +26,32 @@
 #include "backends/native/meta-kms-device-private.h"
 #include "backends/native/meta-kms-update-private.h"
 
-enum
-{
-  PROP_0,
-
-  PROP_KMS,
-};
-
 struct _MetaKmsImpl
 {
   GObject parent;
+
+  GPtrArray *update_filters;
 };
 
 typedef struct _MetaKmsImplPrivate
 {
-  MetaKms *kms;
-
   GList *impl_devices;
 } MetaKmsImplPrivate;
 
-G_DEFINE_TYPE_WITH_PRIVATE (MetaKmsImpl, meta_kms_impl, G_TYPE_OBJECT)
+struct _MetaKmsUpdateFilter
+{
+  MetaKmsUpdateFilterFunc func;
+  gpointer user_data;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (MetaKmsImpl, meta_kms_impl, META_TYPE_THREAD_IMPL)
 
 MetaKms *
 meta_kms_impl_get_kms (MetaKmsImpl *impl)
 {
-  MetaKmsImplPrivate *priv = meta_kms_impl_get_instance_private (impl);
+  MetaThreadImpl *thread_impl = META_THREAD_IMPL (impl);
 
-  return priv->kms;
+  return META_KMS (meta_thread_impl_get_thread (thread_impl));
 }
 
 void
@@ -61,7 +60,7 @@ meta_kms_impl_add_impl_device (MetaKmsImpl       *impl,
 {
   MetaKmsImplPrivate *priv = meta_kms_impl_get_instance_private (impl);
 
-  meta_assert_in_kms_impl (priv->kms);
+  meta_assert_in_kms_impl (meta_kms_impl_get_kms (impl));
 
   priv->impl_devices = g_list_append (priv->impl_devices, impl_device);
 }
@@ -72,7 +71,7 @@ meta_kms_impl_remove_impl_device (MetaKmsImpl       *impl,
 {
   MetaKmsImplPrivate *priv = meta_kms_impl_get_instance_private (impl);
 
-  meta_assert_in_kms_impl (priv->kms);
+  meta_assert_in_kms_impl (meta_kms_impl_get_kms (impl));
 
   priv->impl_devices = g_list_remove (priv->impl_devices, impl_device);
 }
@@ -112,6 +111,30 @@ meta_kms_impl_notify_modes_set (MetaKmsImpl *impl)
                   NULL);
 }
 
+static void
+meta_kms_update_filter_free (MetaKmsUpdateFilter *filter)
+{
+  g_free (filter);
+}
+
+MetaKmsUpdate *
+meta_kms_impl_filter_update (MetaKmsImpl       *impl,
+                             MetaKmsCrtc       *crtc,
+                             MetaKmsUpdate     *update,
+                             MetaKmsUpdateFlag  flags)
+{
+  int i;
+
+  for (i = 0; i < impl->update_filters->len; i++)
+    {
+      MetaKmsUpdateFilter *filter = g_ptr_array_index (impl->update_filters, i);
+
+      update = filter->func (impl, crtc, update, flags, filter->user_data);
+    }
+
+  return update;
+}
+
 MetaKmsImpl *
 meta_kms_impl_new (MetaKms *kms)
 {
@@ -121,67 +144,49 @@ meta_kms_impl_new (MetaKms *kms)
 }
 
 static void
-meta_kms_impl_set_property (GObject      *object,
-                            guint         prop_id,
-                            const GValue *value,
-                            GParamSpec   *pspec)
+meta_kms_impl_init (MetaKmsImpl *impl)
 {
-  MetaKmsImpl *impl = META_KMS_IMPL (object);
-  MetaKmsImplPrivate *priv = meta_kms_impl_get_instance_private (impl);
-
-  switch (prop_id)
-    {
-    case PROP_KMS:
-      priv->kms = g_value_get_object (value);
-      break;
-
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-    }
+  impl->update_filters =
+    g_ptr_array_new_with_free_func ((GDestroyNotify) meta_kms_update_filter_free);
 }
 
 static void
-meta_kms_impl_get_property (GObject    *object,
-                            guint       prop_id,
-                            GValue     *value,
-                            GParamSpec *pspec)
+meta_kms_impl_finalize (GObject *object)
 {
   MetaKmsImpl *impl = META_KMS_IMPL (object);
-  MetaKmsImplPrivate *priv = meta_kms_impl_get_instance_private (impl);
 
-  switch (prop_id)
-    {
-    case PROP_KMS:
-      g_value_set_object (value, priv->kms);
-      break;
+  g_clear_pointer (&impl->update_filters, g_ptr_array_unref);
 
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-    }
-}
-
-static void
-meta_kms_impl_init (MetaKmsImpl *kms_impl)
-{
+  G_OBJECT_CLASS (meta_kms_impl_parent_class)->finalize (object);
 }
 
 static void
 meta_kms_impl_class_init (MetaKmsImplClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  GParamSpec *pspec;
 
-  object_class->set_property = meta_kms_impl_set_property;
-  object_class->get_property = meta_kms_impl_get_property;
+  object_class->finalize = meta_kms_impl_finalize;
+}
 
-  pspec = g_param_spec_object ("kms",
-                               "kms",
-                               "MetaKms",
-                               META_TYPE_KMS,
-                               G_PARAM_READWRITE |
-                               G_PARAM_STATIC_STRINGS |
-                               G_PARAM_CONSTRUCT_ONLY);
-  g_object_class_install_property (object_class,
-                                   PROP_KMS,
-                                   pspec);
+MetaKmsUpdateFilter *
+meta_kms_impl_add_update_filter (MetaKmsImpl             *impl,
+                                 MetaKmsUpdateFilterFunc  func,
+                                 gpointer                 user_data)
+{
+  MetaKmsUpdateFilter *filter;
+
+  filter = g_new0 (MetaKmsUpdateFilter, 1);
+  filter->func = func;
+  filter->user_data = user_data;
+
+  g_ptr_array_add (impl->update_filters, filter);
+
+  return filter;
+}
+
+void
+meta_kms_impl_remove_update_filter (MetaKmsImpl         *impl,
+                                    MetaKmsUpdateFilter *filter)
+{
+  g_ptr_array_remove (impl->update_filters, filter);
 }

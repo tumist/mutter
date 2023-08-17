@@ -96,6 +96,16 @@ G_DECLARE_FINAL_TYPE (MetaWaylandTextInputFocus, meta_wayland_text_input_focus,
 G_DEFINE_TYPE (MetaWaylandTextInputFocus, meta_wayland_text_input_focus,
                CLUTTER_TYPE_INPUT_FOCUS)
 
+static MetaBackend *
+backend_from_text_input (MetaWaylandTextInput *text_input)
+{
+  MetaWaylandSeat *seat = text_input->seat;
+  MetaWaylandCompositor *compositor = meta_wayland_seat_get_compositor (seat);
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+
+  return meta_context_get_backend (context);
+}
+
 static void
 meta_wayland_text_input_focus_request_surrounding (ClutterInputFocus *focus)
 {
@@ -801,29 +811,56 @@ meta_wayland_text_input_init (MetaWaylandCompositor *compositor)
 }
 
 gboolean
+meta_wayland_text_input_update (MetaWaylandTextInput *text_input,
+                                const ClutterEvent   *event)
+{
+  ClutterEventType event_type;
+
+  if (!text_input->surface ||
+      !clutter_input_focus_is_focused (text_input->input_focus))
+    return FALSE;
+
+  event_type = clutter_event_type (event);
+
+  if (event_type == CLUTTER_KEY_PRESS ||
+      event_type == CLUTTER_KEY_RELEASE)
+    return clutter_input_focus_filter_event (text_input->input_focus, event);
+
+  return FALSE;
+}
+
+gboolean
 meta_wayland_text_input_handle_event (MetaWaylandTextInput *text_input,
                                       const ClutterEvent   *event)
 {
+  ClutterEventType event_type;
   gboolean retval;
 
   if (!text_input->surface ||
       !clutter_input_focus_is_focused (text_input->input_focus))
     return FALSE;
 
-  if ((event->type == CLUTTER_KEY_PRESS ||
-       event->type == CLUTTER_KEY_RELEASE) &&
+  event_type = clutter_event_type (event);
+
+  if ((event_type == CLUTTER_KEY_PRESS ||
+       event_type == CLUTTER_KEY_RELEASE) &&
       clutter_event_get_flags (event) & CLUTTER_EVENT_FLAG_INPUT_METHOD)
     meta_wayland_text_input_focus_flush_done (text_input->input_focus);
 
-  retval = clutter_input_focus_filter_event (text_input->input_focus, event);
+  retval = clutter_input_focus_process_event (text_input->input_focus, event);
 
-  if (event->type == CLUTTER_BUTTON_PRESS ||
-      event->type == CLUTTER_TOUCH_BEGIN)
+  if (event_type == CLUTTER_BUTTON_PRESS ||
+      event_type == CLUTTER_TOUCH_BEGIN)
     {
       MetaWaylandSurface *surface = NULL;
+      MetaBackend *backend;
+      ClutterStage *stage;
       ClutterActor *actor;
 
-      actor = clutter_stage_get_device_actor (clutter_event_get_stage (event),
+      backend = backend_from_text_input (text_input);
+      stage = CLUTTER_STAGE (meta_backend_get_stage (backend));
+
+      actor = clutter_stage_get_device_actor (stage,
                                               clutter_event_get_device (event),
                                               clutter_event_get_event_sequence (event));
 

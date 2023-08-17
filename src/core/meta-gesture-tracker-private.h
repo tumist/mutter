@@ -21,8 +21,7 @@
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
 
-#ifndef META_GESTURE_TRACKER_PRIVATE_H
-#define META_GESTURE_TRACKER_PRIVATE_H
+#pragma once
 
 #include <glib-object.h>
 
@@ -59,6 +58,7 @@ GType                meta_gesture_tracker_get_type           (void) G_GNUC_CONST
 MetaGestureTracker * meta_gesture_tracker_new                (void);
 
 gboolean             meta_gesture_tracker_handle_event       (MetaGestureTracker   *tracker,
+                                                              ClutterStage         *stage,
                                                               const ClutterEvent   *event);
 gboolean             meta_gesture_tracker_set_sequence_state (MetaGestureTracker   *tracker,
                                                               ClutterEventSequence *sequence,
@@ -66,5 +66,3 @@ gboolean             meta_gesture_tracker_set_sequence_state (MetaGestureTracker
 MetaSequenceState    meta_gesture_tracker_get_sequence_state (MetaGestureTracker   *tracker,
                                                               ClutterEventSequence *sequence);
 gint                 meta_gesture_tracker_get_n_current_touches (MetaGestureTracker *tracker);
-
-#endif /* META_GESTURE_TRACKER_PRIVATE_H */

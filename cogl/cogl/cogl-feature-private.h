@@ -28,13 +28,12 @@
  *
  */
 
-#ifndef __COGL_FEATURE_PRIVATE_H
-#define __COGL_FEATURE_PRIVATE_H
+#pragma once
 
 #include <glib.h>
 
-#include "cogl-context.h"
-#include "cogl-renderer.h"
+#include "cogl/cogl-context.h"
+#include "cogl/cogl-renderer.h"
 
 #define COGL_CHECK_GL_VERSION(driver_major, driver_minor, \
                               target_major, target_minor) \
@@ -102,5 +101,3 @@ _cogl_feature_check_ext_functions (CoglContext *context,
                                    int gl_major,
                                    int gl_minor,
                                    char * const *gl_extensions);
-
-#endif /* __COGL_FEATURE_PRIVATE_H */
