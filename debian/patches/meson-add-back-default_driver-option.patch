@@ -30,7 +30,7 @@ index 29ca429..85fd0c6 100644
 +
  #define COGL_CONFIG_H_INCLUDED 1
 diff --git a/cogl/meson.build b/cogl/meson.build
-index e73f1a8..b4b6f10 100644
+index 277dfab..ea260a8 100644
 --- a/cogl/meson.build
 +++ b/cogl/meson.build
 @@ -10,6 +10,10 @@ cdata.set('HAVE_COGL_GLES2', have_gles2)
@@ -45,10 +45,10 @@ index e73f1a8..b4b6f10 100644
    input: 'cogl-config.h.meson',
    output: 'cogl-config.h',
 diff --git a/meson.build b/meson.build
-index 8947069..4425a26 100644
+index dedfa0a..5ef685a 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -273,6 +273,8 @@ if have_wayland_eglstream
+@@ -274,6 +274,8 @@ if have_wayland_eglstream
    endif
  endif
  
@@ -57,7 +57,7 @@ index 8947069..4425a26 100644
  have_sm = get_option('sm')
  if have_sm
    sm_dep = dependency('sm')
-@@ -684,6 +686,7 @@ summary('X11', have_x11, section: 'Options')
+@@ -685,6 +687,7 @@ summary('X11', have_x11, section: 'Options')
  summary('XWayland', have_xwayland, section: 'Options')
  summary('Native Backend', have_native_backend, section: 'Options')
  summary('EGL Device', have_egl_device, section: 'Options')

@@ -11,7 +11,7 @@ Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2774
  1 file changed, 1 insertion(+)
 
 diff --git a/src/core/workspace.c b/src/core/workspace.c
-index 2c09176..fc0b022 100644
+index a70791b..8128bd0 100644
 --- a/src/core/workspace.c
 +++ b/src/core/workspace.c
 @@ -734,6 +734,7 @@ meta_workspace_index (MetaWorkspace *workspace)

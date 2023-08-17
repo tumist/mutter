@@ -1,0 +1,26 @@
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 7 Aug 2023 15:29:33 +0200
+Subject: settings: Remove stray new line
+
+Cosmetic only, no functional change.
+
+(cherry picked from commit e35eafebba5fa7aaa55065d41b29bd867e4dbe46)
+
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3156
+Applied-upstream: 44.4, commit:28e9913323cba67eda4b1e12c9ed498c7c32dbb6
+---
+ src/backends/meta-settings.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/backends/meta-settings.c b/src/backends/meta-settings.c
+index 730a8e8..b8b34ab 100644
+--- a/src/backends/meta-settings.c
++++ b/src/backends/meta-settings.c
+@@ -488,7 +488,6 @@ meta_settings_get_xwayland_disable_extensions (MetaSettings *settings)
+ gboolean
+ meta_settings_are_xwayland_byte_swapped_clients_allowed (MetaSettings *settings)
+ {
+-
+   return settings->xwayland_allow_byte_swapped_clients;
+ }
+ 

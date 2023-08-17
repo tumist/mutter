@@ -1,3 +1,9 @@
+output-kms-Use-meta_kms_connector_get_preferred_mode-in-i.patch
+Update-Persian-translation.patch
+settings-Remove-stray-new-line.patch
+settings-Use-appropriate-type-for-xwayland-allow-byte-swa.patch
+settings-Set-xwayland_allow_byte_swapped_clients-at-start.patch
+wayland-Unset-keyboard-focus-if-surface-is-destroyed.patch
 meson-add-back-default_driver-option.patch
 tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
 debian/meson-Do-not-mark-CI-test-tools-as-required.patch
