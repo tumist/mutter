@@ -25,6 +25,21 @@ mutter (44.3-5) UNRELEASED; urgency=medium
 
  -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 14:49:07 +0100
 
+mutter (43.7-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream stable release 43.7
+    - Functionally equivalent to 43.6-1
+  * d/p/wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch:
+    Drop patch, applied upstream
+  * d/gbp.conf, d/control.in: Use debian/trixie branch
+  * d/p/cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch:
+    Add patch from upstream 45.beta to fix a test failure with recent Mesa
+    (Closes: #1042055, LP: #2025287)
+  * d/patches: Improve tracking of upstream status
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 17:40:39 +0100
+
 mutter (44.3-4) experimental; urgency=medium
 
   * Team upload
