@@ -3,8 +3,13 @@ mutter (44.3-5) UNRELEASED; urgency=medium
   * d/patches: Reorder patch series with closest-to-upstream first
   * d/patches: Improve tracking of bug references and upstream status
   * d/.gitignore: Add
+  * d/patches/44/, d/patches/45/: Move patches that were applied upstream
+    into topic subdirs.
+    We have enough patches in this package, some of them short-term and
+    some of them long-term delta, that it seems useful to keep track
+    of this.
 
- -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 12:33:55 +0100
+ -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 12:38:41 +0100
 
 mutter (44.3-4) experimental; urgency=medium
 
