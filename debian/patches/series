@@ -13,7 +13,6 @@
 45/compositor-Handle-grab-state-through-ClutterStage-is-grab.patch
 45/cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch
 workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch
-debian/meson-add-back-default_driver-option.patch
 workarounds/tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
 debian/meson-Do-not-mark-CI-test-tools-as-required.patch
 debian/tests-Do-not-run-screencast-tests.patch
