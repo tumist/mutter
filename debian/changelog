@@ -1,3 +1,11 @@
+mutter (44.3-5) UNRELEASED; urgency=medium
+
+  * d/patches: Reorder patch series with closest-to-upstream first
+  * d/patches: Improve tracking of bug references and upstream status
+  * d/.gitignore: Add
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 12:33:55 +0100
+
 mutter (44.3-4) experimental; urgency=medium
 
   * Team upload
