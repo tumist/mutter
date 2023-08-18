@@ -1,3 +1,4 @@
+output-kms-Use-meta_kms_connector_get_preferred_mode-in-i.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 tests-Use-a-more-interoperable-path-to-bash.patch
 cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch
