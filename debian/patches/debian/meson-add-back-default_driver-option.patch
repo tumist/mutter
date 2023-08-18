@@ -7,9 +7,16 @@ to force the usage of a specific cogl driver at build time.
 
 Expose this functionality in meson as well
 
+TODO: This was rejected upstream with:
+> There is a bunch of #ifdef COGL_DEFAULT_DRIVER in cogl-renderer.c that
+> aren't used, because upstream, the build system does not define it. I
+> think the better approach is to delete those ifdefs, and if necessary,
+> hardcode the Mali driver (or whatever problematic driver there is)
+> to use the right GL.
+
 Origin: https://gitlab.gnome.org/GNOME/mutter/merge_requests/392
 Forwarded: yes
-Applied-upstream: no
+Applied-upstream: no, rejected
 ---
  cogl/cogl-config.h.meson | 3 +++
  cogl/meson.build         | 4 ++++

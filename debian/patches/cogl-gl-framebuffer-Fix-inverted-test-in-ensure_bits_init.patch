@@ -15,6 +15,9 @@ the CI tests to fail in mutter.
 
 (cherry picked from commit a2203df9f43b9e501a972d23b3d5584005c03ce6)
 
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2848
+Bug-Debian: https://bugs.debian.org/1042055
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/mutter/+bug/2025287
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3047
 Applied-upstream: 45.alpha, commit:a2203df9f43b9e501a972d23b3d5584005c03ce6
 ---
