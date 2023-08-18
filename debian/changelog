@@ -3,7 +3,7 @@ mutter (43.6-2) UNRELEASED; urgency=medium
   * d/gbp.conf, d/control.in: Use debian/trixie branch
   * d/p/cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch:
     Add patch from upstream 45.beta to fix a test failure with recent Mesa
-    (Closes: #1042055)
+    (Closes: #1042055, LP: #2025287)
   * d/patches: Improve tracking of upstream status
 
  -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 12:23:13 +0100
