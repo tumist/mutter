@@ -21,6 +21,7 @@ git suggests. Also add Gbp-Pq: Topic debian
 
 Bug: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/3760
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/1441
+Applied-upstream: no, see also https://bugs.debian.org/1050020
 Last-Update: 2023-08-14
 ---
  clutter/clutter/clutter-frame-clock.c             | 252 ++++++++++++----

@@ -7,6 +7,7 @@ Workaround for https://gitlab.gnome.org/GNOME/mutter/-/issues/2509
 
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2509
 Forwarded: not-needed
+Applied-upstream: no, see also https://bugs.debian.org/1050022
 ---
  src/tests/meson.build | 1 -
  1 file changed, 1 deletion(-)

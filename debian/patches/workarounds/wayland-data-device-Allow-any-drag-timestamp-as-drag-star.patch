@@ -16,6 +16,7 @@ dragging and accept a serial to match any of these.
 
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2216
 Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/mutter/+bug/1964541
+Applied-upstream: no, see also https://bugs.debian.org/1050025
 ---
  src/wayland/meta-wayland-data-device.c | 15 ++++++++++++++-
  src/wayland/meta-wayland-pointer.c     |  9 +++++++++
