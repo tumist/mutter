@@ -1,5 +1,6 @@
-mutter (44.3-5) UNRELEASED; urgency=medium
+mutter (44.3-5) experimental; urgency=medium
 
+  * Team upload
   * d/patches: Reorder patch series with closest-to-upstream first
   * d/patches: Improve tracking of bug references and upstream status
   * d/.gitignore: Add
@@ -28,7 +29,7 @@ mutter (44.3-5) UNRELEASED; urgency=medium
   * d/gbp.conf: Use upstream/44.x branch.
     The Ubuntu GNOME team have already started packaging v45 prereleases.
 
- -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 20:48:39 +0100
+ -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 20:49:18 +0100
 
 mutter (43.7-1) unstable; urgency=medium
 
