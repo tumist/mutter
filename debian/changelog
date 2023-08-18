@@ -8,8 +8,22 @@ mutter (44.3-5) UNRELEASED; urgency=medium
     We have enough patches in this package, some of them short-term and
     some of them long-term delta, that it seems useful to keep track
     of this.
+  * d/patches, d/rules: Stop trying to force gles2 driver on armel, armhf.
+    This patch was rejected by upstream, and according to comments on the
+    upstream merge request, it is no longer effective either, because
+    mutter's driver selection is now done in a higher layer.
+    Users of systems with a working gles2 driver but a broken or slow gl3
+    driver can work around this by setting environment variable
+    CLUTTER_DRIVER=gles2.
+    See #1050014 for more details of what would be involved in making this
+    driver choice happen automatically in an upstreamable way.
+  * d/p/cursor-renderer-native-Workaround-broken-arm64-drivers.patch:
+    Drop patch forcing use of simpler cursor buffers on aarch64.
+    According to the upstream and Ubuntu bugs, this should be fixed in Mesa
+    since 22.3.3, which is included in the Debian 12 initial release and in
+    Ubuntu 22.04 as an update.
 
- -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 12:38:41 +0100
+ -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 14:49:07 +0100
 
 mutter (44.3-4) experimental; urgency=medium
 
