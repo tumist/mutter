@@ -13,10 +13,10 @@ method which isn't supported in core profiles.
 As Mesa has recently started to be more strict about these, this causes
 the CI tests to fail in mutter.
 
-Part-of: <https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3047>
 (cherry picked from commit a2203df9f43b9e501a972d23b3d5584005c03ce6)
 
-Origin: future 45.alpha
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3047
+Applied-upstream: 45.alpha, commit:a2203df9f43b9e501a972d23b3d5584005c03ce6
 ---
  cogl/cogl/driver/gl/cogl-gl-framebuffer-fbo.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
