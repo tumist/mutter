@@ -1,4 +1,3 @@
-wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 tests-Use-a-more-interoperable-path-to-bash.patch
 cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch
