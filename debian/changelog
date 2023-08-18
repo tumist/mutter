@@ -22,6 +22,9 @@ mutter (44.3-5) UNRELEASED; urgency=medium
     According to the upstream and Ubuntu bugs, this should be fixed in Mesa
     since 22.3.3, which is included in the Debian 12 initial release and in
     Ubuntu 22.04 as an update.
+  * Merge packaging from unstable
+    - No functional changes; all changes relevant to this branch were
+      already in experimental
 
  -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 14:49:07 +0100
 
