@@ -1,6 +1,7 @@
 wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 tests-Use-a-more-interoperable-path-to-bash.patch
+cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch
 meson-add-back-default_driver-option.patch
 tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
 theme-load-icons-as-Gtk-does-with-fallback-and-RTL-suppor.patch
