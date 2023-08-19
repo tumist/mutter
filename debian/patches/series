@@ -5,8 +5,6 @@ tests-test-runner-Add-toggle_overview-command.patch
 clutter-stage-Add-is-grabbed-property.patch
 window-Postpone-focusing-until-grab-ended-if-uninteractab.patch
 tests-Add-test-case-for-restoring-focus-after-overview.patch
-core-Drop-unnecessary-code.patch
-compositor-Handle-grab-state-through-ClutterStage-is-grab.patch
 tests-Reinstate-meta_test_get_plugin_name.patch
 tests-Break-up-stacking-installed-tests-into-more-smaller.patch
 tests-Use-a-more-interoperable-path-to-bash.patch

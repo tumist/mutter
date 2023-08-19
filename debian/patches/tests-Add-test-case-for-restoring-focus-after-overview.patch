@@ -8,8 +8,7 @@ https://gitlab.gnome.org/GNOME/mutter/-/issues/2690.
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2690
 Bug-Debian: https://bugs.debian.org/1035092
 Bug-Debian: https://bugs.debian.org/1049934
-Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
-Applied-upstream: 45, commit:0b9f5ae75b1aaa14a0c4d440e18726ecaf4be402
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3195
 ---
  src/tests/meson.build                      |  1 +
  src/tests/stacking/overview-focus.metatest | 44 ++++++++++++++++++++++++++++++

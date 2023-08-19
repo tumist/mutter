@@ -2,8 +2,7 @@ From: =?utf-8?q?Jonas_=C3=85dahl?= <jadahl@gmail.com>
 Date: Wed, 16 Aug 2023 00:08:31 +0200
 Subject: clutter/stage: Add is-grabbed property
 
-Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
-Applied-upstream: 45, commit:03ee48094e1d6e74f3632b517ae48ba34358da31
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3195
 ---
  clutter/clutter/clutter-stage.c | 29 +++++++++++++++++++++++++++++
  1 file changed, 29 insertions(+)

@@ -7,8 +7,7 @@ implementation. It's roughly a copy of default.c with some cleanups on
 top. A custom shell allows for a bit more freedom when doing testy
 things.
 
-Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
-Applied-upstream: 45, commit:524c9aa4587719a86f0d1c99d8b4482092e58ed5
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3195
 ---
  src/tests/clutter/conform/meson.build         |   1 -
  src/tests/cogl/conform/meson.build            |   1 -
