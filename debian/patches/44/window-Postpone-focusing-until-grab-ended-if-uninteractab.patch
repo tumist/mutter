@@ -11,7 +11,7 @@ Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2690
 Bug-Debian: https://bugs.debian.org/1035092
 Bug-Debian: https://bugs.debian.org/1049934
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
-Applied-upstream: 45, commit:05eeb684d1f990a0b5cedf28a65fbe14980f8fcf
+Applied-upstream: 44.4, commit:57471eaa1ff5a4937ce9753413cf0382e5af6e2b
 ---
  src/core/display-private.h |  3 +++
  src/core/display.c         | 59 ++++++++++++++++++++++++++++++++++++++++++++++

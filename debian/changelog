@@ -1,3 +1,12 @@
+mutter (44.3-6) UNRELEASED; urgency=medium
+
+  * d/patches: Update to upstream gnome-44 branch commit
+    44.3-15-g0b5ab083b4 (no functional changes)
+    - Patches previously in d/patches/45 have been applied to the gnome-44
+      branch and move to d/patches/44
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 00:42:28 +0100
+
 mutter (44.3-5) experimental; urgency=medium
 
   * Team upload
