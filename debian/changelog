@@ -1,24 +1,29 @@
 mutter (43.7-2) UNRELEASED; urgency=medium
 
-  * d/patches: Update to upstream gnome-43 branch commit 43.7-1-ge526843172
-    - Make the choice of preferred video mode consistent between code
+  * d/patches: Update to upstream gnome-43 branch commit
+    43.7-9-g3139cbb47c, excluding CI-only changes
+    - d/p/output-kms-Use-meta_kms_connector_get_preferred_mode-in-i.patch:
+      Make the choice of preferred video mode consistent between code
       paths, fixing choice of video mode on some monitors (mutter!3055)
-  * d/p/clutter-stage-Add-is-grabbed-property.patch,
-    d/p/window-Postpone-focusing-until-grab-ended-if-uninteractab.patch:
-    Add patches backported from upstream to give focus to new app
-    windows when launched from the gnome-shell overview
-    (Closes: #1035092, #1049934)
-  * d/p/tests-Introduce-and-use-a-custom-test-shell.patch,
-    d/p/tests-test-shell-Emulate-overview-grabs.patch,
-    d/p/tests-test-runner-Add-toggle_overview-command.patch,
-    d/p/tests-Add-test-case-for-restoring-focus-after-overview.patch:
-    Add patches from upstream adding test coverage for #1035092
+    - d/p/cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch:
+      change was already included in 43.7-1, just update metadata
+    - d/p/clutter-stage-Add-is-grabbed-property.patch,
+      d/p/window-Postpone-focusing-until-grab-ended-if-uninteractab.patch:
+      Give focus to new app windows when launched from the gnome-shell
+      overview, fixing a regression in 43.3-5 and upstream 43.4
+      (Closes: #1035092, #1049934)
+    - d/p/tests-Introduce-and-use-a-custom-test-shell.patch,
+      d/p/tests-test-shell-Emulate-overview-grabs.patch,
+      d/p/tests-test-runner-Add-toggle_overview-command.patch,
+      d/p/tests-Add-test-case-for-restoring-focus-after-overview.patch:
+      Add unit test coverage for #1035092
   * d/p/tests-Reinstate-meta_test_get_plugin_name.patch:
     Reinstate a symbol in libmutter-test-11 removed by the above patches,
     in case a dependent package is using it
-  * d/libmutter-test-11.symbols: Update for #1035092 changes
+  * d/libmutter-test-11.symbols: Add a new symbol introduced by the test
+    for #1035092
 
- -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 00:47:13 +0100
+ -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 11:27:00 +0100
 
 mutter (43.7-1) unstable; urgency=medium
 
