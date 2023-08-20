@@ -7,6 +7,7 @@ having a grab active, and setting the keyboard focus to the stage
 itself.
 
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3195
+Applied-upstream: 43.8, commit:28e7a638731511fca8f58bdc9c35d59bf02fb9b0
 ---
  src/tests/meta-test-shell.c | 30 ++++++++++++++++++++++++++++++
  1 file changed, 30 insertions(+)

@@ -6,6 +6,7 @@ This will emit the `overlay-key` key which will be handled by the test
 shell.
 
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3195
+Applied-upstream: 43.8, commit:150cf9b4aae5514a6f991f26a1729b8b53018f73
 ---
  src/tests/test-runner.c | 9 +++++++++
  1 file changed, 9 insertions(+)

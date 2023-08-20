@@ -8,6 +8,7 @@ top. A custom shell allows for a bit more freedom when doing testy
 things.
 
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3195
+Applied-upstream: 43.8, commit:610f3260be1b8ce7ac4086c79f080c38d02cbab6
 ---
  src/tests/clutter/conform/meson.build         |   1 -
  src/tests/cogl/conform/meson.build            |   1 -
