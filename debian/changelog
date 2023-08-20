@@ -1,5 +1,6 @@
-mutter (44.3-6) UNRELEASED; urgency=medium
+mutter (44.3-6) unstable; urgency=medium
 
+  * Team upload
   * d/patches: Update to upstream gnome-44 branch commit
     44.3-15-g0b5ab083b4 (no functional changes)
     - Patches previously in d/patches/45 have been applied to the gnome-44
@@ -9,8 +10,9 @@ mutter (44.3-6) UNRELEASED; urgency=medium
       already in experimental
     - d/p/tests-Reinstate-meta_test_get_plugin_name.patch intentionally
       omitted to avoid creating longer-term delta
+  * Upload to unstable (starts transition: #1043144)
 
- -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 00:42:28 +0100
+ -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 21:30:31 +0100
 
 mutter (43.7-2) unstable; urgency=medium
 
