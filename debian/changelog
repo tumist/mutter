@@ -1,5 +1,6 @@
-mutter (43.7-2) UNRELEASED; urgency=medium
+mutter (43.7-2) unstable; urgency=medium
 
+  * Team upload
   * d/patches: Update to upstream gnome-43 branch commit
     43.7-9-g3139cbb47c, excluding CI-only changes
     - d/p/output-kms-Use-meta_kms_connector_get_preferred_mode-in-i.patch:
@@ -23,7 +24,7 @@ mutter (43.7-2) UNRELEASED; urgency=medium
   * d/libmutter-test-11.symbols: Add a new symbol introduced by the test
     for #1035092
 
- -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 11:27:00 +0100
+ -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 11:35:31 +0100
 
 mutter (43.7-1) unstable; urgency=medium
 
