@@ -1,3 +1,11 @@
+mutter (45~beta.1-0ubuntu2) mantic; urgency=medium
+
+  * Drop wayland-data-device-Allow-any-drag-timestamp patch:
+    no longer needed (LP: #1964541) (Closes: #1050025)
+  * Add patch to skip new thread priority modification test on arm
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 21 Aug 2023 12:40:23 -0400
+
 mutter (45~beta.1-0ubuntu1) mantic; urgency=medium
 
   [ Jeremy Bícha ]
