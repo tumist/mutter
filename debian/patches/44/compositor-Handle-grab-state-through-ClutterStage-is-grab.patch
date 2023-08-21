@@ -7,11 +7,14 @@ This is something the compositor could now track by itself, instead of
 being pushed through events. It also makes more sense to do this directly
 when the grabbing conditions change, as opposed to the next event.
 
+Part-of: <https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3185>
+(cherry picked from commit 90a00dae9938c092d9ef520dabcc2d35dbda0dc6)
+
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2690
 Bug-Debian: https://bugs.debian.org/1035092
 Bug-Debian: https://bugs.debian.org/1049934
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
-Applied-upstream: 44.4, commit:5db2f043ac7ac605e4ba9377cd063b6e0175cd5b
+Applied-upstream: 45.rc
 ---
  src/compositor/compositor.c | 18 ++++++++++++++++++
  src/core/display-private.h  |  1 -
@@ -19,10 +22,10 @@ Applied-upstream: 44.4, commit:5db2f043ac7ac605e4ba9377cd063b6e0175cd5b
  3 files changed, 18 insertions(+), 15 deletions(-)
 
 diff --git a/src/compositor/compositor.c b/src/compositor/compositor.c
-index 90c9e81..dd98aa0 100644
+index 5ebe7c5..7d58208 100644
 --- a/src/compositor/compositor.c
 +++ b/src/compositor/compositor.c
-@@ -109,6 +109,7 @@ typedef struct _MetaCompositorPrivate
+@@ -114,6 +114,7 @@ typedef struct _MetaCompositorPrivate
    gulong after_paint_handler_id;
    gulong window_visibility_updated_id;
    gulong monitors_changed_internal_id;
@@ -30,7 +33,7 @@ index 90c9e81..dd98aa0 100644
  
    int64_t server_time_query_time;
    int64_t server_time_offset;
-@@ -1208,6 +1209,17 @@ on_monitors_changed_internal (MetaMonitorManager *monitor_manager,
+@@ -1166,6 +1167,17 @@ on_monitors_changed_internal (MetaMonitorManager *monitor_manager,
    meta_compositor_ensure_compositor_views (compositor);
  }
  
@@ -48,7 +51,7 @@ index 90c9e81..dd98aa0 100644
  static void
  meta_compositor_set_property (GObject      *object,
                                guint         prop_id,
-@@ -1284,6 +1296,11 @@ meta_compositor_constructed (GObject *object)
+@@ -1242,6 +1254,11 @@ meta_compositor_constructed (GObject *object)
                              "after-paint",
                              G_CALLBACK (on_after_paint),
                              compositor);
@@ -60,7 +63,7 @@ index 90c9e81..dd98aa0 100644
  
    priv->window_visibility_updated_id =
      g_signal_connect (priv->display,
-@@ -1317,6 +1334,7 @@ meta_compositor_dispose (GObject *object)
+@@ -1275,6 +1292,7 @@ meta_compositor_dispose (GObject *object)
    g_clear_signal_handler (&priv->stage_presented_id, stage);
    g_clear_signal_handler (&priv->before_paint_handler_id, stage);
    g_clear_signal_handler (&priv->after_paint_handler_id, stage);
@@ -69,10 +72,10 @@ index 90c9e81..dd98aa0 100644
  
    g_clear_pointer (&priv->windows, g_list_free);
 diff --git a/src/core/display-private.h b/src/core/display-private.h
-index 72606ac..a37b97e 100644
+index 4afd0d5..e847e40 100644
 --- a/src/core/display-private.h
 +++ b/src/core/display-private.h
-@@ -130,7 +130,6 @@ struct _MetaDisplay
+@@ -120,7 +120,6 @@ struct _MetaDisplay
  
    /* Opening the display */
    unsigned int display_opening : 1;
@@ -81,10 +84,10 @@ index 72606ac..a37b97e 100644
    /* Closing down the display */
    int closing;
 diff --git a/src/core/events.c b/src/core/events.c
-index 1767dde..8396f86 100644
+index 3a60ee0..7ee03cf 100644
 --- a/src/core/events.c
 +++ b/src/core/events.c
-@@ -229,20 +229,6 @@ meta_display_handle_event (MetaDisplay        *display,
+@@ -257,20 +257,6 @@ meta_display_handle_event (MetaDisplay        *display,
  
    has_grab = stage_has_grab (display);
  
@@ -102,6 +105,6 @@ index 1767dde..8396f86 100644
 -        }
 -    }
 -
-   device = clutter_event_get_device (event);
-   clutter_input_pointer_a11y_update (device, event);
- 
+   sequence = clutter_event_get_event_sequence (event);
+   event_type = clutter_event_type (event);
+   time_ms = clutter_event_get_time (event);

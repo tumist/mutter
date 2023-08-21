@@ -7,22 +7,26 @@ focus left and right, but once we leave the overview, we do want
 whatever was mapped with "take_focus" to get focus. Do that, but after
 the last grab was dismissed.
 
+Closes: https://gitlab.gnome.org/GNOME/mutter/-/issues/2690
+Part-of: <https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3185>
+(cherry picked from commit 05eeb684d1f990a0b5cedf28a65fbe14980f8fcf)
+
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2690
 Bug-Debian: https://bugs.debian.org/1035092
 Bug-Debian: https://bugs.debian.org/1049934
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
-Applied-upstream: 44.4, commit:57471eaa1ff5a4937ce9753413cf0382e5af6e2b
+Applied-upstream: 45.rc
 ---
  src/core/display-private.h |  3 +++
- src/core/display.c         | 59 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/core/display.c         | 58 ++++++++++++++++++++++++++++++++++++++++++++++
  src/core/window.c          | 14 ++++-------
- 3 files changed, 66 insertions(+), 10 deletions(-)
+ 3 files changed, 65 insertions(+), 10 deletions(-)
 
 diff --git a/src/core/display-private.h b/src/core/display-private.h
-index 4eff0b7..72606ac 100644
+index daa12a5..4afd0d5 100644
 --- a/src/core/display-private.h
 +++ b/src/core/display-private.h
-@@ -304,6 +304,9 @@ void meta_display_cancel_touch (MetaDisplay *display);
+@@ -297,6 +297,9 @@ void meta_display_cancel_touch (MetaDisplay *display);
  
  gboolean meta_display_windows_are_interactable (MetaDisplay *display);
  
@@ -33,13 +37,13 @@ index 4eff0b7..72606ac 100644
                                                      ClutterInputDevice *pad,
                                                      const gchar        *pretty_name);
 diff --git a/src/core/display.c b/src/core/display.c
-index eca1c0f..55fc9e1 100644
+index 062e0fd..8f2bb8a 100644
 --- a/src/core/display.c
 +++ b/src/core/display.c
-@@ -135,6 +135,11 @@ typedef struct _MetaDisplayPrivate
- 
-   guint queue_later_ids[META_N_QUEUE_TYPES];
+@@ -141,6 +141,11 @@ typedef struct _MetaDisplayPrivate
    GList *queue_windows[META_N_QUEUE_TYPES];
+ 
+   gboolean enable_input_capture;
 +
 +  struct {
 +    MetaWindow *window;
@@ -48,7 +52,7 @@ index eca1c0f..55fc9e1 100644
  } MetaDisplayPrivate;
  
  G_DEFINE_TYPE_WITH_PRIVATE (MetaDisplay, meta_display, G_TYPE_OBJECT)
-@@ -203,6 +208,10 @@ meta_display_show_osd (MetaDisplay *display,
+@@ -209,6 +214,10 @@ meta_display_show_osd (MetaDisplay *display,
                         const gchar *icon_name,
                         const gchar *message);
  
@@ -59,7 +63,7 @@ index eca1c0f..55fc9e1 100644
  static MetaBackend *
  backend_from_display (MetaDisplay *display)
  {
-@@ -854,6 +863,7 @@ meta_display_new (MetaContext  *context,
+@@ -917,6 +926,7 @@ meta_display_new (MetaContext  *context,
                    GError      **error)
  {
    MetaBackend *backend = meta_context_get_backend (context);
@@ -67,17 +71,16 @@ index eca1c0f..55fc9e1 100644
    MetaDisplay *display;
    MetaDisplayPrivate *priv;
    guint32 timestamp;
-@@ -1005,6 +1015,9 @@ meta_display_new (MetaContext  *context,
-       meta_display_unset_input_focus (display, timestamp);
-     }
+@@ -1091,6 +1101,8 @@ meta_display_new (MetaContext  *context,
+   meta_display_unset_input_focus (display, timestamp);
+ #endif
  
 +  g_signal_connect (stage, "notify::is-grabbed",
 +                    G_CALLBACK (on_is_grabbed_changed), display);
-+
+ 
    display->sound_player = g_object_new (META_TYPE_SOUND_PLAYER, NULL);
  
-   /* Done opening new display */
-@@ -1226,6 +1239,52 @@ meta_display_windows_are_interactable (MetaDisplay *display)
+@@ -1315,6 +1327,52 @@ meta_display_windows_are_interactable (MetaDisplay *display)
    return TRUE;
  }
  
@@ -131,10 +134,10 @@ index eca1c0f..55fc9e1 100644
   * meta_display_xserver_time_is_before:
   * @display: a #MetaDisplay
 diff --git a/src/core/window.c b/src/core/window.c
-index 6c92477..abe87e7 100644
+index aa886ff..3ca98fc 100644
 --- a/src/core/window.c
 +++ b/src/core/window.c
-@@ -2007,15 +2007,6 @@ window_state_on_map (MetaWindow *window,
+@@ -1939,15 +1939,6 @@ window_state_on_map (MetaWindow *window,
        return;
      }
  
@@ -147,10 +150,10 @@ index 6c92477..abe87e7 100644
 -      return;
 -    }
 -
-   /* Terminal usage may be different; some users intend to launch
-    * many apps in quick succession or to just view things in the new
-    * window while still interacting with the terminal.  In that case,
-@@ -2337,7 +2328,10 @@ meta_window_show (MetaWindow *window)
+   /* When strict focus mode is enabled, prevent new windows from taking
+    * focus unless they are ancestors to the transient.
+    */
+@@ -2262,7 +2253,10 @@ meta_window_show (MetaWindow *window)
  
            timestamp = meta_display_get_current_time_roundtrip (window->display);
  
