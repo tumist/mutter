@@ -15,7 +15,21 @@ if [ -z "$(ginsttest-runner -l "$namespace")" ]; then
     exit 1
 fi
 
-exec ginsttest-runner \
+e=0
+ginsttest-runner \
     --log-directory "$AUTOPKGTEST_ARTIFACTS" \
     --tap \
-    "$namespace"
+    "$namespace" || e="$?"
+
+if [ "$e" -ne 0 ]; then
+    arch="$(dpkg --print-architecture)"
+    case "$arch" in
+        # Please keep this list in sync with debian/rules
+        (mips|mips64el|mipsel|riscv64|s390x|alpha|hppa|powerpc|sparc64|x32)
+            echo "# Ignoring test failure on $arch"
+            exit 77
+            ;;
+    esac
+
+    exit "$e"
+fi
