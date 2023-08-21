@@ -1,3 +1,17 @@
+mutter (44.3-7) unstable; urgency=medium
+
+  * Team upload
+  * d/tests/installed-tests: Run installed-tests via a wrapper script.
+    This collects logs as test artifacts, and lets us fail the test if a
+    packaging bug results in no matching tests being present.
+  * d/tests/installed-tests: Ignore test failures on some architectures.
+    These are the same architectures where we don't run build-time tests.
+    On s390x the tests are timing out at the default 5 minute cutoff, and
+    it's not clear whether they would finish successfully if allowed to
+    run for longer.
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 21 Aug 2023 20:57:49 +0100
+
 mutter (44.3-6) unstable; urgency=medium
 
   * Team upload
