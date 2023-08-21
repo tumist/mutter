@@ -1,9 +1,3 @@
-44/output-kms-Use-meta_kms_connector_get_preferred_mode-in-i.patch
-44/Update-Persian-translation.patch
-44/settings-Remove-stray-new-line.patch
-44/settings-Use-appropriate-type-for-xwayland-allow-byte-swa.patch
-44/settings-Set-xwayland_allow_byte_swapped_clients-at-start.patch
-44/wayland-Unset-keyboard-focus-if-surface-is-destroyed.patch
 44/tests-Introduce-and-use-a-custom-test-shell.patch
 44/tests-test-shell-Emulate-overview-grabs.patch
 44/tests-test-runner-Add-toggle_overview-command.patch
@@ -11,7 +5,6 @@
 44/window-Postpone-focusing-until-grab-ended-if-uninteractab.patch
 44/tests-Add-test-case-for-restoring-focus-after-overview.patch
 44/compositor-Handle-grab-state-through-ClutterStage-is-grab.patch
-44/cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch
 workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch
 workarounds/tests-Mark-view-verification-tests-as-incomplete-in-big-e.patch
 debian/meson-Do-not-mark-CI-test-tools-as-required.patch
