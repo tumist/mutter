@@ -24,15 +24,14 @@
  * 02111-1307, USA.
  */
 
-#ifndef __META_SHAPED_TEXTURE_PRIVATE_H__
-#define __META_SHAPED_TEXTURE_PRIVATE_H__
+#pragma once
 
 #include "backends/meta-monitor-manager-private.h"
 #include "meta/meta-shaped-texture.h"
 
 MetaShapedTexture * meta_shaped_texture_new (void);
 void meta_shaped_texture_set_texture (MetaShapedTexture *stex,
-                                      CoglTexture       *texture);
+                                      MetaMultiTexture  *multi_texture);
 void meta_shaped_texture_set_is_y_inverted (MetaShapedTexture *stex,
                                             gboolean           is_y_inverted);
 void meta_shaped_texture_set_snippet (MetaShapedTexture *stex,
@@ -66,6 +65,9 @@ gboolean meta_shaped_texture_update_area (MetaShapedTexture     *stex,
 int meta_shaped_texture_get_width (MetaShapedTexture *stex);
 int meta_shaped_texture_get_height (MetaShapedTexture *stex);
 
+float meta_shaped_texture_get_unscaled_width (MetaShapedTexture *stex);
+float meta_shaped_texture_get_unscaled_height (MetaShapedTexture *stex);
+
 void meta_shaped_texture_set_clip_region (MetaShapedTexture *stex,
                                           cairo_region_t    *clip_region);
 void meta_shaped_texture_set_opaque_region (MetaShapedTexture *stex,
@@ -74,5 +76,3 @@ void meta_shaped_texture_set_opaque_region (MetaShapedTexture *stex,
 void meta_shaped_texture_ensure_size_valid (MetaShapedTexture *stex);
 
 gboolean meta_shaped_texture_should_get_via_offscreen (MetaShapedTexture *stex);
-
-#endif

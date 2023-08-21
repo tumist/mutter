@@ -1,7 +1,6 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; c-basic-offset: 2; -*- */
 
-#ifndef __META_BARRIER_H__
-#define __META_BARRIER_H__
+#pragma once
 
 #include <glib-object.h>
 
@@ -26,6 +25,12 @@ typedef enum
   META_BARRIER_DIRECTION_NEGATIVE_Y = 1 << 3,
 } MetaBarrierDirection;
 
+typedef enum
+{
+  META_BARRIER_FLAG_NONE = 1 << 0,
+  META_BARRIER_FLAG_STICKY = 1 << 1,
+} MetaBarrierFlags;
+
 #define META_TYPE_BARRIER (meta_barrier_get_type ())
 META_EXPORT
 G_DECLARE_DERIVABLE_TYPE (MetaBarrier, meta_barrier,
@@ -45,6 +50,7 @@ MetaBarrier * meta_barrier_new (MetaBackend           *backend,
                                 int                    x2,
                                 int                    y2,
                                 MetaBarrierDirection   directions,
+                                MetaBarrierFlags       flags,
                                 GError               **error);
 
 META_EXPORT
@@ -99,5 +105,3 @@ META_EXPORT
 GType meta_barrier_event_get_type (void) G_GNUC_CONST;
 
 G_END_DECLS
-
-#endif /* __META_BARRIER_H__ */

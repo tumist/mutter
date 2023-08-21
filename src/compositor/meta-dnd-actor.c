@@ -19,9 +19,9 @@
  */
 
 /**
- * SECTION:meta-dnd-actor
- * @title: MetaDnDActor
- * @short_description: Actor for painting the drag and drop surface
+ * MetaDnDActor:
+ *
+ * Actor for painting the drag and drop surface
  *
  */
 
@@ -111,9 +111,7 @@ meta_dnd_actor_class_init (MetaDnDActorClass *klass)
   object_class->set_property = meta_dnd_actor_set_property;
   object_class->get_property = meta_dnd_actor_get_property;
 
-  pspec = g_param_spec_object ("drag-origin",
-                               "Drag origin",
-                               "The origin of the DnD operation",
+  pspec = g_param_spec_object ("drag-origin", NULL, NULL,
                                CLUTTER_TYPE_ACTOR,
                                G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 
@@ -121,9 +119,7 @@ meta_dnd_actor_class_init (MetaDnDActorClass *klass)
                                    PROP_DRAG_ORIGIN,
                                    pspec);
 
-  pspec = g_param_spec_int ("drag-start-x",
-                            "Drag start X",
-                            "The X axis of the drag start point",
+  pspec = g_param_spec_int ("drag-start-x", NULL, NULL,
                             0, G_MAXINT, 0,
                             G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 
@@ -131,9 +127,7 @@ meta_dnd_actor_class_init (MetaDnDActorClass *klass)
                                    PROP_DRAG_START_X,
                                    pspec);
 
-  pspec = g_param_spec_int ("drag-start-y",
-                            "Drag start Y",
-                            "The Y axis of the drag start point",
+  pspec = g_param_spec_int ("drag-start-y", NULL, NULL,
                             0, G_MAXINT, 0,
                             G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 
@@ -207,7 +201,7 @@ meta_dnd_actor_drag_finish (MetaDnDActor *self,
       clutter_actor_set_easing_duration (actor, DRAG_FAILED_DURATION);
       clutter_actor_set_opacity (actor, 0);
 
-      if (CLUTTER_ACTOR_IS_VISIBLE (self->drag_origin))
+      if (clutter_actor_is_visible (self->drag_origin))
         {
           MetaWindowActor *origin_actor;
           float anchor_x, anchor_y;

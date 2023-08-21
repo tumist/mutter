@@ -55,9 +55,9 @@
 #include "cogl/cogl-debug.h"
 #include "cogl/cogl-context-private.h"
 #include "cogl/cogl-texture-private.h"
-#include "cogl-pango-private.h"
-#include "cogl-pango-glyph-cache.h"
-#include "cogl-pango-display-list.h"
+#include "cogl-pango/cogl-pango-private.h"
+#include "cogl-pango/cogl-pango-glyph-cache.h"
+#include "cogl-pango/cogl-pango-display-list.h"
 
 enum
 {
@@ -269,9 +269,7 @@ cogl_pango_renderer_class_init (CoglPangoRendererClass *klass)
   object_class->dispose = cogl_pango_renderer_dispose;
   object_class->finalize = cogl_pango_renderer_finalize;
 
-  pspec = g_param_spec_pointer ("context",
-                                "Context",
-                                "The Cogl Context",
+  pspec = g_param_spec_pointer ("context", NULL, NULL,
                                 G_PARAM_WRITABLE |
                                 G_PARAM_STATIC_STRINGS |
                                 G_PARAM_CONSTRUCT_ONLY);

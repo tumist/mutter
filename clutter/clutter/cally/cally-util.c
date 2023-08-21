@@ -37,15 +37,15 @@
  * available any accessible object.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include <clutter/clutter.h>
 
-#include "cally-util.h"
-#include "cally-root.h"
-#include "cally-stage.h"
+#include "cally/cally-util.h"
+#include "cally/cally-root.h"
+#include "cally/cally-stage.h"
+#include "clutter/clutter.h"
 
 #define DEFAULT_PASSWORD_CHAR '*'
 
@@ -175,7 +175,7 @@ atk_key_event_from_clutter_event_key (ClutterKeyEvent *clutter_event,
   AtkKeyEventStruct *atk_event = g_new0 (AtkKeyEventStruct, 1);
   gunichar key_unichar;
 
-  switch (clutter_event->type)
+  switch (clutter_event_type ((ClutterEvent *) clutter_event))
     {
     case CLUTTER_KEY_PRESS:
       atk_event->type = ATK_KEY_EVENT_PRESS;
@@ -191,7 +191,7 @@ atk_key_event_from_clutter_event_key (ClutterKeyEvent *clutter_event,
   if (password_char)
     atk_event->state = 0;
   else
-    atk_event->state = clutter_event->modifier_state;
+    atk_event->state = clutter_event_get_state ((ClutterEvent *) clutter_event);
 
   /* We emit the clutter keyval. This is not exactly the one expected
      by AtkKeyEventStruct, as it expects a Gdk-like event, with the
@@ -202,7 +202,7 @@ atk_key_event_from_clutter_event_key (ClutterKeyEvent *clutter_event,
   if (password_char)
     atk_event->keyval = clutter_unicode_to_keysym (password_char);
   else
-    atk_event->keyval = clutter_event->keyval;
+    atk_event->keyval = clutter_event_get_key_symbol ((ClutterEvent *) clutter_event);
 
   /* It is expected to store a key defining string here (ie "Space" in
      case you press a space). Anyway, there are no function on clutter
@@ -238,9 +238,9 @@ atk_key_event_from_clutter_event_key (ClutterKeyEvent *clutter_event,
   if (password_char)
     atk_event->keycode = 0;
   else
-    atk_event->keycode = clutter_event->hardware_keycode;
+    atk_event->keycode = clutter_event_get_key_code ((ClutterEvent *) clutter_event);
 
-  atk_event->timestamp = clutter_event->time;
+  atk_event->timestamp = clutter_event_get_time ((ClutterEvent *) clutter_event);
 
 #ifdef CALLY_DEBUG
 
@@ -278,12 +278,12 @@ insert_hf (gpointer key, gpointer value, gpointer data)
  * char
  */
 static gunichar
-check_key_visibility (ClutterEvent *event)
+check_key_visibility (ClutterStage *stage)
 {
   AtkObject *accessible;
   ClutterActor *focus;
 
-  focus = clutter_stage_get_key_focus (clutter_event_get_stage (event));
+  focus = clutter_stage_get_key_focus (stage);
   accessible = clutter_actor_get_accessible (focus);
 
   g_return_val_if_fail (accessible != NULL, 0);
@@ -307,15 +307,19 @@ check_key_visibility (ClutterEvent *event)
 }
 
 gboolean
-cally_snoop_key_event (ClutterKeyEvent *key)
+cally_snoop_key_event (ClutterStage    *stage,
+                       ClutterKeyEvent *key)
 {
   ClutterEvent *event = (ClutterEvent *) key;
   AtkKeyEventStruct *key_event = NULL;
+  ClutterEventType event_type;
   gboolean consumed = FALSE;
   gunichar password_char = 0;
 
+  event_type = clutter_event_type (event);
+
   /* filter key events */
-  if ((event->type != CLUTTER_KEY_PRESS) && (event->type != CLUTTER_KEY_RELEASE))
+  if ((event_type != CLUTTER_KEY_PRESS) && (event_type != CLUTTER_KEY_RELEASE))
     return FALSE;
 
   if (key_listener_list)
@@ -323,7 +327,7 @@ cally_snoop_key_event (ClutterKeyEvent *key)
       GHashTable *new_hash = g_hash_table_new (NULL, NULL);
 
       g_hash_table_foreach (key_listener_list, insert_hf, new_hash);
-      password_char = check_key_visibility (event);
+      password_char = check_key_visibility (stage);
       key_event = atk_key_event_from_clutter_event_key (key, password_char);
       /* func data is inside the hash table */
       consumed = g_hash_table_foreach_steal (new_hash, notify_hf, key_event) > 0;

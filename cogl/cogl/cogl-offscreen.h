@@ -28,15 +28,14 @@
  *
  */
 
+#pragma once
+
 #if !defined(__COGL_H_INSIDE__) && !defined(COGL_COMPILATION)
 #error "Only <cogl/cogl.h> can be included directly."
 #endif
 
-#ifndef __COGL_OFFSCREEN_H__
-#define __COGL_OFFSCREEN_H__
-
-#include <cogl/cogl-types.h>
-#include <cogl/cogl-texture.h>
+#include "cogl/cogl-types.h"
+#include "cogl/cogl-texture.h"
 
 #include <glib-object.h>
 
@@ -100,5 +99,3 @@ COGL_EXPORT CoglTexture *
 cogl_offscreen_get_texture (CoglOffscreen *offscreen);
 
 G_END_DECLS
-
-#endif /* __COGL_OFFSCREEN_H__ */

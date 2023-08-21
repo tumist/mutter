@@ -28,16 +28,15 @@
  *
  */
 
+#pragma once
+
 #if !defined(__COGL_H_INSIDE__) && !defined(COGL_COMPILATION)
 #error "Only <cogl/cogl.h> can be included directly."
 #endif
 
-#ifndef __COGL_SHADER_H__
-#define __COGL_SHADER_H__
-
-#include <cogl/cogl-types.h>
-#include <cogl/cogl-defines.h>
-#include <cogl/cogl-macros.h>
+#include "cogl/cogl-types.h"
+#include "cogl/cogl-defines.h"
+#include "cogl/cogl-macros.h"
 
 G_BEGIN_DECLS
 
@@ -475,5 +474,3 @@ cogl_program_set_uniform_matrix (CoglHandle program,
                                  const float *value);
 
 G_END_DECLS
-
-#endif /* __COGL_SHADER_H__ */

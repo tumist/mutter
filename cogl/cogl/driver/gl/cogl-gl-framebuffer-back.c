@@ -27,14 +27,14 @@
 
 #include "cogl-config.h"
 
-#include "driver/gl/cogl-gl-framebuffer-back.h"
+#include "cogl/driver/gl/cogl-gl-framebuffer-back.h"
 
 #include <gio/gio.h>
 
-#include "cogl-context-private.h"
-#include "cogl-framebuffer-private.h"
-#include "cogl-offscreen-private.h"
-#include "driver/gl/cogl-util-gl-private.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-framebuffer-private.h"
+#include "cogl/cogl-offscreen-private.h"
+#include "cogl/driver/gl/cogl-util-gl-private.h"
 
 struct _CoglGlFramebufferBack
 {
@@ -65,39 +65,38 @@ ensure_bits_initialized (CoglGlFramebufferBack *gl_framebuffer_back)
                                         framebuffer,
                                         COGL_FRAMEBUFFER_STATE_BIND);
 
-#ifdef HAVE_COGL_GL
-  if (ctx->driver == COGL_DRIVER_GL3)
+  if (_cogl_has_private_feature (ctx, COGL_PRIVATE_FEATURE_QUERY_FRAMEBUFFER_BITS))
     {
       const struct {
         GLenum attachment, pname;
         size_t offset;
       } params[] = {
-        { 
+        {
           .attachment = GL_BACK_LEFT,
           .pname = GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE,
           .offset = offsetof (CoglFramebufferBits, red),
         },
-        { 
+        {
           .attachment = GL_BACK_LEFT,
           .pname = GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE,
           .offset = offsetof (CoglFramebufferBits, green),
         },
-        { 
+        {
           .attachment = GL_BACK_LEFT,
           .pname = GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE,
           .offset = offsetof (CoglFramebufferBits, blue),
         },
-        { 
+        {
           .attachment = GL_BACK_LEFT,
           .pname = GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE,
           .offset = offsetof (CoglFramebufferBits, alpha),
         },
-        { 
+        {
           .attachment = GL_DEPTH,
           .pname = GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE,
           .offset = offsetof (CoglFramebufferBits, depth),
         },
-        { 
+        {
           .attachment = GL_STENCIL,
           .pname = GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE,
           .offset = offsetof (CoglFramebufferBits, stencil),
@@ -117,14 +116,8 @@ ensure_bits_initialized (CoglGlFramebufferBack *gl_framebuffer_back)
         }
     }
   else
-#endif /* HAVE_COGL_GL */
     {
-      GE (ctx, glGetIntegerv (GL_RED_BITS, &bits->red));
-      GE (ctx, glGetIntegerv (GL_GREEN_BITS, &bits->green));
-      GE (ctx, glGetIntegerv (GL_BLUE_BITS, &bits->blue));
-      GE (ctx, glGetIntegerv (GL_ALPHA_BITS, &bits->alpha));
-      GE (ctx, glGetIntegerv (GL_DEPTH_BITS, &bits->depth));
-      GE (ctx, glGetIntegerv (GL_STENCIL_BITS, &bits->stencil));
+      return FALSE;
     }
 
   COGL_NOTE (FRAMEBUFFER,

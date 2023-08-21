@@ -26,8 +26,7 @@
  * SOFTWARE.
  */
 
-#ifndef __COGL_XLIB_H__
-#define __COGL_XLIB_H__
+#pragma once
 
 #include <X11/Xlib.h>
 
@@ -54,9 +53,9 @@
 
 #endif /* COGL_COMPILATION */
 
-#include <cogl/cogl-types.h>
-#include <cogl/cogl-xlib-renderer.h>
-#include <cogl/cogl-macros.h>
+#include "cogl/cogl-types.h"
+#include "cogl/cogl-xlib-renderer.h"
+#include "cogl/cogl-macros.h"
 
 /* The gobject introspection scanner seems to parse public headers in
  * isolation which means we need to be extra careful about how we
@@ -71,5 +70,3 @@
 #undef __COGL_XLIB_H_INSIDE__
 #undef __COGL_XLIB_H_MUST_UNDEF_COGL_H_INSIDE__
 #endif
-
-#endif /* __COGL_XLIB_H__ */

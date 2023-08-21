@@ -34,7 +34,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "cogl-pixel-format.h"
+#include "cogl/cogl-pixel-format.h"
 
 /* An entry to map CoglPixelFormats to their respective properties */
 typedef struct _CoglPixelFormatInfo
@@ -119,9 +119,23 @@ static const CoglPixelFormatInfo format_info_table[] = {
     .aligned = 1,
     .bpp = { 3 },
   },
+    {
+    .cogl_format = COGL_PIXEL_FORMAT_RGBX_8888,
+    .format_str = "RGBX_8888",
+    .n_planes = 1,
+    .aligned = 1,
+    .bpp = { 4 },
+  },
   {
     .cogl_format = COGL_PIXEL_FORMAT_RGBA_8888,
     .format_str = "RGBA_8888",
+    .n_planes = 1,
+    .aligned = 1,
+    .bpp = { 4 },
+  },
+  {
+    .cogl_format = COGL_PIXEL_FORMAT_BGRX_8888,
+    .format_str = "BGRX_8888",
     .n_planes = 1,
     .aligned = 1,
     .bpp = { 4 },
@@ -134,8 +148,22 @@ static const CoglPixelFormatInfo format_info_table[] = {
     .bpp = { 4 },
   },
   {
+    .cogl_format = COGL_PIXEL_FORMAT_XRGB_8888,
+    .format_str = "XRGB_8888",
+    .n_planes = 1,
+    .aligned = 1,
+    .bpp = { 4 },
+  },
+  {
     .cogl_format = COGL_PIXEL_FORMAT_ARGB_8888,
     .format_str = "ARGB_8888",
+    .n_planes = 1,
+    .aligned = 1,
+    .bpp = { 4 },
+  },
+  {
+    .cogl_format = COGL_PIXEL_FORMAT_XBGR_8888,
+    .format_str = "XBGR_8888",
     .n_planes = 1,
     .aligned = 1,
     .bpp = { 4 },
@@ -260,8 +288,22 @@ static const CoglPixelFormatInfo format_info_table[] = {
     .bpp = { 4 },
   },
   {
+    .cogl_format = COGL_PIXEL_FORMAT_RGBX_FP_16161616,
+    .format_str = "RGBX_FP_16161616",
+    .n_planes = 1,
+    .bpp = { 8 },
+    .aligned = 1
+  },
+  {
     .cogl_format = COGL_PIXEL_FORMAT_RGBA_FP_16161616,
     .format_str = "RGBA_FP_16161616",
+    .n_planes = 1,
+    .bpp = { 8 },
+    .aligned = 1
+  },
+  {
+    .cogl_format = COGL_PIXEL_FORMAT_BGRX_FP_16161616,
+    .format_str = "BGRX_FP_16161616",
     .n_planes = 1,
     .bpp = { 8 },
     .aligned = 1

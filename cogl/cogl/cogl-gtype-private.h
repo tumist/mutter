@@ -28,15 +28,14 @@
  *
  */
 
-#ifndef __COGL_GTYPE_PRIVATE_H__
-#define __COGL_GTYPE_PRIVATE_H__
+#pragma once
 
 #include "cogl-config.h"
 
 #include <glib.h>
 #include <glib-object.h>
 
-#include "cogl-object-private.h"
+#include "cogl/cogl-object-private.h"
 
 /* Move this to public headers? */
 typedef struct _CoglGtypeObject CoglGtypeObject;
@@ -276,5 +275,3 @@ COGL_EXPORT
 gpointer cogl_object_value_get_object (const GValue *value);
 
 void _cogl_gtype_dummy_iface_init (gpointer iface);
-
-#endif /* __COGL_GTYPE_PRIVATE_H__ */

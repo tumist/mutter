@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_ACTION_H__
-#define __CLUTTER_ACTION_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-actor-meta.h>
+#include "clutter/clutter-actor-meta.h"
 
 G_BEGIN_DECLS
 
@@ -55,15 +54,6 @@ struct _ClutterActionClass
   void (* sequence_cancelled) (ClutterAction        *action,
                                ClutterInputDevice   *device,
                                ClutterEventSequence *sequence);
-
-  void (* _clutter_action1) (void);
-  void (* _clutter_action2) (void);
-  void (* _clutter_action3) (void);
-  void (* _clutter_action4) (void);
-  void (* _clutter_action5) (void);
-  void (* _clutter_action6) (void);
-  void (* _clutter_action7) (void);
-  void (* _clutter_action8) (void);
 };
 
 /* ClutterActor API */
@@ -99,5 +89,3 @@ gboolean       clutter_actor_has_actions           (ClutterActor  *self);
 ClutterEventPhase clutter_action_get_phase (ClutterAction *action);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_ACTION_H__ */

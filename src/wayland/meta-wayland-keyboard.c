@@ -231,13 +231,8 @@ keyboard_handle_focus_surface_destroy (struct wl_listener *listener, void *data)
 {
   MetaWaylandKeyboard *keyboard =
     wl_container_of (listener, keyboard, focus_surface_listener);
-  MetaWaylandInputDevice *input_device = META_WAYLAND_INPUT_DEVICE (keyboard);
-  MetaWaylandSeat *seat = meta_wayland_input_device_get_seat (input_device);
-  MetaWaylandCompositor *compositor = meta_wayland_seat_get_compositor (seat);
-  MetaContext *context = meta_wayland_compositor_get_context (compositor);
-  MetaDisplay *display = meta_context_get_display (context);
 
-  meta_display_sync_wayland_input_focus (display);
+  meta_wayland_keyboard_set_focus (keyboard, NULL);
 }
 
 static gboolean
@@ -506,17 +501,18 @@ default_grab_key (MetaWaylandKeyboardGrab *grab,
                   const ClutterEvent      *event)
 {
   MetaWaylandKeyboard *keyboard = grab->keyboard;
-  gboolean is_press = event->type == CLUTTER_KEY_PRESS;
+  gboolean is_press = clutter_event_type (event) == CLUTTER_KEY_PRESS;
   guint32 code = 0;
 
   /* Ignore autorepeat events, as autorepeat in Wayland is done on the client
    * side. */
-  if (event->key.flags & CLUTTER_EVENT_FLAG_REPEATED)
+  if (clutter_event_get_flags (event) & CLUTTER_EVENT_FLAG_REPEATED)
     return FALSE;
 
   code = clutter_event_get_event_code (event);
 
-  return meta_wayland_keyboard_broadcast_key (keyboard, event->key.time,
+  return meta_wayland_keyboard_broadcast_key (keyboard,
+                                              clutter_event_get_time (event),
                                               code, is_press);
 }
 
@@ -586,7 +582,7 @@ meta_wayland_keyboard_disable (MetaWaylandKeyboard *keyboard)
   g_clear_object (&keyboard->settings);
 }
 
-static void
+static gboolean
 update_pressed_keys (struct wl_array *keys,
                      uint32_t         evdev_code,
                      gboolean         is_press)
@@ -600,12 +596,13 @@ update_pressed_keys (struct wl_array *keys,
       for (k = keys->data; k < end; k++)
         {
           if (*k == evdev_code)
-            return;
+            return FALSE;
         }
 
       /* Otherwise add the key to the list of pressed keys */
       k = wl_array_add (keys, sizeof (*k));
       *k = evdev_code;
+      return TRUE;
     }
   else
     {
@@ -616,11 +613,11 @@ update_pressed_keys (struct wl_array *keys,
             {
               *k = *(end - 1);
               keys->size -= sizeof (*k);
-              return;
+              return TRUE;
             }
         }
 
-      g_warning ("unexpected key release event for key 0x%x", evdev_code);
+      return FALSE;
     }
 }
 
@@ -628,17 +625,14 @@ void
 meta_wayland_keyboard_update (MetaWaylandKeyboard *keyboard,
                               const ClutterKeyEvent *event)
 {
-  gboolean is_press = event->type == CLUTTER_KEY_PRESS;
+  gboolean is_press = clutter_event_type ((ClutterEvent *) event) == CLUTTER_KEY_PRESS;
+  uint32_t evdev_code, hardware_keycode;
 
-  /* Only handle real, non-synthetic, events here. The IM is free to reemit
-   * key events (incl. modifiers), handling those additionally will result
-   * in doubly-pressed keys.
-   */
-  if ((event->flags &
-       (CLUTTER_EVENT_FLAG_SYNTHETIC | CLUTTER_EVENT_FLAG_INPUT_METHOD)) != 0)
+  evdev_code = clutter_event_get_event_code ((ClutterEvent *) event);
+  hardware_keycode = clutter_event_get_key_code ((ClutterEvent *) event);
+
+  if (!update_pressed_keys (&keyboard->pressed_keys, evdev_code, is_press))
     return;
-
-  update_pressed_keys (&keyboard->pressed_keys, event->evdev_code, is_press);
 
   /* If we get a key event but still have pending modifier state
    * changes from a previous event that didn't get cleared, we need to
@@ -648,29 +642,35 @@ meta_wayland_keyboard_update (MetaWaylandKeyboard *keyboard,
     notify_modifiers (keyboard);
 
   keyboard->mods_changed = xkb_state_update_key (keyboard->xkb_info.state,
-                                                 event->hardware_keycode,
+                                                 hardware_keycode,
                                                  is_press ? XKB_KEY_DOWN : XKB_KEY_UP);
   keyboard->mods_changed |= kbd_a11y_apply_mask (keyboard);
 }
 
 gboolean
-meta_wayland_keyboard_handle_event (MetaWaylandKeyboard *keyboard,
+meta_wayland_keyboard_handle_event (MetaWaylandKeyboard   *keyboard,
                                     const ClutterKeyEvent *event)
 {
 #ifdef WITH_VERBOSE_MODE
-  gboolean is_press = event->type == CLUTTER_KEY_PRESS;
+  gboolean is_press =
+    clutter_event_type ((ClutterEvent *) event) == CLUTTER_KEY_PRESS;
 #endif
   gboolean handled;
+  ClutterEventFlags flags;
+  uint32_t hardware_keycode;
+
+  flags = clutter_event_get_flags ((ClutterEvent *) event);
+  hardware_keycode = clutter_event_get_key_code ((ClutterEvent *) event);
 
   /* Synthetic key events are for autorepeat. Ignore those, as
    * autorepeat in Wayland is done on the client side. */
-  if ((event->flags & CLUTTER_EVENT_FLAG_SYNTHETIC) &&
-      !(event->flags & CLUTTER_EVENT_FLAG_INPUT_METHOD))
+  if ((flags & CLUTTER_EVENT_FLAG_SYNTHETIC) &&
+      !(flags & CLUTTER_EVENT_FLAG_INPUT_METHOD))
     return FALSE;
 
   meta_verbose ("Handling key %s event code %d",
 		is_press ? "press" : "release",
-		event->hardware_keycode);
+		hardware_keycode);
 
   handled = notify_key (keyboard, (const ClutterEvent *) event);
 

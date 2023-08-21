@@ -17,8 +17,7 @@
  * 02111-1307, USA.
  */
 
-#ifndef META_PROFILER_H
-#define META_PROFILER_H
+#pragma once
 
 #include <glib-object.h>
 
@@ -34,8 +33,13 @@ G_DECLARE_FINAL_TYPE (MetaProfiler,
                       PROFILER,
                       MetaDBusSysprof3ProfilerSkeleton)
 
-MetaProfiler * meta_profiler_new (void);
+MetaProfiler * meta_profiler_new (const char *trace_file);
+
+void meta_profiler_register_thread (MetaProfiler *profiler,
+                                    GMainContext *main_context,
+                                    const char   *name);
+
+void meta_profiler_unregister_thread (MetaProfiler *profiler,
+                                      GMainContext *main_context);
 
 G_END_DECLS
-
-#endif /* META_PROFILER_H */

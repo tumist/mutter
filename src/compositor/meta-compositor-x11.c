@@ -75,7 +75,6 @@ meta_compositor_x11_process_xevent (MetaCompositorX11 *compositor_x11,
 {
   MetaCompositor *compositor = META_COMPOSITOR (compositor_x11);
   MetaDisplay *display = meta_compositor_get_display (compositor);
-  MetaBackend *backend = meta_compositor_get_backend (compositor);
   MetaX11Display *x11_display = display->x11_display;
   int damage_event_base;
 
@@ -100,13 +99,6 @@ meta_compositor_x11_process_xevent (MetaCompositorX11 *compositor_x11,
 
   if (compositor_x11->have_x11_sync_object)
     meta_sync_ring_handle_event (xevent);
-
-  /*
-   * Clutter needs to know about MapNotify events otherwise it will think the
-   * stage is invisible
-   */
-  if (xevent->type == MapNotify)
-    meta_x11_handle_event (backend, xevent);
 }
 
 static void
@@ -171,8 +163,6 @@ meta_compositor_x11_manage (MetaCompositor  *compositor,
 
   determine_server_clock_source (compositor_x11);
 
-  meta_x11_display_set_cm_selection (display->x11_display, CurrentTime);
-
   compositor_x11->output = display->x11_display->composite_overlay_window;
 
   xwindow = meta_backend_x11_get_xwindow (META_BACKEND_X11 (backend));
@@ -200,8 +190,6 @@ meta_compositor_x11_manage (MetaCompositor  *compositor,
 
   compositor_x11->have_x11_sync_object = meta_sync_ring_init (xdisplay);
 
-  meta_compositor_redirect_x11_windows (META_COMPOSITOR (compositor));
-
   return TRUE;
 }
 
@@ -209,10 +197,16 @@ static void
 meta_compositor_x11_unmanage (MetaCompositor *compositor)
 {
   MetaDisplay *display = meta_compositor_get_display (compositor);
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
   MetaX11Display *x11_display = display->x11_display;
   Display *xdisplay = x11_display->xdisplay;
   Window xroot = x11_display->xroot;
+  Window backend_xwindow;
   MetaCompositorClass *parent_class;
+
+  backend_xwindow = meta_backend_x11_get_xwindow (META_BACKEND_X11 (backend));
+  XReparentWindow (xdisplay, backend_xwindow, xroot, 0, 0);
 
   /*
    * This is the most important part of cleanup - we have to do this before

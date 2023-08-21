@@ -21,17 +21,17 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_TYPES_H__
-#define __CLUTTER_TYPES_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
 #include <cairo.h>
-#include <cogl/cogl.h>
-#include <clutter/clutter-macros.h>
-#include <clutter/clutter-enums.h>
+
+#include "cogl/cogl.h"
+#include "clutter/clutter-macros.h"
+#include "clutter/clutter-enums.h"
 
 #include <graphene-gobject.h>
 
@@ -54,6 +54,7 @@ typedef struct _ClutterLayoutMeta               ClutterLayoutMeta;
 typedef struct _ClutterActorMeta                ClutterActorMeta;
 typedef struct _ClutterLayoutManager            ClutterLayoutManager;
 typedef struct _ClutterActorIter                ClutterActorIter;
+typedef struct _ClutterPaintContext             ClutterPaintContext;
 typedef struct _ClutterPaintNode                ClutterPaintNode;
 typedef struct _ClutterContent                  ClutterContent; /* dummy */
 typedef struct _ClutterScrollActor	        ClutterScrollActor;
@@ -89,6 +90,8 @@ typedef struct _ClutterInputMethod              ClutterInputMethod;
 typedef struct _ClutterInputFocus               ClutterInputFocus;
 
 typedef union _ClutterEvent                     ClutterEvent;
+
+typedef enum _ClutterPaintFlag                  ClutterPaintFlag;
 
 /**
  * ClutterEventSequence:
@@ -415,5 +418,3 @@ void clutter_interval_register_progress_func (GType               value_type,
                                               ClutterProgressFunc func);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_TYPES_H__ */

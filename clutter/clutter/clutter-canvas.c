@@ -39,25 +39,24 @@
  * for an example of how to use #ClutterCanvas..
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <math.h>
-#include <cogl/cogl.h>
 #include <cairo-gobject.h>
 
-#include "clutter-canvas.h"
-
-#include "clutter-actor-private.h"
-#include "clutter-backend.h"
-#include "clutter-cairo.h"
-#include "clutter-color.h"
-#include "clutter-content-private.h"
-#include "clutter-debug.h"
-#include "clutter-marshal.h"
-#include "clutter-paint-node.h"
-#include "clutter-paint-nodes.h"
-#include "clutter-private.h"
-#include "clutter-settings.h"
+#include "cogl/cogl.h"
+#include "clutter/clutter-canvas.h"
+#include "clutter/clutter-actor-private.h"
+#include "clutter/clutter-backend.h"
+#include "clutter/clutter-cairo.h"
+#include "clutter/clutter-color.h"
+#include "clutter/clutter-content-private.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-marshal.h"
+#include "clutter/clutter-paint-node.h"
+#include "clutter/clutter-paint-nodes.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-settings.h"
 
 struct _ClutterCanvasPrivate
 {
@@ -234,9 +233,7 @@ clutter_canvas_class_init (ClutterCanvasClass *klass)
    * The width of the canvas.
    */
   obj_props[PROP_WIDTH] =
-    g_param_spec_int ("width",
-                      P_("Width"),
-                      P_("The width of the canvas"),
+    g_param_spec_int ("width", NULL, NULL,
                       -1, G_MAXINT,
                       -1,
                       G_PARAM_READWRITE |
@@ -248,9 +245,7 @@ clutter_canvas_class_init (ClutterCanvasClass *klass)
    * The height of the canvas.
    */
   obj_props[PROP_HEIGHT] =
-    g_param_spec_int ("height",
-                      P_("Height"),
-                      P_("The height of the canvas"),
+    g_param_spec_int ("height", NULL, NULL,
                       -1, G_MAXINT,
                       -1,
                       G_PARAM_READWRITE |
@@ -262,9 +257,7 @@ clutter_canvas_class_init (ClutterCanvasClass *klass)
    * The height of the canvas.
    */
   obj_props[PROP_SCALE_FACTOR] =
-    g_param_spec_float ("scale-factor",
-                        P_("Scale Factor"),
-                        P_("The Scale factor of the canvas"),
+    g_param_spec_float ("scale-factor", NULL, NULL,
                         0.01f, G_MAXFLOAT,
                         1.0f,
                         G_PARAM_READWRITE |

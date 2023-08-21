@@ -25,15 +25,15 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_CHILD_META_H__
-#define __CLUTTER_CHILD_META_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
 #include <glib-object.h>
-#include <clutter/clutter-types.h>
+
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -76,5 +76,3 @@ CLUTTER_EXPORT
 ClutterActor     *      clutter_child_meta_get_actor            (ClutterChildMeta *data);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_CHILD_META_H__ */

@@ -21,7 +21,7 @@
 
 #include "config.h"
 
-#include "meta-window-drag.h"
+#include "compositor/meta-window-drag.h"
 
 #include "compositor/compositor-private.h"
 #include "compositor/edge-resistance.h"
@@ -236,16 +236,12 @@ meta_window_drag_class_init (MetaWindowDragClass *klass)
   object_class->set_property = meta_window_drag_set_property;
   object_class->get_property = meta_window_drag_get_property;
 
-  props[PROP_WINDOW] = g_param_spec_object ("window",
-                                            "Window",
-                                            "Window",
+  props[PROP_WINDOW] = g_param_spec_object ("window", NULL, NULL,
                                             META_TYPE_WINDOW,
                                             G_PARAM_READWRITE |
                                             G_PARAM_CONSTRUCT_ONLY |
                                             G_PARAM_STATIC_STRINGS);
-  props[PROP_GRAB_OP] = g_param_spec_uint ("grab-op",
-                                           "Grab op",
-                                           "Grab op",
+  props[PROP_GRAB_OP] = g_param_spec_uint ("grab-op", NULL, NULL,
                                            0, G_MAXUINT,
                                            META_GRAB_OP_NONE,
                                            G_PARAM_READWRITE |
@@ -546,10 +542,10 @@ process_mouse_move_resize_grab (MetaWindowDrag  *window_drag,
                                 ClutterKeyEvent *event)
 {
   /* don't care about releases, but eat them, don't end grab */
-  if (event->type == CLUTTER_KEY_RELEASE)
+  if (clutter_event_type ((ClutterEvent *) event) == CLUTTER_KEY_RELEASE)
     return TRUE;
 
-  if (event->keyval == CLUTTER_KEY_Escape)
+  if (clutter_event_get_key_symbol ((ClutterEvent *) event) == CLUTTER_KEY_Escape)
     {
       MetaTileMode tile_mode;
 
@@ -596,17 +592,22 @@ process_keyboard_move_grab (MetaWindowDrag  *window_drag,
   MetaEdgeResistanceFlags flags;
   gboolean handled;
   MetaRectangle frame_rect;
+  ClutterModifierType modifiers;
+  uint32_t keyval;
   int x, y;
   int incr;
 
   handled = FALSE;
 
   /* don't care about releases, but eat them, don't end grab */
-  if (event->type == CLUTTER_KEY_RELEASE)
+  if (clutter_event_type ((ClutterEvent *) event) == CLUTTER_KEY_RELEASE)
     return TRUE;
 
+  keyval = clutter_event_get_key_symbol ((ClutterEvent *) event);
+  modifiers = clutter_event_get_state ((ClutterEvent *) event);
+
   /* don't end grab on modifier key presses */
-  if (is_modifier (event->keyval))
+  if (is_modifier (keyval))
     return TRUE;
 
   meta_window_get_frame_rect (window, &frame_rect);
@@ -615,7 +616,7 @@ process_keyboard_move_grab (MetaWindowDrag  *window_drag,
 
   flags = META_EDGE_RESISTANCE_KEYBOARD_OP | META_EDGE_RESISTANCE_WINDOWS;
 
-  if ((event->modifier_state & CLUTTER_SHIFT_MASK) != 0)
+  if ((modifiers & CLUTTER_SHIFT_MASK) != 0)
     flags |= META_EDGE_RESISTANCE_SNAP;
 
 #define SMALL_INCREMENT 1
@@ -623,12 +624,12 @@ process_keyboard_move_grab (MetaWindowDrag  *window_drag,
 
   if (flags & META_EDGE_RESISTANCE_SNAP)
     incr = 1;
-  else if (event->modifier_state & CLUTTER_CONTROL_MASK)
+  else if (modifiers & CLUTTER_CONTROL_MASK)
     incr = SMALL_INCREMENT;
   else
     incr = NORMAL_INCREMENT;
 
-  if (event->keyval == CLUTTER_KEY_Escape)
+  if (keyval == CLUTTER_KEY_Escape)
     {
       /* End move and restore to original state.  If the window was a
        * maximized window that had been "shaken loose" we need to
@@ -651,7 +652,7 @@ process_keyboard_move_grab (MetaWindowDrag  *window_drag,
    * Shift + arrow to snap is sort of a hidden feature. This way
    * people using just arrows shouldn't get too frustrated.
    */
-  switch (event->keyval)
+  switch (keyval)
     {
     case CLUTTER_KEY_KP_Home:
     case CLUTTER_KEY_KP_Prior:
@@ -669,7 +670,7 @@ process_keyboard_move_grab (MetaWindowDrag  *window_drag,
       break;
     }
 
-  switch (event->keyval)
+  switch (keyval)
     {
     case CLUTTER_KEY_KP_Home:
     case CLUTTER_KEY_KP_End:
@@ -715,15 +716,18 @@ process_keyboard_resize_grab_op_change (MetaWindowDrag  *window_drag,
 {
   MetaGrabOp op, unconstrained;
   gboolean handled;
+  uint32_t keyval;
 
   op = (window_drag->grab_op & ~META_GRAB_OP_WINDOW_FLAG_UNCONSTRAINED);
   unconstrained = (window_drag->grab_op & META_GRAB_OP_WINDOW_FLAG_UNCONSTRAINED);
+
+  keyval = clutter_event_get_key_symbol ((ClutterEvent *) event);
 
   handled = FALSE;
   switch (op)
     {
     case META_GRAB_OP_KEYBOARD_RESIZING_UNKNOWN:
-      switch (event->keyval)
+      switch (keyval)
         {
         case CLUTTER_KEY_Up:
         case CLUTTER_KEY_KP_Up:
@@ -749,7 +753,7 @@ process_keyboard_resize_grab_op_change (MetaWindowDrag  *window_drag,
       break;
 
     case META_GRAB_OP_KEYBOARD_RESIZING_S:
-      switch (event->keyval)
+      switch (keyval)
         {
         case CLUTTER_KEY_Left:
         case CLUTTER_KEY_KP_Left:
@@ -765,7 +769,7 @@ process_keyboard_resize_grab_op_change (MetaWindowDrag  *window_drag,
       break;
 
     case META_GRAB_OP_KEYBOARD_RESIZING_N:
-      switch (event->keyval)
+      switch (keyval)
         {
         case CLUTTER_KEY_Left:
         case CLUTTER_KEY_KP_Left:
@@ -781,7 +785,7 @@ process_keyboard_resize_grab_op_change (MetaWindowDrag  *window_drag,
       break;
 
     case META_GRAB_OP_KEYBOARD_RESIZING_W:
-      switch (event->keyval)
+      switch (keyval)
         {
         case CLUTTER_KEY_Up:
         case CLUTTER_KEY_KP_Up:
@@ -797,7 +801,7 @@ process_keyboard_resize_grab_op_change (MetaWindowDrag  *window_drag,
       break;
 
     case META_GRAB_OP_KEYBOARD_RESIZING_E:
-      switch (event->keyval)
+      switch (keyval)
         {
         case CLUTTER_KEY_Up:
         case CLUTTER_KEY_KP_Up:
@@ -846,18 +850,23 @@ process_keyboard_resize_grab (MetaWindowDrag  *window_drag,
   int width, height;
   MetaEdgeResistanceFlags flags;
   MetaGravity gravity;
+  ClutterModifierType modifiers;
+  uint32_t keyval;
 
   handled = FALSE;
 
   /* don't care about releases, but eat them, don't end grab */
-  if (event->type == CLUTTER_KEY_RELEASE)
+  if (clutter_event_type ((ClutterEvent *) event) == CLUTTER_KEY_RELEASE)
     return TRUE;
+
+  keyval = clutter_event_get_key_symbol ((ClutterEvent *) event);
+  modifiers = clutter_event_get_state ((ClutterEvent *) event);
 
   /* don't end grab on modifier key presses */
-  if (is_modifier (event->keyval))
+  if (is_modifier (keyval))
     return TRUE;
 
-  if (event->keyval == CLUTTER_KEY_Escape)
+  if (keyval == CLUTTER_KEY_Escape)
     {
       /* End resize and restore to original state. */
       meta_window_move_resize_frame (window_drag->effective_grab_window,
@@ -884,7 +893,7 @@ process_keyboard_resize_grab (MetaWindowDrag  *window_drag,
 
   flags = META_EDGE_RESISTANCE_KEYBOARD_OP;
 
-  if ((event->modifier_state & CLUTTER_SHIFT_MASK) != 0)
+  if ((modifiers & CLUTTER_SHIFT_MASK) != 0)
     flags |= META_EDGE_RESISTANCE_SNAP;
 
 #define SMALL_INCREMENT 1
@@ -895,7 +904,7 @@ process_keyboard_resize_grab (MetaWindowDrag  *window_drag,
       height_inc = 1;
       width_inc = 1;
     }
-  else if (event->modifier_state & CLUTTER_CONTROL_MASK)
+  else if (modifiers & CLUTTER_CONTROL_MASK)
     {
       width_inc = SMALL_INCREMENT;
       height_inc = SMALL_INCREMENT;
@@ -914,7 +923,7 @@ process_keyboard_resize_grab (MetaWindowDrag  *window_drag,
   if (window->size_hints.height_inc > 1)
     height_inc = window->size_hints.height_inc;
 
-  switch (event->keyval)
+  switch (keyval)
     {
     case CLUTTER_KEY_Up:
     case CLUTTER_KEY_KP_Up:
@@ -1668,6 +1677,7 @@ process_pointer_event (MetaWindowDrag     *window_drag,
   MetaEdgeResistanceFlags flags;
   MetaWindow *window;
   gfloat x, y;
+  int button;
 
   window = window_drag->effective_grab_window;
   if (!window)
@@ -1677,7 +1687,7 @@ process_pointer_event (MetaWindowDrag     *window_drag,
   if (window_drag->leading_touch_sequence != sequence)
     return;
 
-  switch (event->type)
+  switch (clutter_event_type (event))
     {
     case CLUTTER_BUTTON_PRESS:
       /* This is the keybinding or menu case where we've
@@ -1694,8 +1704,10 @@ process_pointer_event (MetaWindowDrag     *window_drag,
       if (window_drag->leading_touch_sequence)
         return;
 
-      if (event->button.button == 1 ||
-          event->button.button == (unsigned int) meta_prefs_get_mouse_button_resize ())
+      button = clutter_event_get_button (event);
+
+      if (button == 1 ||
+          button == (unsigned int) meta_prefs_get_mouse_button_resize ())
         end_grab_op (window_drag, event);
 
       break;
@@ -1737,11 +1749,11 @@ static gboolean
 on_window_drag_event (MetaWindowDrag *window_drag,
                       ClutterEvent   *event)
 {
-  switch (event->type)
+  switch (clutter_event_type (event))
     {
     case CLUTTER_KEY_PRESS:
     case CLUTTER_KEY_RELEASE:
-      process_key_event (window_drag, &event->key);
+      process_key_event (window_drag, (ClutterKeyEvent *) event);
       break;
     default:
       process_pointer_event (window_drag, event);

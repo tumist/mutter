@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_BLUR_EFFECT_H__
-#define __CLUTTER_BLUR_EFFECT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-effect.h>
+#include "clutter/clutter-effect.h"
 
 G_BEGIN_DECLS
 
@@ -47,5 +46,3 @@ CLUTTER_EXPORT
 ClutterEffect *clutter_blur_effect_new (void);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_BLUR_EFFECT_H__ */

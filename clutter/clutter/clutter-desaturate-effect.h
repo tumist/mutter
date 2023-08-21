@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_DESATURATE_EFFECT_H__
-#define __CLUTTER_DESATURATE_EFFECT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-effect.h>
+#include "clutter/clutter-effect.h"
 
 G_BEGIN_DECLS
 
@@ -53,5 +52,3 @@ CLUTTER_EXPORT
 gdouble        clutter_desaturate_effect_get_factor (ClutterDesaturateEffect *effect);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_DESATURATE_EFFECT_H__ */

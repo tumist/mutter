@@ -20,9 +20,9 @@
  */
 
 /**
- * SECTION:input-settings
- * @title: MetaInputSettings
- * @short_description: Mutter input device configuration
+ * MetaInputSettings:
+ *
+ * Mutter input device configuration
  */
 
 #include "config.h"
@@ -1734,9 +1734,7 @@ meta_input_settings_class_init (MetaInputSettingsClass *klass)
   object_class->set_property = meta_input_settings_set_property;
 
   props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "backend",
-                         "MetaBackend",
+    g_param_spec_object ("backend", NULL, NULL,
                          META_TYPE_BACKEND,
                          G_PARAM_WRITABLE |
                          G_PARAM_CONSTRUCT_ONLY |

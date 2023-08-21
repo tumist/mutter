@@ -17,8 +17,7 @@
  * 02111-1307, USA.
  */
 
-#ifndef META_WAYLAND_SURFACE_H
-#define META_WAYLAND_SURFACE_H
+#pragma once
 
 #include <cairo.h>
 #include <glib.h>
@@ -83,7 +82,7 @@ struct _MetaWaylandSurfaceState
   /* wl_surface.attach */
   gboolean newly_attached;
   MetaWaylandBuffer *buffer;
-  CoglTexture *texture;
+  MetaMultiTexture *texture;
   gulong buffer_destroy_handler_id;
   int32_t dx;
   int32_t dy;
@@ -148,7 +147,9 @@ struct _MetaWaylandDragDestFuncs
                       MetaWaylandSurface    *surface);
   void (* motion)    (MetaWaylandDataDevice *data_device,
                       MetaWaylandSurface    *surface,
-                      const ClutterEvent    *event);
+                      float                  x,
+                      float                  y,
+                      uint32_t               time_ms);
   void (* drop)      (MetaWaylandDataDevice *data_device,
                       MetaWaylandSurface    *surface);
   void (* update)    (MetaWaylandDataDevice *data_device,
@@ -193,7 +194,7 @@ struct _MetaWaylandSurface
     MetaWaylandSurface *parent;
     GNode *subsurface_branch_node;
     GNode *subsurface_leaf_node;
-    CoglTexture *texture;
+    MetaMultiTexture *texture;
   } output_state, protocol_state;
 
   /* Extension resources. */
@@ -316,7 +317,9 @@ void                meta_wayland_surface_delete (MetaWaylandSurface *surface);
 void                meta_wayland_surface_drag_dest_focus_in  (MetaWaylandSurface   *surface,
                                                               MetaWaylandDataOffer *offer);
 void                meta_wayland_surface_drag_dest_motion    (MetaWaylandSurface   *surface,
-                                                              const ClutterEvent   *event);
+                                                              float                 x,
+                                                              float                 y,
+                                                              uint32_t              time_ms);
 void                meta_wayland_surface_drag_dest_focus_out (MetaWaylandSurface   *surface);
 void                meta_wayland_surface_drag_dest_drop      (MetaWaylandSurface   *surface);
 void                meta_wayland_surface_drag_dest_update    (MetaWaylandSurface   *surface);
@@ -371,7 +374,7 @@ void                meta_wayland_surface_restore_shortcuts (MetaWaylandSurface *
 gboolean            meta_wayland_surface_is_shortcuts_inhibited (MetaWaylandSurface *surface,
                                                                  MetaWaylandSeat    *seat);
 
-CoglTexture *       meta_wayland_surface_get_texture (MetaWaylandSurface *surface);
+MetaMultiTexture *  meta_wayland_surface_get_texture (MetaWaylandSurface *surface);
 
 META_EXPORT_TEST
 MetaSurfaceActor *  meta_wayland_surface_get_actor (MetaWaylandSurface *surface);
@@ -414,11 +417,14 @@ struct wl_resource * meta_wayland_surface_get_resource (MetaWaylandSurface *surf
 
 MetaWaylandCompositor * meta_wayland_surface_get_compositor (MetaWaylandSurface *surface);
 
+void meta_wayland_surface_notify_highest_scale_monitor (MetaWaylandSurface *surface);
+
 static inline MetaWaylandSurfaceState *
 meta_wayland_surface_state_new (void)
 {
   return g_object_new (META_TYPE_WAYLAND_SURFACE_STATE, NULL);
 }
+gboolean meta_wayland_surface_is_xwayland (MetaWaylandSurface *surface);
 
 static inline GNode *
 meta_get_next_subsurface_sibling (GNode *n)
@@ -457,5 +463,3 @@ meta_get_first_subsurface_node (struct MetaWaylandSurfaceSubState *sub)
        (subsurface = (G_PASTE (__n, __LINE__) ? G_PASTE (__n, __LINE__)->data : NULL)); \
        G_PASTE (__n, __LINE__) = G_PASTE (__next, __LINE__), \
        G_PASTE (__next, __LINE__) = meta_get_next_subsurface_sibling (G_PASTE (__n, __LINE__)))
-
-#endif

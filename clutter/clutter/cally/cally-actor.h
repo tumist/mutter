@@ -22,15 +22,15 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CALLY_ACTOR_H__
-#define __CALLY_ACTOR_H__
+#pragma once
 
 #if !defined(__CALLY_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <cally/cally.h> can be included directly."
 #endif
 
 #include <atk/atk.h>
-#include <clutter/clutter.h>
+
+#include "clutter/clutter.h"
 
 G_BEGIN_DECLS
 
@@ -103,10 +103,6 @@ struct _CallyActorClass
   gint     (*remove_actor)   (ClutterActor *container,
                               ClutterActor *actor,
                               gpointer      data);
-
-  /*< private >*/
-  /* padding for future expansion */
-  gpointer _padding_dummy[32];
 };
 
 CLUTTER_EXPORT
@@ -139,5 +135,3 @@ gboolean   cally_actor_remove_action_by_name (CallyActor          *cally_actor,
                                               const gchar         *action_name);
 
 G_END_DECLS
-
-#endif /* __CALLY_ACTOR_H__ */

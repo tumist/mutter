@@ -24,16 +24,15 @@
  * Author: Emmanuele Bassi <ebassi@openedhand.com>
  */
 
-#ifndef __CLUTTER_CONTAINER_H__
-#define __CLUTTER_CONTAINER_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-actor.h>
-#include <clutter/clutter-child-meta.h>
-#include <clutter/clutter-types.h>
+#include "clutter/clutter-actor.h"
+#include "clutter/clutter-child-meta.h"
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -150,5 +149,3 @@ void                    clutter_container_child_notify                  (Clutter
                                                                          GParamSpec       *pspec);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_CONTAINER_H__ */

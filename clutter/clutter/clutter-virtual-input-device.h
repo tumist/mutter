@@ -21,13 +21,12 @@
  * Author: Jonas Ådahl <jadahl@gmail.com>
  */
 
-#ifndef __CLUTTER_VIRTUAL_INPUT_DEVICE_H__
-#define __CLUTTER_VIRTUAL_INPUT_DEVICE_H__
+#pragma once
 
 #include <glib-object.h>
 #include <stdint.h>
 
-#include "clutter-seat.h"
+#include "clutter/clutter-seat.h"
 
 #define CLUTTER_TYPE_VIRTUAL_INPUT_DEVICE (clutter_virtual_input_device_get_type ())
 
@@ -176,5 +175,3 @@ int clutter_virtual_input_device_get_device_type (ClutterVirtualInputDevice *vir
 
 CLUTTER_EXPORT
 ClutterSeat * clutter_virtual_input_device_get_seat (ClutterVirtualInputDevice *virtual_device);
-
-#endif /* __CLUTTER_VIRTUAL_INPUT_DEVICE_H__ */

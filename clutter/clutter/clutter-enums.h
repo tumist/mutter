@@ -19,8 +19,7 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_ENUMS_H__
-#define __CLUTTER_ENUMS_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
@@ -29,41 +28,6 @@
 #include <glib-object.h>
 
 G_BEGIN_DECLS
-
-/**
- * ClutterGravity:
- * @CLUTTER_GRAVITY_NONE: Do not apply any gravity
- * @CLUTTER_GRAVITY_NORTH: Scale from topmost downwards
- * @CLUTTER_GRAVITY_NORTH_EAST: Scale from the top right corner
- * @CLUTTER_GRAVITY_EAST: Scale from the right side
- * @CLUTTER_GRAVITY_SOUTH_EAST: Scale from the bottom right corner
- * @CLUTTER_GRAVITY_SOUTH: Scale from the bottom upwards
- * @CLUTTER_GRAVITY_SOUTH_WEST: Scale from the bottom left corner
- * @CLUTTER_GRAVITY_WEST: Scale from the left side
- * @CLUTTER_GRAVITY_NORTH_WEST: Scale from the top left corner
- * @CLUTTER_GRAVITY_CENTER: Scale from the center.
- *
- * Gravity of the scaling operations.
- * 
- * When a gravity different than %CLUTTER_GRAVITY_NONE is used, 
- * an actor is scaled keeping the position of the specified portion 
- * at the same coordinates.
- *
- * Deprecated: 1.22: Use the normalized #ClutterActor pivot point instead
- */
-typedef enum /*< prefix=CLUTTER_GRAVITY >*/
-{
-  CLUTTER_GRAVITY_NONE       = 0,
-  CLUTTER_GRAVITY_NORTH,
-  CLUTTER_GRAVITY_NORTH_EAST,
-  CLUTTER_GRAVITY_EAST,
-  CLUTTER_GRAVITY_SOUTH_EAST,
-  CLUTTER_GRAVITY_SOUTH,
-  CLUTTER_GRAVITY_SOUTH_WEST,
-  CLUTTER_GRAVITY_WEST,
-  CLUTTER_GRAVITY_NORTH_WEST,
-  CLUTTER_GRAVITY_CENTER
-} ClutterGravity;
 
 /**
  * ClutterRotateAxis:
@@ -79,21 +43,6 @@ typedef enum /*< prefix=CLUTTER >*/
   CLUTTER_Y_AXIS,
   CLUTTER_Z_AXIS
 } ClutterRotateAxis;
-
-/**
- * ClutterRotateDirection:
- * @CLUTTER_ROTATE_CW: Clockwise rotation
- * @CLUTTER_ROTATE_CCW: Counter-clockwise rotation
- *
- * Direction of a rotation.
- *
- * Deprecated: 1.22
- */
-typedef enum /*< prefix=CLUTTER_ROTATE >*/
-{
-  CLUTTER_ROTATE_CW,
-  CLUTTER_ROTATE_CCW
-} ClutterRotateDirection;
 
 /**
  * ClutterRequestMode:
@@ -518,21 +467,6 @@ typedef enum /*< prefix=CLUTTER_ALIGN >*/
 } ClutterAlignAxis;
 
 /**
- * ClutterInterpolation:
- * @CLUTTER_INTERPOLATION_LINEAR: linear interpolation
- * @CLUTTER_INTERPOLATION_CUBIC: cubic interpolation
- *
- * The mode of interpolation between key frames
- *
- * Deprecated: 1.22
- */
-typedef enum
-{
-  CLUTTER_INTERPOLATION_LINEAR,
-  CLUTTER_INTERPOLATION_CUBIC
-} ClutterInterpolation;
-
-/**
  * ClutterBinAlignment:
  * @CLUTTER_BIN_ALIGNMENT_FIXED: Fixed position alignment; the
  *   #ClutterBinLayout will honour the fixed position provided
@@ -772,6 +706,7 @@ typedef enum /*< flags prefix=CLUTTER_EVENT >*/
   CLUTTER_EVENT_FLAG_REPEATED     = 1 << 2,
   CLUTTER_EVENT_FLAG_RELATIVE_MOTION = 1 << 3,
   CLUTTER_EVENT_FLAG_GRAB_NOTIFY  = 1 << 4,
+  CLUTTER_EVENT_FLAG_POINTER_EMULATED = 1 << 5,
 } ClutterEventFlags;
 
 /**
@@ -1078,48 +1013,6 @@ typedef enum /*< prefix=CLUTTER_PAN >*/
 
   CLUTTER_PAN_AXIS_AUTO
 } ClutterPanAxis;
-
-/**
- * ClutterTextureFlags:
- * @CLUTTER_TEXTURE_NONE: No flags
- * @CLUTTER_TEXTURE_RGB_FLAG_BGR: Unused flag
- * @CLUTTER_TEXTURE_RGB_FLAG_PREMULT: Unused flag
- * @CLUTTER_TEXTURE_YUV_FLAG_YUV2: Unused flag
- *
- * Flags for clutter_texture_set_from_rgb_data().
- *
- * Deprecated: 1.22: The #ClutterTexture class was the only user of
- *   this API
- */
-typedef enum /*< prefix=CLUTTER_TEXTURE >*/
-{
-  CLUTTER_TEXTURE_NONE             = 0,
-  CLUTTER_TEXTURE_RGB_FLAG_BGR     = 1 << 1,
-  CLUTTER_TEXTURE_RGB_FLAG_PREMULT = 1 << 2, /* FIXME: not handled */
-  CLUTTER_TEXTURE_YUV_FLAG_YUV2    = 1 << 3
-} ClutterTextureFlags;
-
-/**
- * ClutterTextureQuality:
- * @CLUTTER_TEXTURE_QUALITY_LOW: fastest rendering will use nearest neighbour
- *   interpolation when rendering. good setting.
- * @CLUTTER_TEXTURE_QUALITY_MEDIUM: higher quality rendering without using
- *   extra resources.
- * @CLUTTER_TEXTURE_QUALITY_HIGH: render the texture with the best quality
- *   available using extra memory.
- *
- * Enumaration controlling the texture quality.
- *
- * Deprecated: 1.22: The #ClutterTexture class was the only user of
- *   this API; use #ClutterImage and clutter_actor_set_content_scaling_filters()
- *   instead.
- */
-typedef enum /*< prefix=CLUTTER_TEXTURE_QUALITY >*/
-{
-  CLUTTER_TEXTURE_QUALITY_LOW,
-  CLUTTER_TEXTURE_QUALITY_MEDIUM,
-  CLUTTER_TEXTURE_QUALITY_HIGH
-} ClutterTextureQuality;
 
 /**
  * ClutterTimelineDirection:
@@ -1578,5 +1471,3 @@ typedef enum
 } ClutterGrabState;
 
 G_END_DECLS
-
-#endif /* __CLUTTER_ENUMS_H__ */

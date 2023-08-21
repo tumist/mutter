@@ -21,39 +21,40 @@
  */
 
 /**
- * SECTION:meta-window
- * @title: MetaWindow
- * @short_description: A display-agnostic abstraction for a window.
+ * MetaWindow:
+ *
+ * A display-agnostic abstraction for a window.
  *
  * #MetaWindow is the core abstraction in Mutter of a window. It has the
  * properties you'd expect, such as a title, whether it's fullscreen,
  * has decorations, etc.
  *
  * Since a lot of different kinds of windows exist, each window also a
- * #MetaWindowType which denotes which kind of window we're exactly dealing
+ * [enum@Meta.WindowType] which denotes which kind of window we're exactly dealing
  * with. For example, one expects slightly different behaviour from a dialog
  * than a "normal" window. The type of a window can be queried with
- * meta_window_get_type().
+ * [method@Meta.Window.get_window_type].
  *
  * Common API for windows include:
- * - Minimizing: meta_window_minimize() / meta_window_unminimize()
- * - Maximizing: meta_window_maximize() / meta_window_unmaximize()
- * - Fullscreen: meta_window_make_fullscreen() / meta_window_unmake_fullscreen()
- *               / meta_window_is_fullscreen()
  *
- * Each #MetaWindow is part of either one or all #MetaWorkspace<!-- -->s of the
+ * - Minimizing: [method@Meta.Window.minimize] / [method@Meta.Window.unminimize]
+ * - Maximizing: [method@Meta.Window.maximize] / [method@Meta.Window.unmaximize]
+ * - Fullscreen: [method@Meta.Window.make_fullscreen] / [method@Meta.Window.unmake_fullscreen]
+ *               / [method@Meta.Window.is_fullscreen]
+ *
+ * Each #MetaWindow is part of either one or all [class@Meta.Workspace]s of the
  * desktop. You can activate a window on a certain workspace using
- * meta_window_activate_with_workspace(), and query on which workspace it is
- * located using meta_window_located_on_workspace(). The workspace it is part
- * of can be obtained using meta_window_get_workspace().
+ * [method@Meta.Window.activate_with_workspace], and query on which workspace it is
+ * located using [method@Meta.Window.located_on_workspace]. The workspace it is part
+ * of can be obtained using [method@Meta.Window.get_workspace].
  *
  * Each display protocol should make a subclass to be compatible with that
  * protocols' specifics, for example #MetaWindowX11 and #MetaWindowWayland.
  * This is independent of the protocol that the client uses, which is modeled
- * using the #MetaWindowClientType enum.
+ * using the [enum@Meta.WindowClientType] enum.
  *
  * To integrate within the Clutter scene graph, which deals with the actual
- * rendering, each #MetaWindow will be part of a #MetaWindowActor.
+ * rendering, each #MetaWindow will be part of a [class@Meta.WindowActor].
  */
 
 #include "config.h"
@@ -221,6 +222,7 @@ enum
   SIZE_CHANGED,
   POSITION_CHANGED,
   SHOWN,
+  HIGHEST_SCALE_MONITOR_CHANGED,
 
   LAST_SIGNAL
 };
@@ -485,184 +487,126 @@ meta_window_class_init (MetaWindowClass *klass)
   klass->get_client_pid = meta_window_real_get_client_pid;
 
   obj_props[PROP_TITLE] =
-    g_param_spec_string ("title",
-                         "Title",
-                         "The title of the window",
+    g_param_spec_string ("title", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_ICON] =
-    g_param_spec_pointer ("icon",
-                          "Icon",
-                          "Normal icon, usually 96x96 pixels",
+    g_param_spec_pointer ("icon", NULL, NULL,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_MINI_ICON] =
-    g_param_spec_pointer ("mini-icon",
-                          "Mini Icon",
-                          "Mini icon, usually 16x16 pixels",
+    g_param_spec_pointer ("mini-icon", NULL, NULL,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_DECORATED] =
-    g_param_spec_boolean ("decorated",
-                          "Decorated",
-                          "Whether window is decorated",
+    g_param_spec_boolean ("decorated", NULL, NULL,
                           TRUE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_FULLSCREEN] =
-    g_param_spec_boolean ("fullscreen",
-                          "Fullscreen",
-                          "Whether window is fullscreened",
+    g_param_spec_boolean ("fullscreen", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_MAXIMIZED_HORIZONTALLY] =
-    g_param_spec_boolean ("maximized-horizontally",
-                          "Maximized horizontally",
-                          "Whether window is maximized horizontally",
+    g_param_spec_boolean ("maximized-horizontally", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_MAXIMIZED_VERTICALLY] =
-    g_param_spec_boolean ("maximized-vertically",
-                          "Maximizing vertically",
-                          "Whether window is maximized vertically",
+    g_param_spec_boolean ("maximized-vertically", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_MINIMIZED] =
-    g_param_spec_boolean ("minimized",
-                          "Minimizing",
-                          "Whether window is minimized",
+    g_param_spec_boolean ("minimized", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_WINDOW_TYPE] =
-    g_param_spec_enum ("window-type",
-                       "Window Type",
-                       "The type of the window",
+    g_param_spec_enum ("window-type", NULL, NULL,
                        META_TYPE_WINDOW_TYPE,
                        META_WINDOW_NORMAL,
                        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_USER_TIME] =
-    g_param_spec_uint ("user-time",
-                       "User time",
-                       "Timestamp of last user interaction",
+    g_param_spec_uint ("user-time", NULL, NULL,
                        0,
                        G_MAXUINT,
                        0,
                        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_DEMANDS_ATTENTION] =
-    g_param_spec_boolean ("demands-attention",
-                          "Demands Attention",
-                          "Whether the window has _NET_WM_STATE_DEMANDS_ATTENTION set",
+    g_param_spec_boolean ("demands-attention", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_URGENT] =
-    g_param_spec_boolean ("urgent",
-                          "Urgent",
-                          "Whether the urgent flag of WM_HINTS is set",
+    g_param_spec_boolean ("urgent", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_SKIP_TASKBAR] =
-    g_param_spec_boolean ("skip-taskbar",
-                          "Skip taskbar",
-                          "Whether the skip-taskbar flag of WM_HINTS is set",
+    g_param_spec_boolean ("skip-taskbar", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_MUTTER_HINTS] =
-    g_param_spec_string ("mutter-hints",
-                         "_MUTTER_HINTS",
-                         "Contents of the _MUTTER_HINTS property of this window",
+    g_param_spec_string ("mutter-hints", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_APPEARS_FOCUSED] =
-    g_param_spec_boolean ("appears-focused",
-                          "Appears focused",
-                          "Whether the window is drawn as being focused",
+    g_param_spec_boolean ("appears-focused", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_RESIZEABLE] =
-    g_param_spec_boolean ("resizeable",
-                          "Resizeable",
-                          "Whether the window can be resized",
+    g_param_spec_boolean ("resizeable", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_ABOVE] =
-    g_param_spec_boolean ("above",
-                          "Above",
-                          "Whether the window is shown as always-on-top",
+    g_param_spec_boolean ("above", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_WM_CLASS] =
-    g_param_spec_string ("wm-class",
-                         "WM_CLASS",
-                         "Contents of the WM_CLASS property of this window",
+    g_param_spec_string ("wm-class", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_GTK_APPLICATION_ID] =
-    g_param_spec_string ("gtk-application-id",
-                         "_GTK_APPLICATION_ID",
-                         "Contents of the _GTK_APPLICATION_ID property of this window",
+    g_param_spec_string ("gtk-application-id", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_GTK_UNIQUE_BUS_NAME] =
-    g_param_spec_string ("gtk-unique-bus-name",
-                         "_GTK_UNIQUE_BUS_NAME",
-                         "Contents of the _GTK_UNIQUE_BUS_NAME property of this window",
+    g_param_spec_string ("gtk-unique-bus-name", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_GTK_APPLICATION_OBJECT_PATH] =
-    g_param_spec_string ("gtk-application-object-path",
-                         "_GTK_APPLICATION_OBJECT_PATH",
-                         "Contents of the _GTK_APPLICATION_OBJECT_PATH property of this window",
+    g_param_spec_string ("gtk-application-object-path", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_GTK_WINDOW_OBJECT_PATH] =
-    g_param_spec_string ("gtk-window-object-path",
-                         "_GTK_WINDOW_OBJECT_PATH",
-                         "Contents of the _GTK_WINDOW_OBJECT_PATH property of this window",
+    g_param_spec_string ("gtk-window-object-path", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_GTK_APP_MENU_OBJECT_PATH] =
-    g_param_spec_string ("gtk-app-menu-object-path",
-                         "_GTK_APP_MENU_OBJECT_PATH",
-                         "Contents of the _GTK_APP_MENU_OBJECT_PATH property of this window",
+    g_param_spec_string ("gtk-app-menu-object-path", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_GTK_MENUBAR_OBJECT_PATH] =
-    g_param_spec_string ("gtk-menubar-object-path",
-                         "_GTK_MENUBAR_OBJECT_PATH",
-                         "Contents of the _GTK_MENUBAR_OBJECT_PATH property of this window",
+    g_param_spec_string ("gtk-menubar-object-path", NULL, NULL,
                          NULL,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   obj_props[PROP_ON_ALL_WORKSPACES] =
-    g_param_spec_boolean ("on-all-workspaces",
-                          "On all workspaces",
-                          "Whether the window is set to appear on all workspaces",
+    g_param_spec_boolean ("on-all-workspaces", NULL, NULL,
                           FALSE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_IS_ALIVE] =
-    g_param_spec_boolean ("is-alive",
-                          "Is alive",
-                          "Whether the window responds to pings",
+    g_param_spec_boolean ("is-alive", NULL, NULL,
                           TRUE,
                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   obj_props[PROP_DISPLAY] =
-    g_param_spec_object ("display",
-                         "Display",
-                         "The display the window is attached to",
+    g_param_spec_object ("display", NULL, NULL,
                          META_TYPE_DISPLAY,
                          G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
   obj_props[PROP_EFFECT] =
-    g_param_spec_int ("effect",
-                      "Compositor effect",
-                      "The compositor effect",
+    g_param_spec_int ("effect", NULL, NULL,
                       META_COMP_EFFECT_CREATE,
                       META_COMP_EFFECT_NONE,
                       META_COMP_EFFECT_NONE,
                       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
   obj_props[PROP_XWINDOW] =
-    g_param_spec_ulong ("xwindow",
-                        "X Window",
-                        "The corresponding X Window",
+    g_param_spec_ulong ("xwindow", NULL, NULL,
                         0, G_MAXULONG, 0,
                         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
@@ -713,9 +657,11 @@ meta_window_class_init (MetaWindowClass *klass)
    * @window: a #MetaWindow
    *
    * This is emitted when the position of a window might
-   * have changed. Specifically, this is emitted when the
-   * position of the toplevel window has changed, or when
-   * the position of the client window has changed.
+   * have changed.
+   *
+   * Specifically, this is emitted when the position of
+   * the toplevel window has changed, or when the position
+   * of the client window has changed.
    */
   window_signals[POSITION_CHANGED] =
     g_signal_new ("position-changed",
@@ -744,12 +690,29 @@ meta_window_class_init (MetaWindowClass *klass)
    * @window: a #MetaWindow
    *
    * This is emitted when the size of a window might
-   * have changed. Specifically, this is emitted when the
-   * size of the toplevel window has changed, or when the
+   * have changed.
+   *
+   * Specifically, this is emitted when the size of
+   * the toplevel window has changed, or when the
    * size of the client window has changed.
    */
   window_signals[SIZE_CHANGED] =
     g_signal_new ("size-changed",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+
+  /**
+   * MetaWindow::highest-scale-monitor-changed:
+   * @window: a #MetaWindow
+   *
+   * This is emitted when the monitor with the highest scale
+   * intersecting the window changes.
+   */
+  window_signals[HIGHEST_SCALE_MONITOR_CHANGED] =
+    g_signal_new ("highest-scale-monitor-changed",
                   G_TYPE_FROM_CLASS (object_class),
                   G_SIGNAL_RUN_LAST,
                   0,
@@ -1007,6 +970,19 @@ meta_window_find_monitor_from_frame_rect (MetaWindow *window)
                                                              &window_rect);
 }
 
+static MetaLogicalMonitor *
+meta_window_find_highest_scale_monitor_from_frame_rect (MetaWindow *window)
+{
+  MetaBackend *backend = backend_from_window (window);
+  MetaMonitorManager *monitor_manager =
+    meta_backend_get_monitor_manager (backend);
+  MetaRectangle window_rect;
+
+  meta_window_get_frame_rect (window, &window_rect);
+  return meta_monitor_manager_get_highest_scale_monitor_from_rect (monitor_manager,
+                                                                   &window_rect);
+}
+
 static void
 meta_window_manage (MetaWindow *window)
 {
@@ -1151,6 +1127,9 @@ meta_window_constructed (GObject *object)
     window->monitor = meta_window_find_monitor_from_frame_rect (window);
   else
     window->monitor = meta_backend_get_current_logical_monitor (backend);
+
+  window->highest_scale_monitor =
+    meta_window_find_highest_scale_monitor_from_frame_rect (window);
 
   if (window->monitor)
     window->preferred_output_winsys_id = window->monitor->winsys_id;
@@ -1936,53 +1915,6 @@ intervening_user_event_occurred (MetaWindow *window)
     }
 }
 
-/* This function is an ugly hack.  It's experimental in nature and ought to be
- * replaced by a real hint from the app to the WM if we decide the experimental
- * behavior is worthwhile.  The basic idea is to get more feedback about how
- * usage scenarios of "strict" focus users and what they expect.  See #326159.
- */
-static gboolean
-window_is_terminal (MetaWindow *window)
-{
-  if (window == NULL || window->res_class == NULL)
-    return FALSE;
-
-  /*
-   * Compare res_class, which is not user-settable, and thus theoretically
-   * a more-reliable indication of term-ness.
-   */
-
-  /* gnome-terminal -- if you couldn't guess */
-  if (strcmp (window->res_class, "Gnome-terminal") == 0)
-    return TRUE;
-  /* xterm, rxvt, aterm */
-  else if (strcmp (window->res_class, "XTerm") == 0)
-    return TRUE;
-  /* konsole, KDE's terminal program */
-  else if (strcmp (window->res_class, "Konsole") == 0)
-    return TRUE;
-  /* rxvt-unicode */
-  else if (strcmp (window->res_class, "URxvt") == 0)
-    return TRUE;
-  /* eterm */
-  else if (strcmp (window->res_class, "Eterm") == 0)
-    return TRUE;
-  /* KTerm -- some terminal not KDE based; so not like Konsole */
-  else if (strcmp (window->res_class, "KTerm") == 0)
-    return TRUE;
-  /* Multi-gnome-terminal */
-  else if (strcmp (window->res_class, "Multi-gnome-terminal") == 0)
-    return TRUE;
-  /* mlterm ("multi lingual terminal emulator on X") */
-  else if (strcmp (window->res_class, "mlterm") == 0)
-    return TRUE;
-  /* Terminal -- XFCE Terminal */
-  else if (strcmp (window->res_class, "Terminal") == 0)
-    return TRUE;
-
-  return FALSE;
-}
-
 /* This function determines what state the window should have assuming that it
  * and the focus_window have no relation
  */
@@ -2016,23 +1948,16 @@ window_state_on_map (MetaWindow *window,
       return;
     }
 
-  /* Terminal usage may be different; some users intend to launch
-   * many apps in quick succession or to just view things in the new
-   * window while still interacting with the terminal.  In that case,
-   * apps launched from the terminal should not take focus.  This
-   * isn't quite the same as not allowing focus to transfer from
-   * terminals due to new window map, but the latter is a much easier
-   * approximation to enforce so we do that.
+  /* When strict focus mode is enabled, prevent new windows from taking
+   * focus unless they are ancestors to the transient.
    */
   if (*takes_focus &&
       meta_prefs_get_focus_new_windows () == G_DESKTOP_FOCUS_NEW_WINDOWS_STRICT &&
-      !window->display->allow_terminal_deactivation &&
-      window_is_terminal (window->display->focus_window) &&
       !meta_window_is_ancestor_of_transient (window->display->focus_window,
                                              window))
     {
       meta_topic (META_DEBUG_FOCUS,
-                  "focus_window is terminal; not focusing new window.");
+                  "new window is not an ancestor to transient; not taking focus.");
       *takes_focus = FALSE;
       *places_on_top = FALSE;
     }
@@ -3582,6 +3507,12 @@ meta_window_get_main_logical_monitor (MetaWindow *window)
   return window->monitor;
 }
 
+MetaLogicalMonitor *
+meta_window_get_highest_scale_monitor (MetaWindow *window)
+{
+  return window->highest_scale_monitor;
+}
+
 static MetaLogicalMonitor *
 find_monitor_by_winsys_id (MetaWindow *window,
                            uint64_t    winsys_id)
@@ -3693,7 +3624,7 @@ meta_window_update_monitor (MetaWindow                   *window,
                             MetaWindowUpdateMonitorFlags  flags)
 {
   MetaWorkspaceManager *workspace_manager = window->display->workspace_manager;
-  const MetaLogicalMonitor *old;
+  const MetaLogicalMonitor *old, *old_highest_scale;
 
   old = window->monitor;
   META_WINDOW_GET_CLASS (window)->update_main_monitor (window, flags);
@@ -3724,6 +3655,12 @@ meta_window_update_monitor (MetaWindow                   *window,
 
       meta_display_queue_check_fullscreen (window->display);
     }
+
+  old_highest_scale = window->highest_scale_monitor;
+  window->highest_scale_monitor =
+    meta_window_find_highest_scale_monitor_from_frame_rect (window);
+  if (old_highest_scale != window->highest_scale_monitor)
+    g_signal_emit (window, window_signals[HIGHEST_SCALE_MONITOR_CHANGED], 0);
 }
 
 void
@@ -3931,6 +3868,7 @@ meta_window_move_resize_internal (MetaWindow          *window,
  * Moves the window to the desired location on window's assigned
  * workspace, using the northwest edge of the frame as the reference,
  * instead of the actual window's origin, but only if a frame is present.
+ *
  * Otherwise, acts identically to meta_window_move().
  */
 void
@@ -4383,9 +4321,10 @@ meta_window_frame_rect_to_client_rect (MetaWindow    *window,
  * @rect: (out): pointer to an allocated #MetaRectangle
  *
  * Gets the rectangle that bounds @window that is what the user thinks of
- * as the edge of the window. This doesn't include any extra reactive
- * area that we or the client adds to the window, or any area that the
- * client adds to draw a client-side shadow.
+ * as the edge of the window.
+ *
+ * This doesn't include any extra reactive area that we or the client
+ * adds to the window, or any area that the client adds to draw a client-side shadow.
  */
 void
 meta_window_get_frame_rect (const MetaWindow *window,
@@ -4524,14 +4463,38 @@ meta_window_make_most_recent (MetaWindow *window)
   for (l = workspace_manager->workspaces; l != NULL; l = l->next)
     {
       MetaWorkspace *workspace = l->data;
-      GList *link;
+      GList *self, *link;
 
-      link = g_list_find (workspace->mru_list, window);
-      if (!link)
+      self = g_list_find (workspace->mru_list, window);
+      if (!self)
         continue;
 
-      workspace->mru_list = g_list_delete_link (workspace->mru_list, link);
-      workspace->mru_list = g_list_prepend (workspace->mru_list, window);
+      /*
+       * Move to the front of the MRU list if the window is on the
+       * active workspace or was explicitly made sticky
+       */
+      if (workspace == workspace_manager->active_workspace ||
+          window->on_all_workspaces_requested)
+        {
+          workspace->mru_list = g_list_delete_link (workspace->mru_list, self);
+          workspace->mru_list = g_list_prepend (workspace->mru_list, window);
+          continue;
+        }
+
+      /* Otherwise move it before other sticky windows */
+      for (link = workspace->mru_list; link; link = link->next)
+        {
+          MetaWindow *mru_window = link->data;
+
+          if (mru_window->workspace == NULL)
+            break;
+        }
+
+      if (link == self)
+        continue;
+
+      workspace->mru_list = g_list_delete_link (workspace->mru_list, self);
+      workspace->mru_list = g_list_insert_before (workspace->mru_list, link, window);
     }
 }
 
@@ -5244,9 +5207,10 @@ meta_window_set_focused_internal (MetaWindow *window,
  * @window: a #MetaWindow
  * @rect: (out): rectangle into which to store the returned geometry.
  *
- * Gets the location of the icon corresponding to the window. The location
- * will be provided set by the task bar or other user interface element
- * displaying the icon, and is relative to the root window.
+ * Gets the location of the icon corresponding to the window.
+ *
+ * The location will be provided set by the task bar or other user interface
+ * element displaying the icon, and is relative to the root window.
  *
  * Return value: %TRUE if the icon geometry was successfully retrieved.
  */
@@ -5272,8 +5236,9 @@ meta_window_get_icon_geometry (MetaWindow    *window,
  * @window: a #MetaWindow
  * @rect: (nullable): rectangle with the desired geometry or %NULL.
  *
- * Sets or unsets the location of the icon corresponding to the window. If
- * set, the location should correspond to a dock, task bar or other user
+ * Sets or unsets the location of the icon corresponding to the window.
+ *
+ * If set, the location should correspond to a dock, task bar or other user
  * interface element displaying the icon, and is relative to the root window.
  */
 void
@@ -5915,7 +5880,8 @@ meta_window_same_application (MetaWindow *window,
  * meta_window_is_client_decorated:
  *
  * Check if if the window has decorations drawn by the client.
- * (window->decorated refers only to whether we should add decorations)
+ *
+ * `window->decorated` refers only to whether we should add decorations.
  */
 gboolean
 meta_window_is_client_decorated (MetaWindow *window)
@@ -6200,8 +6166,9 @@ meta_window_stack_just_above (MetaWindow *window,
  * @window: a #MetaWindow
  *
  * The user time represents a timestamp for the last time the user
- * interacted with this window.  Note this property is only available
- * for non-override-redirect windows.
+ * interacted with this window.
+ *
+ * Note this property is only available for non-override-redirect windows.
  *
  * The property is set by Mutter initially upon window creation,
  * and updated thereafter on input events (key and button presses) seen by Mutter,
@@ -6245,13 +6212,6 @@ meta_window_set_user_time (MetaWindow *window,
       window->net_wm_user_time = timestamp;
       if (XSERVER_TIME_IS_BEFORE (window->display->last_user_time, timestamp))
         window->display->last_user_time = timestamp;
-
-      /* If this is a terminal, user interaction with it means the user likely
-       * doesn't want to have focus transferred for now due to new windows.
-       */
-      if (meta_prefs_get_focus_new_windows () == G_DESKTOP_FOCUS_NEW_WINDOWS_STRICT &&
-          window_is_terminal (window))
-        window->display->allow_terminal_deactivation = FALSE;
 
       g_object_notify_by_pspec (G_OBJECT (window), obj_props[PROP_USER_TIME]);
     }
@@ -6379,8 +6339,9 @@ meta_window_get_frame (MetaWindow *window)
  * meta_window_appears_focused:
  * @window: a #MetaWindow
  *
- * Determines if the window should be drawn with a focused appearance. This is
- * true for focused windows but also true for windows with a focused modal
+ * Determines if the window should be drawn with a focused appearance.
+ *
+ * This is true for focused windows but also true for windows with a focused modal
  * dialog attached.
  *
  * Return value: %TRUE if the window should be drawn with a focused frame
@@ -6460,7 +6421,8 @@ meta_window_get_window_type (MetaWindow *window)
  * meta_window_get_workspace:
  * @window: a #MetaWindow
  *
- * Gets the #MetaWorkspace that the window is currently displayed on.
+ * Gets the [class@Meta.Workspace] that the window is currently displayed on.
+ *
  * If the window is on all workspaces, returns the currently active
  * workspace.
  *
@@ -6502,9 +6464,9 @@ meta_window_get_description (MetaWindow *window)
  * meta_window_get_wm_class:
  * @window: a #MetaWindow
  *
- * Return the current value of the name part of WM_CLASS X property.
+ * Return the current value of the name part of `WM_CLASS` X property.
  *
- * Returns: (nullable): the current value of the name part of WM_CLASS X
+ * Returns: (nullable): the current value of the name part of `WM_CLASS` X
  * property
  */
 const char *
@@ -6520,9 +6482,9 @@ meta_window_get_wm_class (MetaWindow *window)
  * meta_window_get_wm_class_instance:
  * @window: a #MetaWindow
  *
- * Return the current value of the instance part of WM_CLASS X property.
+ * Return the current value of the instance part of `WM_CLASS` X property.
  *
- * Returns: (nullable): the current value of the instance part of WM_CLASS X
+ * Returns: (nullable): the current value of the instance part of `WM_CLASS` X
  * property.
  */
 const char *
@@ -6963,8 +6925,9 @@ meta_window_get_frame_bounds (MetaWindow *window)
  * @window: a #MetaWindow
  *
  * Tests if @window should be attached to its parent window.
- * (If the "attach_modal_dialogs" option is not enabled, this will
- * always return %FALSE.)
+ *
+ * If the `attach_modal_dialogs` option is not enabled, this will
+ * always return %FALSE.
  *
  * Return value: whether @window should be attached to its parent
  */
@@ -6994,8 +6957,9 @@ has_attached_foreach_func (MetaWindow *window,
  * @window: a #MetaWindow
  *
  * Tests if @window has any transients attached to it.
- * (If the "attach_modal_dialogs" option is not enabled, this will
- * always return %FALSE.)
+ *
+ * If the `attach_modal_dialogs` option is not enabled, this will
+ * always return %FALSE.
  *
  * Return value: whether @window has attached transients
  */
@@ -7548,17 +7512,22 @@ meta_window_handle_ungrabbed_event (MetaWindow         *window,
   gboolean is_window_button_grab_allowed;
   ClutterModifierType grab_mods, event_mods;
   ClutterInputDevice *source;
+  ClutterEventType event_type;
+  uint32_t time_ms;
   gfloat x, y;
   guint button;
 
   if (window->unmanaging)
     return;
 
-  if (event->type != CLUTTER_BUTTON_PRESS &&
-      event->type != CLUTTER_TOUCH_BEGIN)
+  event_type = clutter_event_type (event);
+  time_ms = clutter_event_get_time (event);
+
+  if (event_type != CLUTTER_BUTTON_PRESS &&
+      event_type != CLUTTER_TOUCH_BEGIN)
     return;
 
-  if (event->type == CLUTTER_TOUCH_BEGIN)
+  if (event_type == CLUTTER_TOUCH_BEGIN)
     {
       ClutterEventSequence *sequence;
 
@@ -7585,14 +7554,9 @@ meta_window_handle_ungrabbed_event (MetaWindow         *window,
       meta_topic (META_DEBUG_FOCUS,
                   "Focusing %s due to button %u press (display.c)",
                   window->desc, button);
-      meta_window_focus (window, event->any.time);
-      meta_window_check_alive (window, event->any.time);
+      meta_window_focus (window, time_ms);
+      meta_window_check_alive (window, time_ms);
     }
-  else
-    /* However, do allow terminals to lose focus due to new
-     * window mappings after the user clicks on a panel.
-     */
-    display->allow_terminal_deactivation = TRUE;
 
   /* We have three passive button grabs:
    * - on any button, without modifiers => focuses and maybe raises the window
@@ -7665,7 +7629,7 @@ meta_window_handle_ungrabbed_event (MetaWindow         *window,
                                          op,
                                          clutter_event_get_device (event),
                                          clutter_event_get_event_sequence (event),
-                                         event->any.time);
+                                         time_ms);
             }
         }
     }
@@ -7686,7 +7650,7 @@ meta_window_handle_ungrabbed_event (MetaWindow         *window,
                                      META_GRAB_OP_WINDOW_FLAG_UNCONSTRAINED,
                                      clutter_event_get_device (event),
                                      clutter_event_get_event_sequence (event),
-                                     event->any.time);
+                                     time_ms);
         }
     }
 }

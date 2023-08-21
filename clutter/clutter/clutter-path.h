@@ -21,15 +21,15 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_PATH_H__
-#define __CLUTTER_PATH_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
 #include <cairo.h>
-#include <clutter/clutter-types.h>
+
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -122,9 +122,6 @@ CLUTTER_EXPORT
 void         clutter_path_add_node             (ClutterPath           *path,
                                                 const ClutterPathNode *node);
 CLUTTER_EXPORT
-void         clutter_path_add_cairo_path       (ClutterPath           *path,
-                                                const cairo_path_t    *cpath);
-CLUTTER_EXPORT
 guint        clutter_path_get_n_nodes          (ClutterPath           *path);
 CLUTTER_EXPORT
 void         clutter_path_get_node             (ClutterPath           *path,
@@ -155,9 +152,6 @@ gboolean     clutter_path_set_description      (ClutterPath           *path,
 CLUTTER_EXPORT
 void         clutter_path_clear                (ClutterPath           *path);
 CLUTTER_EXPORT
-void         clutter_path_to_cairo_path        (ClutterPath           *path,
-                                                cairo_t               *cr);
-CLUTTER_EXPORT
 guint        clutter_path_get_position         (ClutterPath           *path,
                                                 gdouble                progress,
                                                 ClutterKnot           *position);
@@ -165,5 +159,3 @@ CLUTTER_EXPORT
 guint        clutter_path_get_length           (ClutterPath           *path);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_PATH_H__ */

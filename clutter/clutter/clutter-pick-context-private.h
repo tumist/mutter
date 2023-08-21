@@ -15,11 +15,10 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CLUTTER_PICK_CONTEXT_PRIVATE_H
-#define CLUTTER_PICK_CONTEXT_PRIVATE_H
+#pragma once
 
-#include "clutter-pick-context.h"
-#include "clutter-pick-stack-private.h"
+#include "clutter/clutter-pick-context.h"
+#include "clutter/clutter-pick-stack-private.h"
 
 ClutterPickContext *
 clutter_pick_context_new_for_view (ClutterStageView         *view,
@@ -33,5 +32,3 @@ clutter_pick_context_steal_stack (ClutterPickContext *pick_context);
 gboolean
 clutter_pick_context_intersects_box (ClutterPickContext   *pick_context,
                                      const graphene_box_t *box);
-
-#endif /* CLUTTER_PICK_CONTEXT_PRIVATE_H */

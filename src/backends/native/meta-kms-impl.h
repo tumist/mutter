@@ -18,16 +18,24 @@
  * 02111-1307, USA.
  */
 
-#ifndef META_KMS_IMPL_H
-#define META_KMS_IMPL_H
+#pragma once
 
 #include "backends/native/meta-kms-impl-device.h"
 #include "backends/native/meta-kms-page-flip-private.h"
 #include "backends/native/meta-kms.h"
+#include "backends/native/meta-thread-impl.h"
+
+typedef struct _MetaKmsUpdateFilter MetaKmsUpdateFilter;
 
 #define META_TYPE_KMS_IMPL (meta_kms_impl_get_type ())
 G_DECLARE_FINAL_TYPE (MetaKmsImpl, meta_kms_impl,
-                      META, KMS_IMPL, GObject)
+                      META, KMS_IMPL, MetaThreadImpl)
+
+typedef MetaKmsUpdate * (* MetaKmsUpdateFilterFunc) (MetaKmsImpl       *impl_device,
+                                                     MetaKmsCrtc       *crtc,
+                                                     MetaKmsUpdate     *update,
+                                                     MetaKmsUpdateFlag  flags,
+                                                     gpointer           user_data);
 
 MetaKms * meta_kms_impl_get_kms (MetaKmsImpl *impl);
 
@@ -45,4 +53,14 @@ void meta_kms_impl_notify_modes_set (MetaKmsImpl *impl);
 
 MetaKmsImpl * meta_kms_impl_new (MetaKms *kms);
 
-#endif /* META_KMS_IMPL_H */
+MetaKmsUpdateFilter * meta_kms_impl_add_update_filter (MetaKmsImpl             *impl,
+                                                       MetaKmsUpdateFilterFunc  func,
+                                                       gpointer                 user_data);
+
+void meta_kms_impl_remove_update_filter (MetaKmsImpl         *impl,
+                                         MetaKmsUpdateFilter *filter);
+
+MetaKmsUpdate * meta_kms_impl_filter_update (MetaKmsImpl       *impl,
+                                             MetaKmsCrtc       *crtc,
+                                             MetaKmsUpdate     *update,
+                                             MetaKmsUpdateFlag  flags);

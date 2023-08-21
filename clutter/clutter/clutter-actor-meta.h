@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_ACTOR_META_H__
-#define __CLUTTER_ACTOR_META_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-types.h>
+#include "clutter/clutter-types.h"
 
 G_BEGIN_DECLS
 
@@ -69,14 +68,6 @@ struct _ClutterActorMetaClass
 
   void (* set_enabled) (ClutterActorMeta *meta,
                         gboolean          is_enabled);
-
-  /*< private >*/
-  void (* _clutter_meta1) (void);
-  void (* _clutter_meta2) (void);
-  void (* _clutter_meta3) (void);
-  void (* _clutter_meta4) (void);
-  void (* _clutter_meta5) (void);
-  void (* _clutter_meta6) (void);
 };
 
 CLUTTER_EXPORT
@@ -94,5 +85,3 @@ CLUTTER_EXPORT
 ClutterActor *  clutter_actor_meta_get_actor    (ClutterActorMeta *meta);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_ACTOR_META_H__ */

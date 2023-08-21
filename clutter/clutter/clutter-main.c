@@ -47,31 +47,31 @@
  * [threads.c](https://git.gnome.org/browse/clutter/tree/examples/threads.c?h=clutter-1.18)
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <stdlib.h>
 #include <glib/gi18n-lib.h>
 #include <hb-glib.h>
 
-#include "clutter-actor-private.h"
-#include "clutter-backend-private.h"
-#include "clutter-debug.h"
-#include "clutter-event-private.h"
-#include "clutter-input-device-private.h"
-#include "clutter-input-pointer-a11y-private.h"
-#include "clutter-graphene.h"
-#include "clutter-main.h"
-#include "clutter-mutter.h"
-#include "clutter-paint-node-private.h"
-#include "clutter-private.h"
-#include "clutter-settings-private.h"
-#include "clutter-stage.h"
-#include "clutter-stage-manager.h"
-#include "clutter-stage-private.h"
-#include "clutter-backend-private.h"
+#include "clutter/clutter-actor-private.h"
+#include "clutter/clutter-backend-private.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-event-private.h"
+#include "clutter/clutter-input-device-private.h"
+#include "clutter/clutter-input-pointer-a11y-private.h"
+#include "clutter/clutter-graphene.h"
+#include "clutter/clutter-main.h"
+#include "clutter/clutter-mutter.h"
+#include "clutter/clutter-paint-node-private.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-settings-private.h"
+#include "clutter/clutter-stage.h"
+#include "clutter/clutter-stage-manager.h"
+#include "clutter/clutter-stage-private.h"
+#include "clutter/clutter-backend-private.h"
 
-#include <cogl/cogl.h>
-#include <cogl-pango/cogl-pango.h>
+#include "cogl/cogl.h"
+#include "cogl-pango/cogl-pango.h"
 
 #include "cally/cally.h" /* For accessibility support */
 
@@ -682,13 +682,18 @@ _clutter_boolean_continue_accumulator (GSignalInvocationHint *ihint,
  */
 
 static inline void
-emit_event (ClutterEvent *event)
+emit_event (ClutterStage *stage,
+            ClutterEvent *event)
 {
-  if (event->type == CLUTTER_KEY_PRESS ||
-      event->type == CLUTTER_KEY_RELEASE)
-    cally_snoop_key_event ((ClutterKeyEvent *) event);
+  ClutterEventType event_type;
 
-  clutter_stage_emit_event (event->any.stage, event);
+  event_type = clutter_event_type (event);
+
+  if (event_type == CLUTTER_KEY_PRESS ||
+      event_type == CLUTTER_KEY_RELEASE)
+    cally_snoop_key_event (stage, (ClutterKeyEvent *) event);
+
+  clutter_stage_emit_event (stage, event);
 }
 
 static ClutterActor *
@@ -728,7 +733,7 @@ maybe_remove_device_for_event (ClutterStage *stage,
   graphene_point_t point;
   uint32_t time;
 
-  if (event->type == CLUTTER_DEVICE_REMOVED)
+  if (clutter_event_type (event) == CLUTTER_DEVICE_REMOVED)
     {
       ClutterInputDeviceType device_type =
         clutter_input_device_get_device_type (device);
@@ -757,7 +762,8 @@ maybe_remove_device_for_event (ClutterStage *stage,
 }
 
 /**
- * clutter_do_event:
+ * clutter_stage_handle_event:
+ * @stage: a #ClutterStage.
  * @event: a #ClutterEvent.
  *
  * Processes an event.
@@ -769,42 +775,42 @@ maybe_remove_device_for_event (ClutterStage *stage,
  * toolkit, and it should never be called by applications.
  */
 void
-clutter_do_event (ClutterEvent *event)
+clutter_stage_handle_event (ClutterStage *stage,
+                            ClutterEvent *event)
 {
   ClutterContext *context = _clutter_context_get_default();
   ClutterActor *event_actor = NULL;
+  ClutterEventType event_type;
   gboolean filtered;
 
-  /* we need the stage for the event */
-  if (event->any.stage == NULL)
-    {
-      g_warning ("%s: Event does not have a stage: discarding.", G_STRFUNC);
-      return;
-    }
+  g_return_if_fail (CLUTTER_IS_STAGE (stage));
+  g_return_if_fail (event != NULL);
 
   /* stages in destruction do not process events */
-  if (CLUTTER_ACTOR_IN_DESTRUCTION (event->any.stage))
+  if (CLUTTER_ACTOR_IN_DESTRUCTION (stage))
     return;
 
-  switch (event->any.type)
+  event_type = clutter_event_type (event);
+
+  switch (event_type)
     {
     case CLUTTER_ENTER:
     case CLUTTER_MOTION:
     case CLUTTER_BUTTON_PRESS:
     case CLUTTER_TOUCH_BEGIN:
     case CLUTTER_TOUCH_UPDATE:
-      update_device_for_event (event->any.stage, event, TRUE);
+      update_device_for_event (stage, event, TRUE);
       break;
     default:
       break;
     }
 
-  if (event->any.type != CLUTTER_DEVICE_ADDED &&
-      event->any.type != CLUTTER_DEVICE_REMOVED &&
-      event->any.type != CLUTTER_NOTHING &&
-      event->any.type != CLUTTER_EVENT_LAST)
+  if (event_type != CLUTTER_DEVICE_ADDED &&
+      event_type != CLUTTER_DEVICE_REMOVED &&
+      event_type != CLUTTER_NOTHING &&
+      event_type != CLUTTER_EVENT_LAST)
     {
-      event_actor = clutter_stage_get_event_actor (event->any.stage, event);
+      event_actor = clutter_stage_get_event_actor (stage, event);
     }
 
   context->current_event = g_slist_prepend (context->current_event, event);
@@ -816,29 +822,29 @@ clutter_do_event (ClutterEvent *event)
 
   if (filtered)
     {
-      if (event->type == CLUTTER_MOTION ||
-          event->type == CLUTTER_BUTTON_RELEASE ||
-          event->type == CLUTTER_TOUCH_UPDATE ||
-          event->type == CLUTTER_TOUCH_END ||
-          event->type == CLUTTER_TOUCH_CANCEL)
+      if (event_type == CLUTTER_MOTION ||
+          event_type == CLUTTER_BUTTON_RELEASE ||
+          event_type == CLUTTER_TOUCH_UPDATE ||
+          event_type == CLUTTER_TOUCH_END ||
+          event_type == CLUTTER_TOUCH_CANCEL)
         {
           ClutterInputDevice *device = clutter_event_get_device (event);
           ClutterEventSequence *sequence = clutter_event_get_event_sequence (event);
 
-          clutter_stage_maybe_lost_implicit_grab (event->any.stage, device, sequence);
+          clutter_stage_maybe_lost_implicit_grab (stage, device, sequence);
         }
     }
   else
     {
-      _clutter_stage_queue_event (event->any.stage, event, TRUE);
+      _clutter_stage_queue_event (stage, event, TRUE);
     }
 
-  if (event->type == CLUTTER_TOUCH_END ||
-      event->type == CLUTTER_TOUCH_CANCEL ||
-      event->type == CLUTTER_DEVICE_REMOVED)
+  if (event_type == CLUTTER_TOUCH_END ||
+      event_type == CLUTTER_TOUCH_CANCEL ||
+      event_type == CLUTTER_DEVICE_REMOVED)
     {
-      _clutter_stage_process_queued_events (event->any.stage);
-      maybe_remove_device_for_event (event->any.stage, event, TRUE);
+      _clutter_stage_process_queued_events (stage);
+      maybe_remove_device_for_event (stage, event, TRUE);
     }
 }
 
@@ -847,7 +853,7 @@ _clutter_process_event_details (ClutterActor        *stage,
                                 ClutterMainContext  *context,
                                 ClutterEvent        *event)
 {
-  switch (event->type)
+  switch (clutter_event_type (event))
     {
       case CLUTTER_NOTHING:
         break;
@@ -876,7 +882,7 @@ _clutter_process_event_details (ClutterActor        *stage,
       case CLUTTER_TOUCH_END:
       case CLUTTER_PROXIMITY_IN:
       case CLUTTER_PROXIMITY_OUT:
-        emit_event (event);
+        emit_event (CLUTTER_STAGE (stage), event);
         break;
 
       case CLUTTER_DEVICE_REMOVED:
@@ -887,28 +893,21 @@ _clutter_process_event_details (ClutterActor        *stage,
 }
 
 /*
- * _clutter_process_event
+ * clutter_stage_process_event
  * @event: a #ClutterEvent.
  *
  * Does the actual work of processing an event that was queued earlier
- * out of clutter_do_event().
+ * out of clutter_stage_handle_event().
  */
 void
-_clutter_process_event (ClutterEvent *event)
+clutter_stage_process_event (ClutterStage *stage,
+                             ClutterEvent *event)
 {
   ClutterMainContext *context;
-  ClutterActor *stage;
   ClutterSeat *seat;
 
   context = _clutter_context_get_default ();
   seat = clutter_backend_get_default_seat (context->backend);
-
-  stage = CLUTTER_ACTOR (event->any.stage);
-  if (stage == NULL)
-    {
-      CLUTTER_NOTE (EVENT, "Discarding event without a stage set");
-      return;
-    }
 
   /* push events on a stack, so that we don't need to
    * add an event parameter to all signals that can be emitted within
@@ -917,7 +916,7 @@ _clutter_process_event (ClutterEvent *event)
   context->current_event = g_slist_prepend (context->current_event, event);
 
   clutter_seat_handle_event_post (seat, event);
-  _clutter_process_event_details (stage, context, event);
+  _clutter_process_event_details (CLUTTER_ACTOR (stage), context, event);
 
   context->current_event = g_slist_delete_link (context->current_event, context->current_event);
 }

@@ -22,14 +22,14 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_PAINT_NODE_PRIVATE_H__
-#define __CLUTTER_PAINT_NODE_PRIVATE_H__
+#pragma once
 
 #include <glib-object.h>
 #include <json-glib/json-glib.h>
-#include <clutter/clutter-backend.h>
-#include <clutter/clutter-paint-context.h>
-#include <clutter/clutter-paint-node.h>
+
+#include "clutter/clutter-backend.h"
+#include "clutter/clutter-paint-context.h"
+#include "clutter/clutter-paint-node.h"
 
 G_BEGIN_DECLS
 
@@ -164,5 +164,3 @@ CLUTTER_EXPORT
 ClutterPaintNode * clutter_effect_node_new (ClutterEffect *effect);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_PAINT_NODE_PRIVATE_H__ */

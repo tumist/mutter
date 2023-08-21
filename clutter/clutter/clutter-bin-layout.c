@@ -42,21 +42,21 @@
  * shows how to pack actors inside a #ClutterBinLayout.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <math.h>
 
 #define CLUTTER_DISABLE_DEPRECATION_WARNINGS
-#include "deprecated/clutter-container.h"
+#include "clutter/deprecated/clutter-container.h"
 
-#include "clutter-actor-private.h"
-#include "clutter-animatable.h"
-#include "clutter-bin-layout.h"
-#include "clutter-child-meta.h"
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-layout-meta.h"
-#include "clutter-private.h"
+#include "clutter/clutter-actor-private.h"
+#include "clutter/clutter-animatable.h"
+#include "clutter/clutter-bin-layout.h"
+#include "clutter/clutter-child-meta.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-layout-meta.h"
+#include "clutter/clutter-private.h"
 
 #define CLUTTER_TYPE_BIN_LAYER          (clutter_bin_layer_get_type ())
 #define CLUTTER_BIN_LAYER(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), CLUTTER_TYPE_BIN_LAYER, ClutterBinLayer))
@@ -213,19 +213,13 @@ clutter_bin_layer_class_init (ClutterBinLayerClass *klass)
   gobject_class->get_property = clutter_bin_layer_get_property;
 
   layer_props[PROP_LAYER_X_ALIGN] =
-    g_param_spec_enum ("x-align",
-                       P_("Horizontal Alignment"),
-                       P_("Horizontal alignment for the actor "
-                          "inside the layout manager"),
+    g_param_spec_enum ("x-align", NULL, NULL,
                        CLUTTER_TYPE_BIN_ALIGNMENT,
                        CLUTTER_BIN_ALIGNMENT_CENTER,
                        CLUTTER_PARAM_READWRITE);
 
   layer_props[PROP_LAYER_Y_ALIGN] =
-    g_param_spec_enum ("y-align",
-                       P_("Vertical Alignment"),
-                       P_("Vertical alignment for the actor "
-                          "inside the layout manager"),
+    g_param_spec_enum ("y-align", NULL, NULL,
                        CLUTTER_TYPE_BIN_ALIGNMENT,
                        CLUTTER_BIN_ALIGNMENT_CENTER,
                        CLUTTER_PARAM_READWRITE);
@@ -622,10 +616,7 @@ clutter_bin_layout_class_init (ClutterBinLayoutClass *klass)
    *   #ClutterActor:x-align properties on #ClutterActor instead.
    */
   bin_props[PROP_X_ALIGN] =
-    g_param_spec_enum ("x-align",
-                       P_("Horizontal Alignment"),
-                       P_("Default horizontal alignment for the actors "
-                          "inside the layout manager"),
+    g_param_spec_enum ("x-align", NULL, NULL,
                        CLUTTER_TYPE_BIN_ALIGNMENT,
                        CLUTTER_BIN_ALIGNMENT_CENTER,
                        CLUTTER_PARAM_READWRITE);
@@ -640,10 +631,7 @@ clutter_bin_layout_class_init (ClutterBinLayoutClass *klass)
    *   #ClutterActor:y-align properties on #ClutterActor instead.
    */
   bin_props[PROP_Y_ALIGN] =
-    g_param_spec_enum ("y-align",
-                       P_("Vertical Alignment"),
-                       P_("Default vertical alignment for the actors "
-                          "inside the layout manager"),
+    g_param_spec_enum ("y-align", NULL, NULL,
                        CLUTTER_TYPE_BIN_ALIGNMENT,
                        CLUTTER_BIN_ALIGNMENT_CENTER,
                        CLUTTER_PARAM_READWRITE);

@@ -19,10 +19,9 @@
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
 
-#ifndef __CLUTTER_INPUT_FOCUS_H__
-#define __CLUTTER_INPUT_FOCUS_H__
+#pragma once
 
-#include <clutter/clutter.h>
+#include "clutter/clutter.h"
 
 #define CLUTTER_TYPE_INPUT_FOCUS (clutter_input_focus_get_type ())
 
@@ -75,11 +74,14 @@ void clutter_input_focus_set_content_purpose (ClutterInputFocus          *focus,
 CLUTTER_EXPORT
 gboolean clutter_input_focus_filter_event (ClutterInputFocus  *focus,
                                            const ClutterEvent *event);
+
+CLUTTER_EXPORT
+gboolean clutter_input_focus_process_event (ClutterInputFocus  *focus,
+                                            const ClutterEvent *event);
+
 CLUTTER_EXPORT
 void clutter_input_focus_set_can_show_preedit (ClutterInputFocus *focus,
                                                gboolean           can_show_preedit);
 CLUTTER_EXPORT
 void clutter_input_focus_set_input_panel_state (ClutterInputFocus      *focus,
                                                 ClutterInputPanelState  state);
-
-#endif /* __CLUTTER_INPUT_FOCUS_H__ */

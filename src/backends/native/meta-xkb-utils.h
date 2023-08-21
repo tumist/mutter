@@ -18,8 +18,7 @@
  *  Damien Lespiau <damien.lespiau@intel.com>
  */
 
-#ifndef META_XKB_UTILS_H
-#define META_XKB_UTILS_H
+#pragma once
 
 #include <xkbcommon/xkbcommon.h>
 
@@ -27,17 +26,13 @@
 
 ClutterEvent *    meta_key_event_new_from_evdev (ClutterInputDevice *device,
                                                  ClutterInputDevice *core_keyboard,
+                                                 ClutterEventFlags   flags,
                                                  struct xkb_state   *xkb_state,
                                                  uint32_t            button_state,
-                                                 uint32_t            _time,
+                                                 uint64_t            time_us,
                                                  uint32_t            key,
                                                  uint32_t            state);
-void               meta_xkb_translate_state     (ClutterEvent       *event,
-                                                 struct xkb_state   *xkb_state,
-                                                 uint32_t            button_state);
 ClutterModifierType meta_xkb_translate_modifiers (struct xkb_state    *state,
                                                   ClutterModifierType  button_state);
 uint32_t meta_xkb_keycode_to_evdev (uint32_t hardware_keycode);
 uint32_t meta_xkb_evdev_to_keycode (uint32_t evcode);
-
-#endif /* META_XKB_UTILS_H */

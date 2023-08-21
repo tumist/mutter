@@ -29,14 +29,13 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_OBJECT_PRIVATE_H
-#define __COGL_OBJECT_PRIVATE_H
+#pragma once
 
 #include <glib.h>
 
-#include "cogl-types.h"
-#include "cogl-object.h"
-#include "cogl-debug.h"
+#include "cogl/cogl-types.h"
+#include "cogl/cogl-object.h"
+#include "cogl/cogl-debug.h"
 
 /* XXX: sadly we didn't fully consider when we copied the cairo API
  * for _set_user_data that the callback doesn't get a pointer to the
@@ -277,6 +276,3 @@ _cogl_object_set_user_data (CoglObject *object,
 
 COGL_EXPORT void
 _cogl_object_default_unref (void *obj);
-
-#endif /* __COGL_OBJECT_PRIVATE_H */
-

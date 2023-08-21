@@ -440,7 +440,7 @@ meta_wayland_surface_state_clear (MetaWaylandSurfaceState *state)
 {
   MetaWaylandFrameCallback *cb, *next;
 
-  cogl_clear_object (&state->texture);
+  g_clear_object (&state->texture);
 
   g_clear_pointer (&state->surface_damage, cairo_region_destroy);
   g_clear_pointer (&state->buffer_damage, cairo_region_destroy);
@@ -490,7 +490,7 @@ meta_wayland_surface_state_merge_into (MetaWaylandSurfaceState *from,
       to->newly_attached = TRUE;
       to->buffer = g_steal_pointer (&from->buffer);
 
-      cogl_clear_object (&to->texture);
+      g_clear_object (&to->texture);
       to->texture = g_steal_pointer (&from->texture);
     }
 
@@ -731,7 +731,7 @@ meta_wayland_surface_apply_state (MetaWaylandSurface      *surface,
         meta_wayland_buffer_dec_use_count (surface->buffer);
 
       g_set_object (&surface->buffer, state->buffer);
-      cogl_clear_object (&surface->output_state.texture);
+      g_clear_object (&surface->output_state.texture);
       surface->output_state.texture = g_steal_pointer (&state->texture);
 
       /* If the newly attached buffer is going to be accessed directly without
@@ -951,14 +951,14 @@ meta_wayland_surface_commit (MetaWaylandSurface *surface)
           return;
         }
 
-      pending->texture = cogl_object_ref (surface->protocol_state.texture);
+      pending->texture = g_object_ref (surface->protocol_state.texture);
 
       g_object_ref (buffer);
       meta_wayland_buffer_inc_use_count (buffer);
     }
   else if (pending->newly_attached)
     {
-      cogl_clear_object (&surface->protocol_state.texture);
+      g_clear_object (&surface->protocol_state.texture);
     }
 
   if (meta_wayland_surface_is_synchronized (surface))
@@ -1410,45 +1410,36 @@ surface_output_disconnect_signals (gpointer key,
                                         surface);
 }
 
-static void
-get_highest_output_scale (gpointer key,
-                          gpointer value,
-                          gpointer data)
-{
-  MetaWaylandOutput *wayland_output = value;
-  MetaLogicalMonitor *logical_monitor =
-    meta_wayland_output_get_logical_monitor (wayland_output);
-  double *scale = data;
-  double new_scale;
-
-  new_scale = meta_logical_monitor_get_scale (logical_monitor);
-  if (new_scale > *scale)
-    *scale = new_scale;
-}
-
 double
 meta_wayland_surface_get_highest_output_scale (MetaWaylandSurface *surface)
 {
   double scale = 0.0;
+  MetaWindow *window;
+  MetaLogicalMonitor *logical_monitor;
 
-  g_hash_table_foreach (surface->outputs, get_highest_output_scale, &scale);
+  window = meta_wayland_surface_get_window (surface);
+  if (!window)
+    goto out;
+
+  logical_monitor = meta_window_get_highest_scale_monitor (window);
+  if (!logical_monitor)
+    goto out;
+
+  scale = meta_logical_monitor_get_scale (logical_monitor);
+
+out:
   return scale;
 }
 
 void
 meta_wayland_surface_update_outputs (MetaWaylandSurface *surface)
 {
-  double scale;
-
   if (!surface->compositor)
     return;
 
   g_hash_table_foreach (surface->compositor->outputs,
                         update_surface_output_state,
                         surface);
-
-  scale = meta_wayland_surface_get_highest_output_scale (surface);
-  meta_wayland_fractional_scale_maybe_send_preferred_scale (surface, scale);
 }
 
 void
@@ -1475,7 +1466,7 @@ meta_wayland_surface_finalize (GObject *object)
 
   if (surface->buffer_held)
     meta_wayland_buffer_dec_use_count (surface->buffer);
-  g_clear_pointer (&surface->output_state.texture, cogl_object_unref);
+  g_clear_object (&surface->output_state.texture);
   g_clear_object (&surface->buffer);
 
   if (surface->opaque_region)
@@ -1527,7 +1518,7 @@ wl_surface_destructor (struct wl_resource *resource)
   g_clear_pointer (&surface->wl_subsurface, wl_resource_destroy);
   g_clear_pointer (&surface->protocol_state.subsurface_branch_node, g_node_destroy);
 
-  cogl_clear_object (&surface->protocol_state.texture);
+  g_clear_object (&surface->protocol_state.texture);
 
   /*
    * Any transactions referencing this surface will keep it alive until they get
@@ -1665,12 +1656,14 @@ meta_wayland_surface_drag_dest_focus_in (MetaWaylandSurface   *surface,
 
 void
 meta_wayland_surface_drag_dest_motion (MetaWaylandSurface *surface,
-                                       const ClutterEvent *event)
+                                       float               x,
+                                       float               y,
+                                       uint32_t            time_ms)
 {
   MetaWaylandCompositor *compositor = surface->compositor;
   MetaWaylandDataDevice *data_device = &compositor->seat->data_device;
 
-  surface->dnd.funcs->motion (data_device, surface, event);
+  surface->dnd.funcs->motion (data_device, surface, x, y, time_ms);
 }
 
 void
@@ -1799,9 +1792,7 @@ meta_wayland_surface_class_init (MetaWaylandSurfaceClass *klass)
   object_class->get_property = meta_wayland_surface_get_property;
 
   obj_props[PROP_SCANOUT_CANDIDATE] =
-    g_param_spec_object ("scanout-candidate",
-                         "scanout-candidate",
-                         "Scanout candidate for given CRTC",
+    g_param_spec_object ("scanout-candidate", NULL, NULL,
                          META_TYPE_CRTC,
                          G_PARAM_READABLE |
                          G_PARAM_STATIC_STRINGS);
@@ -1919,9 +1910,7 @@ meta_wayland_surface_role_class_init (MetaWaylandSurfaceRoleClass *klass)
 
   g_object_class_install_property (object_class,
                                    SURFACE_ROLE_PROP_SURFACE,
-                                   g_param_spec_object ("surface",
-                                                        "MetaWaylandSurface",
-                                                        "The MetaWaylandSurface instance",
+                                   g_param_spec_object ("surface", NULL, NULL,
                                                         META_TYPE_WAYLAND_SURFACE,
                                                         G_PARAM_READWRITE |
                                                         G_PARAM_CONSTRUCT_ONLY |
@@ -2118,7 +2107,7 @@ meta_wayland_surface_is_shortcuts_inhibited (MetaWaylandSurface *surface,
   return g_hash_table_contains (surface->shortcut_inhibited_seats, seat);
 }
 
-CoglTexture *
+MetaMultiTexture *
 meta_wayland_surface_get_texture (MetaWaylandSurface *surface)
 {
   return surface->output_state.texture;
@@ -2193,7 +2182,7 @@ meta_wayland_surface_get_buffer_width (MetaWaylandSurface *surface)
   MetaWaylandBuffer *buffer = meta_wayland_surface_get_buffer (surface);
 
   if (buffer)
-    return cogl_texture_get_width (surface->output_state.texture);
+    return meta_multi_texture_get_width (surface->output_state.texture);
   else
     return 0;
 }
@@ -2204,7 +2193,7 @@ meta_wayland_surface_get_buffer_height (MetaWaylandSurface *surface)
   MetaWaylandBuffer *buffer = meta_wayland_surface_get_buffer (surface);
 
   if (buffer)
-    return cogl_texture_get_height (surface->output_state.texture);
+    return meta_multi_texture_get_height (surface->output_state.texture);
   else
     return 0;
 }
@@ -2395,4 +2384,54 @@ MetaWaylandCompositor *
 meta_wayland_surface_get_compositor (MetaWaylandSurface *surface)
 {
   return surface->compositor;
+}
+
+gboolean
+meta_wayland_surface_is_xwayland (MetaWaylandSurface *surface)
+{
+#ifdef HAVE_XWAYLAND
+  MetaWaylandCompositor *compositor = surface->compositor;
+  MetaXWaylandManager *manager = &compositor->xwayland_manager;
+
+  return surface->resource != NULL &&
+         wl_resource_get_client (surface->resource) == manager->client;
+#else
+  return FALSE;
+#endif
+}
+
+static void
+protocol_state_handle_highest_scale_monitor (MetaWaylandSurface *surface)
+{
+  MetaWaylandSurface *subsurface_surface;
+  double scale;
+
+  scale = meta_wayland_surface_get_highest_output_scale (surface);
+
+  meta_wayland_fractional_scale_maybe_send_preferred_scale (surface, scale);
+
+  META_WAYLAND_SURFACE_FOREACH_SUBSURFACE (&surface->protocol_state,
+                                           subsurface_surface)
+    protocol_state_handle_highest_scale_monitor (subsurface_surface);
+}
+
+static void
+output_state_handle_highest_scale_monitor (MetaWaylandSurface *surface)
+{
+  MetaWaylandSurface *subsurface_surface;
+  MetaSurfaceActor *actor = meta_wayland_surface_get_actor (surface);
+
+  if (actor)
+    clutter_actor_notify_transform_invalid (CLUTTER_ACTOR (actor));
+
+  META_WAYLAND_SURFACE_FOREACH_SUBSURFACE (&surface->output_state,
+                                           subsurface_surface)
+    output_state_handle_highest_scale_monitor (subsurface_surface);
+}
+
+void
+meta_wayland_surface_notify_highest_scale_monitor (MetaWaylandSurface *surface)
+{
+  output_state_handle_highest_scale_monitor (surface);
+  protocol_state_handle_highest_scale_monitor (surface);
 }

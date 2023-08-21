@@ -116,7 +116,7 @@
  * ```
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -129,18 +129,18 @@
 
 #define CLUTTER_DISABLE_DEPRECATION_WARNINGS
 
-#include "clutter-actor.h"
-#include "clutter-stage.h"
+#include "clutter/clutter-actor.h"
+#include "clutter/clutter-stage.h"
 
-#include "clutter-script.h"
-#include "clutter-script-private.h"
-#include "clutter-scriptable.h"
+#include "clutter/clutter-script.h"
+#include "clutter/clutter-script-private.h"
+#include "clutter/clutter-scriptable.h"
 
-#include "clutter-enum-types.h"
-#include "clutter-private.h"
-#include "clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-debug.h"
 
-#include "deprecated/clutter-container.h"
+#include "clutter/deprecated/clutter-container.h"
 
 enum
 {
@@ -338,9 +338,7 @@ clutter_script_class_init (ClutterScriptClass *klass)
    * file name is stored inside the [property@Script:filename] property.
    */
   obj_props[PROP_FILENAME_SET] =
-    g_param_spec_boolean ("filename-set",
-                          P_("Filename Set"),
-                          P_("Whether the :filename property is set"),
+    g_param_spec_boolean ("filename-set", NULL, NULL,
                           FALSE,
                           CLUTTER_PARAM_READABLE);
 
@@ -351,9 +349,7 @@ clutter_script_class_init (ClutterScriptClass *klass)
    * is %FALSE then the value of this property is undefined.
    */
   obj_props[PROP_FILENAME] =
-    g_param_spec_string ("filename",
-                         P_("Filename"),
-                         P_("The path of the currently parsed file"),
+    g_param_spec_string ("filename", NULL, NULL,
                          NULL,
                          CLUTTER_PARAM_READABLE);
 
@@ -367,9 +363,7 @@ clutter_script_class_init (ClutterScriptClass *klass)
    * will use gettext(), otherwise g_dgettext() will be used.
    */
   obj_props[PROP_TRANSLATION_DOMAIN] =
-    g_param_spec_string ("translation-domain",
-                         P_("Translation Domain"),
-                         P_("The translation domain used to localize string"),
+    g_param_spec_string ("translation-domain", NULL, NULL,
                          NULL,
                          CLUTTER_PARAM_READWRITE);
 

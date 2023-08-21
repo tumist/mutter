@@ -15,8 +15,7 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_STAGE_VIEW_H__
-#define __CLUTTER_STAGE_VIEW_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
@@ -24,10 +23,11 @@
 
 #include <cairo.h>
 #include <glib-object.h>
-#include <cogl/cogl.h>
 
-#include "clutter-macros.h"
-#include "clutter-frame-clock.h"
+#include "cogl/cogl.h"
+#include "clutter/clutter-macros.h"
+#include "clutter/clutter-frame-clock.h"
+#include "clutter/clutter-types.h"
 
 #define CLUTTER_TYPE_STAGE_VIEW (clutter_stage_view_get_type ())
 CLUTTER_EXPORT
@@ -52,6 +52,8 @@ struct _ClutterStageViewClass
                                        cairo_rectangle_int_t       *dst_rect);
 
   ClutterFrame * (* new_frame) (ClutterStageView *view);
+
+  ClutterPaintFlag (* get_default_paint_flags) (ClutterStageView *view);
 };
 
 CLUTTER_EXPORT
@@ -90,4 +92,5 @@ gboolean clutter_stage_view_has_shadowfb (ClutterStageView *view);
 CLUTTER_EXPORT
 void clutter_stage_view_schedule_update_now (ClutterStageView *view);
 
-#endif /* __CLUTTER_STAGE_VIEW_H__ */
+CLUTTER_EXPORT
+ClutterPaintFlag clutter_stage_view_get_default_paint_flags (ClutterStageView *view);

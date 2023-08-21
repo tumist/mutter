@@ -1,8 +1,9 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
 
 /*
- * SECTION:stack
- * @short_description: Which windows cover which other windows
+ * stack:
+ *
+ * Which windows cover which other windows
  */
 
 /*
@@ -235,9 +236,7 @@ meta_stack_class_init (MetaStackClass *klass)
                   G_TYPE_NONE, 1, META_TYPE_WINDOW);
 
   pspecs[PROP_DISPLAY] =
-    g_param_spec_object ("display",
-                         "Display",
-                         "Display",
+    g_param_spec_object ("display", NULL, NULL,
                          META_TYPE_DISPLAY,
                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 

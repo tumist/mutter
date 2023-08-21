@@ -28,13 +28,12 @@
  *
  */
 
-#ifndef __COGL_SHADER_H
-#define __COGL_SHADER_H
+#pragma once
 
-#include "cogl-object-private.h"
-#include "cogl-shader.h"
-#include "cogl-gl-header.h"
-#include "cogl-pipeline.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/deprecated/cogl-shader.h"
+#include "cogl/cogl-gl-header.h"
+#include "cogl/cogl-pipeline.h"
 
 typedef struct _CoglShader CoglShader;
 
@@ -46,5 +45,3 @@ struct _CoglShader
   CoglShaderType type;
   char *source;
 };
-
-#endif /* __COGL_SHADER_H */

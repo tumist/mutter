@@ -20,9 +20,9 @@
  */
 
 /**
- * SECTION:workspace
- * @title:MetaWorkspace
- * @short_description:Workspaces
+ * MetaWorkspace:
+ *
+ * Workspaces
  *
  * A workspace is a set of windows which all live on the same
  * screen.  (You may also see the name "desktop" around the place,
@@ -214,19 +214,13 @@ meta_workspace_class_init (MetaWorkspaceClass *klass)
                                           G_TYPE_NONE, 1,
                                           META_TYPE_WINDOW);
 
-  obj_props[PROP_N_WINDOWS] = g_param_spec_uint ("n-windows",
-                                                 "N Windows",
-                                                 "Number of windows",
+  obj_props[PROP_N_WINDOWS] = g_param_spec_uint ("n-windows", NULL, NULL,
                                                  0, G_MAXUINT, 0,
                                                  G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_WORKSPACE_INDEX] = g_param_spec_uint ("workspace-index",
-                                                       "Workspace index",
-                                                       "The workspace's index",
+  obj_props[PROP_WORKSPACE_INDEX] = g_param_spec_uint ("workspace-index", NULL, NULL,
                                                        0, G_MAXUINT, 0,
                                                        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_ACTIVE] = g_param_spec_boolean ("active",
-                                                 "Active",
-                                                 "Whether the workspace is currently active",
+  obj_props[PROP_ACTIVE] = g_param_spec_boolean ("active", NULL, NULL,
                                                  FALSE,
                                                  G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
@@ -1339,39 +1333,14 @@ meta_workspace_get_name (MetaWorkspace *workspace)
   return meta_prefs_get_workspace_name (meta_workspace_index (workspace));
 }
 
-static MetaWindow *
-get_focused_workspace_window (MetaWorkspace *workspace)
-{
-  g_autoptr (GList) windows = NULL;
-  GList *l;
-
-  windows = meta_workspace_list_windows (workspace);
-
-  for (l = windows; l != NULL; l = l->next)
-    {
-      MetaWindow *window = l->data;
-
-      if (meta_window_has_focus (window))
-        return window;
-    }
-
-  return NULL;
-}
-
 void
 meta_workspace_focus_default_window (MetaWorkspace *workspace,
                                      MetaWindow    *not_this_one,
                                      guint32        timestamp)
 {
-  MetaWindow *focus;
-
   if (timestamp == META_CURRENT_TIME)
     meta_warning ("META_CURRENT_TIME used to choose focus window; "
                   "focus window may not be correct.");
-
-  focus = get_focused_workspace_window (workspace);
-  if (focus != NULL && focus != not_this_one)
-    return;
 
   if (meta_prefs_get_focus_mode () == G_DESKTOP_FOCUS_MODE_CLICK ||
       !workspace->display->mouse_mode)

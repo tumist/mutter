@@ -35,13 +35,13 @@
  * be emitted
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-stage-manager-private.h"
+#include "clutter/clutter-stage-manager-private.h"
 
-#include "clutter-marshal.h"
-#include "clutter-debug.h"
-#include "clutter-private.h"
+#include "clutter/clutter-marshal.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-private.h"
 
 enum
 {
@@ -108,9 +108,7 @@ clutter_stage_manager_class_init (ClutterStageManagerClass *klass)
    */
   g_object_class_install_property (gobject_class,
                                    PROP_DEFAULT_STAGE,
-                                   g_param_spec_object ("default-stage",
-                                                        "Default Stage",
-                                                        "The default stage",
+                                   g_param_spec_object ("default-stage", NULL, NULL,
                                                         CLUTTER_TYPE_STAGE,
                                                         CLUTTER_PARAM_READABLE));
 

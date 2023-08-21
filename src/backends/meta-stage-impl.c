@@ -600,10 +600,12 @@ meta_stage_impl_redraw_view_primary (MetaStageImpl    *stage_impl,
    * artefacts.
    */
   /* swap_region does not need damage history, set it up before that */
-  if (use_clipped_redraw)
-    swap_region = cairo_region_copy (fb_clip_region);
-  else
+  if (!use_clipped_redraw)
     swap_region = cairo_region_create ();
+  else if (clutter_stage_view_has_shadowfb (stage_view))
+    swap_region = cairo_region_reference (fb_clip_region);
+  else
+    swap_region = cairo_region_copy (fb_clip_region);
 
   swap_with_damage = FALSE;
   if (has_buffer_age)
@@ -851,17 +853,13 @@ meta_stage_impl_class_init (MetaStageImplClass *klass)
   gobject_class->set_property = meta_stage_impl_set_property;
 
   obj_props[PROP_WRAPPER] =
-    g_param_spec_object ("wrapper",
-                         "Wrapper",
-                         "Back pointer to the Stage actor",
+    g_param_spec_object ("wrapper", NULL, NULL,
                          CLUTTER_TYPE_STAGE,
                          G_PARAM_WRITABLE |
                          G_PARAM_CONSTRUCT_ONLY |
                          G_PARAM_STATIC_STRINGS);
   obj_props[PROP_BACKEND] =
-    g_param_spec_object ("backend",
-                         "MetaBackend",
-                         "MetaBackend",
+    g_param_spec_object ("backend", NULL, NULL,
                          META_TYPE_BACKEND,
                          G_PARAM_WRITABLE |
                          G_PARAM_CONSTRUCT_ONLY |

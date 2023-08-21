@@ -28,14 +28,13 @@
  *
  */
 
-#ifndef __COGL_WINSYS_EGL_PRIVATE_H
-#define __COGL_WINSYS_EGL_PRIVATE_H
+#pragma once
 
-#include "cogl-defines.h"
-#include "cogl-context.h"
-#include "cogl-context-private.h"
-#include "cogl-framebuffer-private.h"
-#include "winsys/cogl-winsys-private.h"
+#include "cogl/cogl-defines.h"
+#include "cogl/cogl-context.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-framebuffer-private.h"
+#include "cogl/winsys/cogl-winsys-private.h"
 
 /* XXX: depending on what version of Mesa you have then
  * eglQueryWaylandBuffer may take a wl_buffer or wl_resource argument
@@ -128,7 +127,7 @@ typedef struct _CoglRendererEGL
 
 #define COGL_WINSYS_FEATURE_END()
 
-#include "winsys/cogl-winsys-egl-feature-functions.h"
+#include "cogl/winsys/cogl-winsys-egl-feature-functions.h"
 
 #undef COGL_WINSYS_FEATURE_BEGIN
 #undef COGL_WINSYS_FEATURE_FUNCTION
@@ -198,5 +197,3 @@ void
 cogl_display_egl_determine_attributes (CoglDisplay                 *display,
                                        const CoglFramebufferConfig *config,
                                        EGLint                      *attributes);
-
-#endif /* __COGL_WINSYS_EGL_PRIVATE_H */

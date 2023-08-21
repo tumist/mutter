@@ -18,15 +18,14 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CALLY_STAGE_H__
-#define __CALLY_STAGE_H__
+#pragma once
 
 #if !defined(__CALLY_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <cally/cally.h> can be included directly."
 #endif
 
-#include <cally/cally-actor.h>
-#include <clutter/clutter.h>
+#include "cally/cally-actor.h"
+#include "clutter/clutter.h"
 
 G_BEGIN_DECLS
 
@@ -59,9 +58,6 @@ struct _CallyStageClass
 {
   /*< private >*/
   CallyActorClass parent_class;
-
-  /* padding for future expansion */
-  gpointer _padding_dummy[16];
 };
 
 CLUTTER_EXPORT
@@ -70,5 +66,3 @@ CLUTTER_EXPORT
 AtkObject *cally_stage_new      (ClutterActor *actor);
 
 G_END_DECLS
-
-#endif /* __CALLY_STAGE_H__ */

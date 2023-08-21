@@ -28,13 +28,11 @@
  *
  */
 
-#ifndef __COGL_PRIVATE_H__
-#define __COGL_PRIVATE_H__
+#pragma once
 
-#include <cogl/cogl-pipeline.h>
-
-#include "cogl-context.h"
-#include "cogl-flags.h"
+#include "cogl/cogl-pipeline.h"
+#include "cogl/cogl-context.h"
+#include "cogl/cogl-flags.h"
 
 G_BEGIN_DECLS
 
@@ -99,5 +97,3 @@ _cogl_init (void);
   COGL_FLAGS_GET ((ctx)->private_features, (feature))
 
 G_END_DECLS
-
-#endif /* __COGL_PRIVATE_H__ */

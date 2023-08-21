@@ -30,10 +30,10 @@
 
 #include "cogl-config.h"
 
-#include "cogl-private.h"
-#include "cogl-bitmap-private.h"
-#include "cogl-context-private.h"
-#include "cogl-texture-private.h"
+#include "cogl/cogl-private.h"
+#include "cogl/cogl-bitmap-private.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-texture-private.h"
 
 #include <string.h>
 
@@ -45,7 +45,7 @@
    loop for the conversion will be really simple */
 #define UNPACK_BYTE(b) (b)
 #define PACK_BYTE(b) (b)
-#include "cogl-bitmap-packing.h"
+#include "cogl/cogl-bitmap-packing.h"
 #undef PACK_BYTE
 #undef UNPACK_BYTE
 #undef component_type
@@ -55,7 +55,7 @@
 #define component_size 16
 #define UNPACK_BYTE(b) (((b) * 65535 + 127) / 255)
 #define PACK_BYTE(b) (((b) * 255 + 32767) / 65535)
-#include "cogl-bitmap-packing.h"
+#include "cogl/cogl-bitmap-packing.h"
 #undef PACK_BYTE
 #undef UNPACK_BYTE
 #undef component_type
@@ -331,9 +331,13 @@ _cogl_bitmap_needs_short_temp_buffer (CoglPixelFormat format)
     case COGL_PIXEL_FORMAT_G_8:
     case COGL_PIXEL_FORMAT_RGB_888:
     case COGL_PIXEL_FORMAT_BGR_888:
+    case COGL_PIXEL_FORMAT_RGBX_8888:
     case COGL_PIXEL_FORMAT_RGBA_8888:
+    case COGL_PIXEL_FORMAT_BGRX_8888:
     case COGL_PIXEL_FORMAT_BGRA_8888:
+    case COGL_PIXEL_FORMAT_XRGB_8888:
     case COGL_PIXEL_FORMAT_ARGB_8888:
+    case COGL_PIXEL_FORMAT_XBGR_8888:
     case COGL_PIXEL_FORMAT_ABGR_8888:
     case COGL_PIXEL_FORMAT_RGBA_8888_PRE:
     case COGL_PIXEL_FORMAT_BGRA_8888_PRE:
@@ -353,7 +357,9 @@ _cogl_bitmap_needs_short_temp_buffer (CoglPixelFormat format)
     case COGL_PIXEL_FORMAT_BGRA_1010102_PRE:
     case COGL_PIXEL_FORMAT_ARGB_2101010_PRE:
     case COGL_PIXEL_FORMAT_ABGR_2101010_PRE:
+    case COGL_PIXEL_FORMAT_RGBX_FP_16161616:
     case COGL_PIXEL_FORMAT_RGBA_FP_16161616:
+    case COGL_PIXEL_FORMAT_BGRX_FP_16161616:
     case COGL_PIXEL_FORMAT_BGRA_FP_16161616:
     case COGL_PIXEL_FORMAT_XRGB_FP_16161616:
     case COGL_PIXEL_FORMAT_ARGB_FP_16161616:

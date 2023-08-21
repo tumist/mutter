@@ -69,8 +69,8 @@
  * ```
  *
  * The actor should then override the [signal@Actor::key-press-event] and
- * use [method@BindingPool.activate] to match a [struct@KeyEvent] structure
- * to one of the actions:
+ * use [method@BindingPool.activate] to match a [struct@Event] key event
+ * structure to one of the actions:
  *
  * ```c
  *   ClutterBindingPool *pool;
@@ -93,13 +93,13 @@
  * key binding handler returned %FALSE.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-binding-pool.h"
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-marshal.h"
-#include "clutter-private.h"
+#include "clutter/clutter-binding-pool.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-marshal.h"
+#include "clutter/clutter-private.h"
 
 #define CLUTTER_BINDING_POOL_CLASS(k)     (G_TYPE_CHECK_CLASS_CAST ((k), CLUTTER_TYPE_BINDING_POOL, ClutterBindingPoolClass))
 #define CLUTTER_IS_BINDING_POOL_CLASS(k)  (G_TYPE_CHECK_CLASS_TYPE ((k), CLUTTER_TYPE_BINDING_POOL))
@@ -308,9 +308,7 @@ clutter_binding_pool_class_init (ClutterBindingPoolClass *klass)
    * The unique name of the #ClutterBindingPool.
    */
   obj_props[PROP_NAME] =
-    g_param_spec_string ("name",
-                         P_("Name"),
-                         P_("The unique name of the binding pool"),
+    g_param_spec_string ("name", NULL, NULL,
                          NULL,
                          CLUTTER_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY);

@@ -1,11 +1,11 @@
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <math.h>
 
-#include "clutter-types.h"
-#include "clutter-interval.h"
-#include "clutter-private.h"
-#include "clutter-actor-box-private.h"
+#include "clutter/clutter-types.h"
+#include "clutter/clutter-interval.h"
+#include "clutter/clutter-private.h"
+#include "clutter/clutter-actor-box-private.h"
 
 /**
  * clutter_actor_box_new:
@@ -505,6 +505,9 @@ void
 _clutter_actor_box_enlarge_for_effects (ClutterActorBox *box)
 {
   float width, height;
+
+  if (clutter_actor_box_get_area (box) == 0.0)
+    return;
 
   /* The aim here is that for a given rectangle defined with floating point
    * coordinates we want to determine a stable quantized size in pixels

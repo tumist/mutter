@@ -37,30 +37,30 @@
  * [method@Text.set_selectable].
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
 #include <string.h>
 #include <math.h>
 
-#include "clutter-text.h"
+#include "clutter/clutter-text.h"
 
-#include "clutter-actor-private.h"
-#include "clutter-animatable.h"
-#include "clutter-backend-private.h"
-#include "clutter-binding-pool.h"
-#include "clutter-color.h"
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-keysyms.h"
-#include "clutter-main.h"
-#include "clutter-marshal.h"
-#include "clutter-private.h"    /* includes <cogl-pango/cogl-pango.h> */
-#include "clutter-property-transition.h"
-#include "clutter-text-buffer.h"
-#include "clutter-units.h"
-#include "clutter-paint-volume-private.h"
-#include "clutter-scriptable.h"
-#include "clutter-input-focus.h"
+#include "clutter/clutter-actor-private.h"
+#include "clutter/clutter-animatable.h"
+#include "clutter/clutter-backend-private.h"
+#include "clutter/clutter-binding-pool.h"
+#include "clutter/clutter-color.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-keysyms.h"
+#include "clutter/clutter-main.h"
+#include "clutter/clutter-marshal.h"
+#include "clutter/clutter-private.h"    /* includes <cogl-pango/cogl-pango.h> */
+#include "clutter/clutter-property-transition.h"
+#include "clutter/clutter-text-buffer.h"
+#include "clutter/clutter-units.h"
+#include "clutter/clutter-paint-volume-private.h"
+#include "clutter/clutter-scriptable.h"
+#include "clutter/clutter-input-focus.h"
 
 /* cursor width in pixels */
 #define DEFAULT_CURSOR_SIZE     2
@@ -282,8 +282,6 @@ static const ClutterColor default_cursor_color    = {   0,   0,   0, 255 };
 static const ClutterColor default_selection_color = {   0,   0,   0, 255 };
 static const ClutterColor default_text_color      = {   0,   0,   0, 255 };
 static const ClutterColor default_selected_text_color = {   0,   0,   0, 255 };
-
-static CoglPipeline *default_color_pipeline = NULL;
 
 static ClutterAnimatableInterface *parent_animatable_iface = NULL;
 static ClutterScriptableIface *parent_scriptable_iface = NULL;
@@ -1885,6 +1883,28 @@ clutter_text_foreach_selection_rectangle (ClutterText              *self,
   g_free (utf8);
 }
 
+static CoglPipeline *
+create_color_pipeline (void)
+{
+  static CoglPipelineKey color_pipeline_key = "clutter-text-color-pipeline-private";
+  CoglContext *ctx =
+    clutter_backend_get_cogl_context (clutter_get_default_backend ());
+  CoglPipeline *color_pipeline;
+
+  color_pipeline =
+    cogl_context_get_named_pipeline (ctx, &color_pipeline_key);
+
+  if (G_UNLIKELY (color_pipeline == NULL))
+    {
+      color_pipeline = cogl_pipeline_new (ctx);
+      cogl_context_set_named_pipeline (ctx,
+                                       &color_pipeline_key,
+                                       color_pipeline);
+    }
+
+  return cogl_pipeline_copy (color_pipeline);
+}
+
 static void
 clutter_text_foreach_selection_rectangle_prescaled (ClutterText              *self,
                                                     ClutterTextSelectionFunc  func,
@@ -1902,7 +1922,7 @@ paint_selection_rectangle (ClutterText           *self,
   ClutterTextPrivate *priv = self->priv;
   ClutterActor *actor = CLUTTER_ACTOR (self);
   guint8 paint_opacity = clutter_actor_get_paint_opacity (actor);
-  CoglPipeline *color_pipeline = cogl_pipeline_copy (default_color_pipeline);
+  CoglPipeline *color_pipeline = create_color_pipeline ();
   PangoLayout *layout = clutter_text_get_layout (self);
   CoglColor cogl_color = { 0, };
   const ClutterColor *color;
@@ -1962,7 +1982,7 @@ selection_paint (ClutterText     *self,
 
   if (priv->position == priv->selection_bound)
     {
-      CoglPipeline *color_pipeline = cogl_pipeline_copy (default_color_pipeline);
+      CoglPipeline *color_pipeline = create_color_pipeline ();
       CoglColor cogl_color;
 
       /* No selection, just draw the cursor */
@@ -1986,6 +2006,8 @@ selection_paint (ClutterText     *self,
                                        priv->cursor_rect.origin.y,
                                        priv->cursor_rect.origin.x + priv->cursor_rect.size.width,
                                        priv->cursor_rect.origin.y + priv->cursor_rect.size.height);
+
+      g_clear_pointer (&color_pipeline, cogl_object_unref);
     }
   else
     {
@@ -2343,42 +2365,42 @@ clutter_text_release (ClutterActor *actor,
 }
 
 static gboolean
-clutter_text_button_press (ClutterActor       *actor,
-                           ClutterButtonEvent *event)
+clutter_text_button_press (ClutterActor *actor,
+                           ClutterEvent *event)
 {
-  return clutter_text_press (actor, (ClutterEvent *) event);
+  return clutter_text_press (actor, event);
 }
 
 static gboolean
-clutter_text_motion (ClutterActor       *actor,
-                     ClutterMotionEvent *event)
+clutter_text_motion (ClutterActor *actor,
+                     ClutterEvent *event)
 {
-  return clutter_text_move (actor, (ClutterEvent *) event);
+  return clutter_text_move (actor, event);
 }
 
 static gboolean
-clutter_text_button_release (ClutterActor       *actor,
-                             ClutterButtonEvent *event)
+clutter_text_button_release (ClutterActor *actor,
+                             ClutterEvent *event)
 {
-  return clutter_text_release (actor, (ClutterEvent *) event);
+  return clutter_text_release (actor, event);
 }
 
 static gboolean
-clutter_text_touch_event (ClutterActor      *actor,
-                          ClutterTouchEvent *event)
+clutter_text_touch_event (ClutterActor *actor,
+                          ClutterEvent *event)
 {
-  switch (event->type)
+  switch (clutter_event_type (event))
     {
     case CLUTTER_TOUCH_BEGIN:
-      return clutter_text_press (actor, (ClutterEvent *) event);
+      return clutter_text_press (actor, event);
 
     case CLUTTER_TOUCH_END:
     case CLUTTER_TOUCH_CANCEL:
       /* TODO: the cancel case probably need a special handler */
-      return clutter_text_release (actor, (ClutterEvent *) event);
+      return clutter_text_release (actor, event);
 
     case CLUTTER_TOUCH_UPDATE:
-      return clutter_text_move (actor, (ClutterEvent *) event);
+      return clutter_text_move (actor, event);
 
     default:
       break;
@@ -2402,12 +2424,15 @@ clutter_text_remove_password_hint (gpointer data)
 }
 
 static gboolean
-clutter_text_key_press (ClutterActor    *actor,
-                        ClutterKeyEvent *event)
+clutter_text_key_press (ClutterActor *actor,
+                        ClutterEvent *event)
 {
   ClutterText *self = CLUTTER_TEXT (actor);
   ClutterTextPrivate *priv = self->priv;
   ClutterBindingPool *pool;
+  ClutterEventFlags flags;
+  ClutterModifierType modifiers;
+  uint32_t keyval;
   gboolean res;
 
   if (!priv->editable)
@@ -2420,22 +2445,25 @@ clutter_text_key_press (ClutterActor    *actor,
   pool = clutter_binding_pool_find (g_type_name (CLUTTER_TYPE_TEXT));
   g_assert (pool != NULL);
 
-  if (!(event->flags & CLUTTER_EVENT_FLAG_INPUT_METHOD) &&
+  flags = clutter_event_get_flags (event);
+  keyval = clutter_event_get_key_symbol (event);
+  modifiers = clutter_event_get_state (event);
+
+  if (!(flags & CLUTTER_EVENT_FLAG_INPUT_METHOD) &&
       clutter_input_focus_is_focused (priv->input_focus) &&
-      clutter_input_focus_filter_event (priv->input_focus,
-					(ClutterEvent *) event))
+      clutter_input_focus_filter_event (priv->input_focus, event))
     return CLUTTER_EVENT_STOP;
 
   /* we allow passing synthetic events that only contain
    * the Unicode value and not the key symbol, unless they
    * contain the input method flag.
    */
-  if (event->keyval == 0 && (event->flags & CLUTTER_EVENT_FLAG_SYNTHETIC) &&
-      !(event->flags & CLUTTER_EVENT_FLAG_INPUT_METHOD))
+  if (keyval == 0 && (flags & CLUTTER_EVENT_FLAG_SYNTHETIC) &&
+      !(flags & CLUTTER_EVENT_FLAG_INPUT_METHOD))
     res = FALSE;
   else
-    res = clutter_binding_pool_activate (pool, event->keyval,
-                                         event->modifier_state,
+    res = clutter_binding_pool_activate (pool, keyval,
+                                         modifiers,
                                          G_OBJECT (actor));
 
   /* if the key binding has handled the event we bail out
@@ -2445,12 +2473,12 @@ clutter_text_key_press (ClutterActor    *actor,
    */
   if (res)
     return CLUTTER_EVENT_STOP;
-  else if ((event->modifier_state & CLUTTER_CONTROL_MASK) == 0)
+  else if ((modifiers & CLUTTER_CONTROL_MASK) == 0)
     {
       gunichar key_unichar;
 
       /* Skip keys when control is pressed */
-      key_unichar = clutter_event_get_key_unicode ((ClutterEvent *) event);
+      key_unichar = clutter_event_get_key_unicode (event);
 
       /* return is reported as CR, but we want LF */
       if (key_unichar == '\r')
@@ -2485,15 +2513,14 @@ clutter_text_key_press (ClutterActor    *actor,
 }
 
 static gboolean
-clutter_text_key_release (ClutterActor    *actor,
-                          ClutterKeyEvent *event)
+clutter_text_key_release (ClutterActor *actor,
+                          ClutterEvent *event)
 {
   ClutterText *self = CLUTTER_TEXT (actor);
   ClutterTextPrivate *priv = self->priv;
 
   if (clutter_input_focus_is_focused (priv->input_focus) &&
-      clutter_input_focus_filter_event (priv->input_focus,
-					(ClutterEvent *) event))
+      clutter_input_focus_filter_event (priv->input_focus, event))
     return CLUTTER_EVENT_STOP;
 
   return CLUTTER_EVENT_PROPAGATE;
@@ -2584,7 +2611,6 @@ clutter_text_paint (ClutterActor        *self,
   gint text_x = priv->text_x;
   gint text_y = priv->text_y;
   gboolean clip_set = FALSE;
-  gboolean bg_color_set = FALSE;
   guint n_chars;
   float alloc_width;
   float alloc_height;
@@ -2598,43 +2624,6 @@ clutter_text_paint (ClutterActor        *self,
   n_chars = clutter_text_buffer_get_length (get_buffer (text));
 
   clutter_actor_get_allocation_box (self, &alloc);
-
-  if (G_UNLIKELY (default_color_pipeline == NULL))
-    {
-      CoglContext *ctx =
-        clutter_backend_get_cogl_context (clutter_get_default_backend ());
-      default_color_pipeline = cogl_pipeline_new (ctx);
-    }
-
-  g_assert (default_color_pipeline != NULL);
-
-  g_object_get (self, "background-color-set", &bg_color_set, NULL);
-  if (bg_color_set)
-    {
-      CoglPipeline *color_pipeline = cogl_pipeline_copy (default_color_pipeline);
-      ClutterColor bg_color;
-
-      clutter_actor_get_background_color (self, &bg_color);
-      bg_color.alpha = clutter_actor_get_paint_opacity (self)
-                     * bg_color.alpha
-                     / 255;
-
-      cogl_color_init_from_4ub (&color,
-                                bg_color.red,
-                                bg_color.green,
-                                bg_color.blue,
-                                bg_color.alpha);
-      cogl_color_premultiply (&color);
-      cogl_pipeline_set_color (color_pipeline, &color);
-
-      cogl_framebuffer_draw_rectangle (fb,
-                                       color_pipeline,
-                                       0, 0,
-                                       clutter_actor_box_get_width (&alloc),
-                                       clutter_actor_box_get_height (&alloc));
-
-      cogl_object_unref (color_pipeline);
-    }
 
   /* don't bother painting an empty text actor, unless it's
    * editable, in which case we want to paint at least the
@@ -3090,13 +3079,16 @@ clutter_text_event (ClutterActor *self,
 {
   ClutterText *text = CLUTTER_TEXT (self);
   ClutterTextPrivate *priv = text->priv;
+  ClutterEventType event_type;
+
+  event_type = clutter_event_type (event);
 
   if (clutter_input_focus_is_focused (priv->input_focus) &&
-      (event->type == CLUTTER_IM_COMMIT ||
-       event->type == CLUTTER_IM_DELETE ||
-       event->type == CLUTTER_IM_PREEDIT))
+      (event_type == CLUTTER_IM_COMMIT ||
+       event_type == CLUTTER_IM_DELETE ||
+       event_type == CLUTTER_IM_PREEDIT))
     {
-      return clutter_input_focus_filter_event (priv->input_focus, event);
+      return clutter_input_focus_process_event (priv->input_focus, event);
     }
 
   return CLUTTER_EVENT_PROPAGATE;
@@ -3862,9 +3854,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * If set to %NULL, a default buffer will be created.
    */
-  pspec = g_param_spec_object ("buffer",
-                               P_("Buffer"),
-                               P_("The buffer for the text"),
+  pspec = g_param_spec_object ("buffer", NULL, NULL,
                                CLUTTER_TYPE_TEXT_BUFFER,
                                CLUTTER_PARAM_READWRITE);
   obj_props[PROP_BUFFER] = pspec;
@@ -3878,9 +3868,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * If set to %NULL, the default system font will be used instead.
    */
-  pspec = g_param_spec_string ("font-name",
-                               P_("Font Name"),
-                               P_("The font to be used by the text"),
+  pspec = g_param_spec_string ("font-name", NULL, NULL,
                                NULL,
                                CLUTTER_PARAM_READWRITE);
   obj_props[PROP_FONT_NAME] = pspec;
@@ -3894,9 +3882,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * If you have a string describing the font then you should look at
    * [property@Text:font-name] instead
    */
-  pspec = g_param_spec_boxed ("font-description",
-                              P_("Font Description"),
-                              P_("The font description to be used"),
+  pspec = g_param_spec_boxed ("font-description", NULL, NULL,
                               PANGO_TYPE_FONT_DESCRIPTION,
                               CLUTTER_PARAM_READWRITE);
   obj_props[PROP_FONT_DESCRIPTION] = pspec;
@@ -3909,9 +3895,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The text to render inside the actor.
    */
-  pspec = g_param_spec_string ("text",
-                               P_("Text"),
-                               P_("The text to render"),
+  pspec = g_param_spec_string ("text", NULL, NULL,
                                "",
                                CLUTTER_PARAM_READWRITE);
   obj_props[PROP_TEXT] = pspec;
@@ -3922,9 +3906,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The color used to render the text.
    */
-  pspec = clutter_param_spec_color ("color",
-                                    P_("Font Color"),
-                                    P_("Color of the font used by the text"),
+  pspec = clutter_param_spec_color ("color", NULL, NULL,
                                     &default_text_color,
                                     CLUTTER_PARAM_READWRITE |
                                     CLUTTER_PARAM_ANIMATABLE);
@@ -3936,9 +3918,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * Whether key events delivered to the actor causes editing.
    */
-  pspec = g_param_spec_boolean ("editable",
-                                P_("Editable"),
-                                P_("Whether the text is editable"),
+  pspec = g_param_spec_boolean ("editable", NULL, NULL,
                                 FALSE,
                                 G_PARAM_READWRITE);
   obj_props[PROP_EDITABLE] = pspec;
@@ -3953,9 +3933,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * This property depends on the [property@Actor:reactive] property being
    * set to %TRUE.
    */
-  pspec = g_param_spec_boolean ("selectable",
-                                P_("Selectable"),
-                                P_("Whether the text is selectable"),
+  pspec = g_param_spec_boolean ("selectable", NULL, NULL,
                                 TRUE,
                                 G_PARAM_READWRITE);
   obj_props[PROP_SELECTABLE] = pspec;
@@ -3966,9 +3944,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * Toggles whether return invokes the activate signal or not.
    */
-  pspec = g_param_spec_boolean ("activatable",
-                                P_("Activatable"),
-                                P_("Whether pressing return causes the activate signal to be emitted"),
+  pspec = g_param_spec_boolean ("activatable", NULL, NULL,
                                 TRUE,
                                 G_PARAM_READWRITE);
   obj_props[PROP_ACTIVATABLE] = pspec;
@@ -3983,9 +3959,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * the [property@Text:editable] or the [property@Text:selectable] properties
    * are set to %TRUE.
    */
-  pspec = g_param_spec_boolean ("cursor-visible",
-                                P_("Cursor Visible"),
-                                P_("Whether the input cursor is visible"),
+  pspec = g_param_spec_boolean ("cursor-visible", NULL, NULL,
                                 TRUE,
                                 CLUTTER_PARAM_READWRITE);
   obj_props[PROP_CURSOR_VISIBLE] = pspec;
@@ -3996,9 +3970,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The color of the cursor.
    */
-  pspec = clutter_param_spec_color ("cursor-color",
-                                    P_("Cursor Color"),
-                                    P_("Cursor Color"),
+  pspec = clutter_param_spec_color ("cursor-color", NULL, NULL,
                                     &default_cursor_color,
                                     CLUTTER_PARAM_READWRITE |
                                     CLUTTER_PARAM_ANIMATABLE);
@@ -4010,9 +3982,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * Will be set to %TRUE if [property@Text:cursor-color] has been set.
    */
-  pspec = g_param_spec_boolean ("cursor-color-set",
-                                P_("Cursor Color Set"),
-                                P_("Whether the cursor color has been set"),
+  pspec = g_param_spec_boolean ("cursor-color-set", NULL, NULL,
                                 FALSE,
                                 CLUTTER_PARAM_READABLE);
   obj_props[PROP_CURSOR_COLOR_SET] = pspec;
@@ -4024,9 +3994,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * The size of the cursor, in pixels. If set to -1 the size used will
    * be the default cursor size of 2 pixels.
    */
-  pspec = g_param_spec_int ("cursor-size",
-                            P_("Cursor Size"),
-                            P_("The width of the cursor, in pixels"),
+  pspec = g_param_spec_int ("cursor-size", NULL, NULL,
                             -1, G_MAXINT, DEFAULT_CURSOR_SIZE,
                             CLUTTER_PARAM_READWRITE);
   obj_props[PROP_CURSOR_SIZE] = pspec;
@@ -4039,9 +4007,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * Deprecated: 1.12: Use [property@Text:cursor-position] instead.
    */
-  pspec = g_param_spec_int ("position",
-                            P_("Cursor Position"),
-                            P_("The cursor position"),
+  pspec = g_param_spec_int ("position", NULL, NULL,
                             -1, G_MAXINT,
                             -1,
                             G_PARAM_READWRITE |
@@ -4055,9 +4021,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The current input cursor position. -1 is taken to be the end of the text
    */
-  pspec = g_param_spec_int ("cursor-position",
-                            P_("Cursor Position"),
-                            P_("The cursor position"),
+  pspec = g_param_spec_int ("cursor-position", NULL, NULL,
                             -1, G_MAXINT,
                             -1,
                             CLUTTER_PARAM_READWRITE);
@@ -4069,9 +4033,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The current input cursor position. -1 is taken to be the end of the text
    */
-  pspec = g_param_spec_int ("selection-bound",
-                            P_("Selection-bound"),
-                            P_("The cursor position of the other end of the selection"),
+  pspec = g_param_spec_int ("selection-bound", NULL, NULL,
                             -1, G_MAXINT,
                             -1,
                             CLUTTER_PARAM_READWRITE);
@@ -4083,9 +4045,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The color of the selection.
    */
-  pspec = clutter_param_spec_color ("selection-color",
-                                    P_("Selection Color"),
-                                    P_("Selection Color"),
+  pspec = clutter_param_spec_color ("selection-color", NULL, NULL,
                                     &default_selection_color,
                                     CLUTTER_PARAM_READWRITE |
                                     CLUTTER_PARAM_ANIMATABLE);
@@ -4097,9 +4057,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * Will be set to %TRUE if [property@Text:selection-color] has been set.
    */
-  pspec = g_param_spec_boolean ("selection-color-set",
-                                P_("Selection Color Set"),
-                                P_("Whether the selection color has been set"),
+  pspec = g_param_spec_boolean ("selection-color-set", NULL, NULL,
                                 FALSE,
                                 CLUTTER_PARAM_READABLE);
   obj_props[PROP_SELECTION_COLOR_SET] = pspec;
@@ -4111,9 +4069,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * A list of `PangoStyleAttribute`s to be applied to the
    * contents of the #ClutterText actor.
    */
-  pspec = g_param_spec_boxed ("attributes",
-                              P_("Attributes"),
-                              P_("A list of style attributes to apply to the contents of the actor"),
+  pspec = g_param_spec_boxed ("attributes", NULL, NULL,
                               PANGO_TYPE_ATTR_LIST,
                               CLUTTER_PARAM_READWRITE);
   obj_props[PROP_ATTRIBUTES] = pspec;
@@ -4132,9 +4088,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * a #ClutterText actor with [property@Text:use-markup] set to %TRUE, the markup
    * is stripped from the string.
    */
-  pspec = g_param_spec_boolean ("use-markup",
-                                P_("Use markup"),
-                                P_("Whether or not the text includes Pango markup"),
+  pspec = g_param_spec_boolean ("use-markup", NULL, NULL,
                                 FALSE,
                                 CLUTTER_PARAM_READWRITE);
   obj_props[PROP_USE_MARKUP] = pspec;
@@ -4147,9 +4101,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * exceed the available allocation. The wrapping strategy is
    * controlled by the [property@Text:line-wrap-mode] property.
    */
-  pspec = g_param_spec_boolean ("line-wrap",
-                                P_("Line wrap"),
-                                P_("If set, wrap the lines if the text becomes too wide"),
+  pspec = g_param_spec_boolean ("line-wrap", NULL, NULL,
                                 FALSE,
                                 CLUTTER_PARAM_READWRITE);
   obj_props[PROP_LINE_WRAP] = pspec;
@@ -4161,9 +4113,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * If [property@Text:line-wrap] is set to %TRUE, this property will
    * control how the text is wrapped.
    */
-  pspec = g_param_spec_enum ("line-wrap-mode",
-                             P_("Line wrap mode"),
-                             P_("Control how line-wrapping is done"),
+  pspec = g_param_spec_enum ("line-wrap-mode", NULL, NULL,
                              PANGO_TYPE_WRAP_MODE,
                              PANGO_WRAP_WORD,
                              CLUTTER_PARAM_READWRITE);
@@ -4175,9 +4125,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The preferred place to ellipsize the contents of the #ClutterText actor
    */
-  pspec = g_param_spec_enum ("ellipsize",
-                             P_("Ellipsize"),
-                             P_("The preferred place to ellipsize the string"),
+  pspec = g_param_spec_enum ("ellipsize", NULL, NULL,
                              PANGO_TYPE_ELLIPSIZE_MODE,
                              PANGO_ELLIPSIZE_NONE,
                              CLUTTER_PARAM_READWRITE);
@@ -4190,9 +4138,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * The preferred alignment for the text. This property controls
    * the alignment of multi-line paragraphs.
    */
-  pspec = g_param_spec_enum ("line-alignment",
-                             P_("Line Alignment"),
-                             P_("The preferred alignment for the string, for multi-line text"),
+  pspec = g_param_spec_enum ("line-alignment", NULL, NULL,
                              PANGO_TYPE_ALIGNMENT,
                              PANGO_ALIGN_LEFT,
                              CLUTTER_PARAM_READWRITE);
@@ -4205,9 +4151,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * Whether the contents of the #ClutterText should be justified
    * on both margins.
    */
-  pspec = g_param_spec_boolean ("justify",
-                                P_("Justify"),
-                                P_("Whether the text should be justified"),
+  pspec = g_param_spec_boolean ("justify", NULL, NULL,
                                 FALSE,
                                 CLUTTER_PARAM_READWRITE);
   obj_props[PROP_JUSTIFY] = pspec;
@@ -4219,9 +4163,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * If non-zero, the character that should be used in place of
    * the actual text in a password text actor.
    */
-  pspec = g_param_spec_unichar ("password-char",
-                                P_("Password Character"),
-                                P_("If non-zero, use this character to display the actor's contents"),
+  pspec = g_param_spec_unichar ("password-char", NULL, NULL,
                                 0,
                                 CLUTTER_PARAM_READWRITE);
   obj_props[PROP_PASSWORD_CHAR] = pspec;
@@ -4232,9 +4174,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The maximum length of the contents of the #ClutterText actor.
    */
-  pspec = g_param_spec_int ("max-length",
-                            P_("Max Length"),
-                            P_("Maximum length of the text inside the actor"),
+  pspec = g_param_spec_int ("max-length", NULL, NULL,
                             -1, G_MAXINT, 0,
                             CLUTTER_PARAM_READWRITE);
   obj_props[PROP_MAX_LENGTH] = pspec;
@@ -4254,9 +4194,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    * The [property@Text:single-line-mode] property is used only if the
    * [property@Text:editable] property is set to %TRUE.
    */
-  pspec = g_param_spec_boolean ("single-line-mode",
-                                P_("Single Line Mode"),
-                                P_("Whether the text should be a single line"),
+  pspec = g_param_spec_boolean ("single-line-mode", NULL, NULL,
                                 FALSE,
                                 CLUTTER_PARAM_READWRITE);
   obj_props[PROP_SINGLE_LINE_MODE] = pspec;
@@ -4267,9 +4205,7 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * The color of selected text.
    */
-  pspec = clutter_param_spec_color ("selected-text-color",
-                                    P_("Selected Text Color"),
-                                    P_("Selected Text Color"),
+  pspec = clutter_param_spec_color ("selected-text-color", NULL, NULL,
                                     &default_selected_text_color,
                                     CLUTTER_PARAM_READWRITE |
                                     CLUTTER_PARAM_ANIMATABLE);
@@ -4281,25 +4217,19 @@ clutter_text_class_init (ClutterTextClass *klass)
    *
    * Will be set to %TRUE if [property@Text:selected-text-color] has been set.
    */
-  pspec = g_param_spec_boolean ("selected-text-color-set",
-                                P_("Selected Text Color Set"),
-                                P_("Whether the selected text color has been set"),
+  pspec = g_param_spec_boolean ("selected-text-color-set", NULL, NULL,
                                 FALSE,
                                 CLUTTER_PARAM_READABLE);
   obj_props[PROP_SELECTED_TEXT_COLOR_SET] = pspec;
   g_object_class_install_property (gobject_class, PROP_SELECTED_TEXT_COLOR_SET, pspec);
 
-  pspec = g_param_spec_flags ("input-hints",
-                              P_("Input hints"),
-                              P_("Input hints"),
+  pspec = g_param_spec_flags ("input-hints", NULL, NULL,
                               CLUTTER_TYPE_INPUT_CONTENT_HINT_FLAGS,
                               0, CLUTTER_PARAM_READWRITE);
   obj_props[PROP_INPUT_HINTS] = pspec;
   g_object_class_install_property (gobject_class, PROP_INPUT_HINTS, pspec);
 
-  pspec = g_param_spec_enum ("input-purpose",
-                             P_("Input purpose"),
-                             P_("Input purpose"),
+  pspec = g_param_spec_enum ("input-purpose", NULL, NULL,
                              CLUTTER_TYPE_INPUT_CONTENT_PURPOSE,
                              0, CLUTTER_PARAM_READWRITE);
   obj_props[PROP_INPUT_PURPOSE] = pspec;

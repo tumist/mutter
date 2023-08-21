@@ -24,6 +24,8 @@ mutter_public_headers = [
   'meta-launch-context.h',
   'meta-later.h',
   'meta-monitor-manager.h',
+  'meta-multi-texture.h',
+  'meta-multi-texture-format.h',
   'meta-plugin.h',
   'meta-remote-access-controller.h',
   'meta-selection.h',
@@ -49,6 +51,7 @@ mutter_public_headers = [
 if have_wayland
   mutter_public_headers += [
     'meta-wayland-client.h',
+    'meta-wayland-compositor.h',
   ]
 endif
 

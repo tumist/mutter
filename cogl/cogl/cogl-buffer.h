@@ -32,14 +32,13 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
+#pragma once
+
 #if !defined(__COGL_H_INSIDE__) && !defined(COGL_COMPILATION)
 #error "Only <cogl/cogl.h> can be included directly."
 #endif
 
-#ifndef __COGL_BUFFER_H__
-#define __COGL_BUFFER_H__
-
-#include <cogl/cogl-types.h>
+#include "cogl/cogl-types.h"
 
 G_BEGIN_DECLS
 
@@ -288,5 +287,3 @@ cogl_buffer_set_data (CoglBuffer *buffer,
                       size_t size);
 
 G_END_DECLS
-
-#endif /* __COGL_BUFFER_H__ */

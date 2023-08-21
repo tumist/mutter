@@ -20,8 +20,8 @@
  *
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
-#ifndef CLUTTER_SEAT_H
-#define CLUTTER_SEAT_H
+
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
@@ -89,6 +89,10 @@ struct _ClutterSeatClass
   void (* warp_pointer) (ClutterSeat *seat,
                          int          x,
                          int          y);
+
+  void (* init_pointer_position) (ClutterSeat *seat,
+                                  float        x,
+                                  float        y);
 
   gboolean (* query_state) (ClutterSeat          *seat,
                             ClutterInputDevice   *device,
@@ -168,4 +172,5 @@ gboolean clutter_seat_query_state (ClutterSeat          *seat,
                                    graphene_point_t     *coords,
                                    ClutterModifierType  *modifiers);
 
-#endif /* CLUTTER_SEAT_H */
+CLUTTER_EXPORT
+const char * clutter_seat_get_name (ClutterSeat *seat);

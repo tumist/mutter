@@ -48,19 +48,17 @@
  * deformation algorithm.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-deform-effect.h"
+#include "cogl/cogl.h"
 
-#include <cogl/cogl.h>
-
-#include "clutter-color.h"
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-offscreen-effect-private.h"
-#include "clutter-paint-node.h"
-#include "clutter-paint-nodes.h"
-#include "clutter-private.h"
+#include "clutter/clutter-deform-effect.h"
+#include "clutter/clutter-color.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-paint-node.h"
+#include "clutter/clutter-paint-nodes.h"
+#include "clutter/clutter-private.h"
 
 #define DEFAULT_N_TILES         32
 
@@ -595,9 +593,7 @@ clutter_deform_effect_class_init (ClutterDeformEffectClass *klass)
    * smaller the tiles
    */
   obj_props[PROP_X_TILES] =
-    g_param_spec_uint ("x-tiles",
-                       P_("Horizontal Tiles"),
-                       P_("The number of horizontal tiles"),
+    g_param_spec_uint ("x-tiles", NULL, NULL,
                        1, G_MAXUINT,
                        DEFAULT_N_TILES,
                        CLUTTER_PARAM_READWRITE);
@@ -609,9 +605,7 @@ clutter_deform_effect_class_init (ClutterDeformEffectClass *klass)
    * smaller the tiles
    */
   obj_props[PROP_Y_TILES] =
-    g_param_spec_uint ("y-tiles",
-                       P_("Vertical Tiles"),
-                       P_("The number of vertical tiles"),
+    g_param_spec_uint ("y-tiles", NULL, NULL,
                        1, G_MAXUINT,
                        DEFAULT_N_TILES,
                        CLUTTER_PARAM_READWRITE);
@@ -625,9 +619,7 @@ clutter_deform_effect_class_init (ClutterDeformEffectClass *klass)
    * By default, no material will be used
    */
   obj_props[PROP_BACK_MATERIAL] =
-    g_param_spec_boxed ("back-material",
-                        P_("Back Material"),
-                        P_("The material to be used when painting the back of the actor"),
+    g_param_spec_boxed ("back-material", NULL, NULL,
                         COGL_TYPE_HANDLE,
                         CLUTTER_PARAM_READWRITE);
 

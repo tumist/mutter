@@ -28,10 +28,9 @@
  *
  */
 
-#ifndef __COGL_DISPLAY_GLX_PRIVATE_H
-#define __COGL_DISPLAY_GLX_PRIVATE_H
+#pragma once
 
-#include "cogl-object-private.h"
+#include "cogl/cogl-object-private.h"
 
 typedef struct _CoglGLXCachedConfig
 {
@@ -60,5 +59,3 @@ typedef struct _CoglGLXDisplay
   GLXWindow dummy_glxwin;
   Window dummy_xwin;
 } CoglGLXDisplay;
-
-#endif /* __COGL_DISPLAY_GLX_PRIVATE_H */

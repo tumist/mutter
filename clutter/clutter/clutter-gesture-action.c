@@ -30,8 +30,8 @@
  * Action for gesture gestures
  *
  * #ClutterGestureAction is a sub-class of [class@Action] that implements
- * the logic for recognizing gesture gestures. It listens for low level events
- * such as [struct@ButtonEvent] and [struct@MotionEvent] on the stage to raise
+ * the logic for recognizing gesture gestures. It listens for low level
+ * [struct@Event] events on the stage to raise
  * the [signal@GestureAction::gesture-begin], [signal@GestureAction::gesture-progress],
  * and [signal@GestureAction::gesture-end] signals.
  *
@@ -81,14 +81,14 @@
  * instead.
  */
 
-#include "clutter-build-config.h"
+#include "clutter/clutter-build-config.h"
 
-#include "clutter-gesture-action-private.h"
 
-#include "clutter-debug.h"
-#include "clutter-enum-types.h"
-#include "clutter-marshal.h"
-#include "clutter-private.h"
+#include "clutter/clutter-debug.h"
+#include "clutter/clutter-enum-types.h"
+#include "clutter/clutter-gesture-action.h"
+#include "clutter/clutter-marshal.h"
+#include "clutter/clutter-private.h"
 
 #include <math.h>
 
@@ -676,9 +676,7 @@ clutter_gesture_action_class_init (ClutterGestureActionClass *klass)
    * Number of touch points to trigger a gesture action.
    */
   gesture_props[PROP_N_TOUCH_POINTS] =
-    g_param_spec_int ("n-touch-points",
-                      P_("Number touch points"),
-                      P_("Number of touch points"),
+    g_param_spec_int ("n-touch-points", NULL, NULL,
                       1, G_MAXINT, 1,
                       CLUTTER_PARAM_READWRITE);
 
@@ -690,9 +688,7 @@ clutter_gesture_action_class_init (ClutterGestureActionClass *klass)
    * [signal@GestureAction::gesture-cancel] signal.
    */
   gesture_props[PROP_THRESHOLD_TRIGGER_EDGE] =
-    g_param_spec_enum ("threshold-trigger-edge",
-                       P_("Threshold Trigger Edge"),
-                       P_("The trigger edge used by the action"),
+    g_param_spec_enum ("threshold-trigger-edge", NULL, NULL,
                        CLUTTER_TYPE_GESTURE_TRIGGER_EDGE,
                        CLUTTER_GESTURE_TRIGGER_EDGE_NONE,
                        CLUTTER_PARAM_READWRITE |
@@ -708,9 +704,7 @@ clutter_gesture_action_class_init (ClutterGestureActionClass *klass)
    * A negative value will be interpreted as the default drag threshold.
    */
   gesture_props[PROP_THRESHOLD_TRIGGER_DISTANCE_X] =
-    g_param_spec_float ("threshold-trigger-distance-x",
-                        P_("Threshold Trigger Horizontal Distance"),
-                        P_("The horizontal trigger distance used by the action"),
+    g_param_spec_float ("threshold-trigger-distance-x", NULL, NULL,
                         -1.0, G_MAXFLOAT, -1.0,
                         CLUTTER_PARAM_READWRITE |
                         G_PARAM_CONSTRUCT_ONLY);
@@ -725,9 +719,7 @@ clutter_gesture_action_class_init (ClutterGestureActionClass *klass)
    * A negative value will be interpreted as the default drag threshold.
    */
   gesture_props[PROP_THRESHOLD_TRIGGER_DISTANCE_Y] =
-    g_param_spec_float ("threshold-trigger-distance-y",
-                        P_("Threshold Trigger Vertical Distance"),
-                        P_("The vertical trigger distance used by the action"),
+    g_param_spec_float ("threshold-trigger-distance-y", NULL, NULL,
                         -1.0, G_MAXFLOAT, -1.0,
                         CLUTTER_PARAM_READWRITE |
                         G_PARAM_CONSTRUCT_ONLY);

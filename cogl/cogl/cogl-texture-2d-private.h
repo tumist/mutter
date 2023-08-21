@@ -28,13 +28,12 @@
  *
  */
 
-#ifndef __COGL_TEXTURE_2D_PRIVATE_H
-#define __COGL_TEXTURE_2D_PRIVATE_H
+#pragma once
 
-#include "cogl-object-private.h"
-#include "cogl-pipeline-private.h"
-#include "cogl-texture-private.h"
-#include "cogl-texture-2d.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-pipeline-private.h"
+#include "cogl/cogl-texture-private.h"
+#include "cogl/cogl-texture-2d.h"
 
 struct _CoglTexture2D
 {
@@ -119,5 +118,3 @@ _cogl_texture_2d_copy_from_framebuffer (CoglTexture2D *texture,
                                         int dst_x,
                                         int dst_y,
                                         int level);
-
-#endif /* __COGL_TEXTURE_2D_PRIVATE_H */

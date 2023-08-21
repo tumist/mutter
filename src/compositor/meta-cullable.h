@@ -22,8 +22,7 @@
  *     Jasper St. Pierre <jstpierre@mecheye.net>
  */
 
-#ifndef __META_CULLABLE_H__
-#define __META_CULLABLE_H__
+#pragma once
 
 #include "clutter/clutter.h"
 
@@ -36,17 +35,15 @@ struct _MetaCullableInterface
 {
   GTypeInterface g_iface;
 
-  void (* cull_out)      (MetaCullable   *cullable,
-                          cairo_region_t *unobscured_region,
-                          cairo_region_t *clip_region);
-  gboolean (* is_untransformed) (MetaCullable *cullable);
+  void (* cull_out) (MetaCullable   *cullable,
+                     cairo_region_t *unobscured_region,
+                     cairo_region_t *clip_region);
   void (* reset_culling) (MetaCullable  *cullable);
 };
 
 void meta_cullable_cull_out (MetaCullable   *cullable,
                              cairo_region_t *unobscured_region,
                              cairo_region_t *clip_region);
-gboolean meta_cullable_is_untransformed (MetaCullable *cullable);
 void meta_cullable_reset_culling (MetaCullable *cullable);
 
 /* Utility methods for implementations */
@@ -56,6 +53,3 @@ void meta_cullable_cull_out_children (MetaCullable   *cullable,
 void meta_cullable_reset_culling_children (MetaCullable *cullable);
 
 G_END_DECLS
-
-#endif /* __META_CULLABLE_H__ */
-

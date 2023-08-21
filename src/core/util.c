@@ -16,11 +16,6 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:util
- * @title: Utility functions
- * @short_description: Miscellaneous utility functions
- */
 
 #define _POSIX_C_SOURCE 200112L /* for fdopen() */
 
@@ -72,6 +67,8 @@ static const GDebugKey meta_debug_keys[] = {
   { "backend", META_DEBUG_BACKEND },
   { "render", META_DEBUG_RENDER },
   { "color", META_DEBUG_COLOR },
+  { "input-events", META_DEBUG_INPUT_EVENTS },
+  { "eis", META_DEBUG_EIS },
 };
 
 static gint verbose_topics = 0;
@@ -175,10 +172,11 @@ meta_add_verbose_topic (MetaDebugTopic topic)
  * meta_remove_verbose_topic:
  * @topic: Topic for which logging will be stopped
  *
- * Stop printing log messages for the given topic @topic.  Note
- * that this method does not stack with meta_add_verbose_topic();
- * i.e. if two calls to meta_add_verbose_topic() for the same
- * topic are made, one call to meta_remove_verbose_topic() will
+ * Stop printing log messages for the given topic @topic.
+ *
+ * Note that this method does not stack with [func@Meta.add_verbose_topic];
+ * i.e. if two calls to [func@Meta.add_verbose_topic] for the same
+ * topic are made, one call to [func@Meta.remove_verbose_topic]  will
  * remove it.
  */
 void
@@ -324,6 +322,10 @@ meta_topic_to_string (MetaDebugTopic topic)
       return "COLOR";
     case META_DEBUG_VERBOSE:
       return "VERBOSE";
+    case META_DEBUG_INPUT_EVENTS:
+      return "INPUT_EVENTS";
+    case META_DEBUG_EIS:
+      return "EIS";
     }
 
   return "WM";

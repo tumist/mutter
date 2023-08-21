@@ -3,7 +3,7 @@
  *
  * An OpenGL based 'interactive canvas' library.
  *
- * Copyright (C) 2012  Collabora Ltd..
+ * Copyright (C) 2022  Red Hat Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,13 +19,15 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_GESTURE_ACTION_PRIVATE_H__
-#define __CLUTTER_GESTURE_ACTION_PRIVATE_H__
+#pragma once
 
-#include <clutter/clutter-gesture-action.h>
+#include "clutter/clutter.h"
+#include "clutter/clutter-stage-private.h"
 
-G_BEGIN_DECLS
+#define CLUTTER_TYPE_INPUT_ONLY_ACTOR (clutter_input_only_actor_get_type ())
+G_DECLARE_FINAL_TYPE (ClutterInputOnlyActor, clutter_input_only_actor,
+                      CLUTTER, INPUT_ONLY_ACTOR, ClutterActor)
 
-G_END_DECLS
-
-#endif /* __CLUTTER_GESTURE_ACTION_PRIVATE_H__ */
+ClutterInputOnlyActor * clutter_input_only_actor_new (ClutterEventHandler event_handler,
+                                                      gpointer            user_data,
+                                                      GDestroyNotify      destroy);

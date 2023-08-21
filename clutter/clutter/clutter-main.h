@@ -21,15 +21,14 @@
  * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CLUTTER_MAIN_H__
-#define __CLUTTER_MAIN_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-actor.h>
-#include <clutter/clutter-stage.h>
+#include "clutter/clutter-actor.h"
+#include "clutter/clutter-stage.h"
 #include <pango/pango.h>
 
 G_BEGIN_DECLS
@@ -91,7 +90,8 @@ typedef enum
 #define CLUTTER_PRIORITY_REDRAW         (G_PRIORITY_HIGH_IDLE + 50)
 
 CLUTTER_EXPORT
-void                    clutter_do_event                        (ClutterEvent *event);
+void                    clutter_stage_handle_event              (ClutterStage *stage,
+                                                                 ClutterEvent *event);
 
 /* Debug utility functions */
 CLUTTER_EXPORT
@@ -154,5 +154,3 @@ CLUTTER_EXPORT
 ClutterTextDirection    clutter_get_text_direction (void);
 
 G_END_DECLS
-
-#endif /* _CLUTTER_MAIN_H__ */

@@ -33,25 +33,25 @@
 
 #include <string.h>
 
-#include "cogl-debug.h"
-#include "cogl-context-private.h"
-#include "cogl-display-private.h"
-#include "cogl-renderer-private.h"
-#include "cogl-object-private.h"
-#include "cogl-util.h"
-#include "cogl-texture-private.h"
-#include "cogl-framebuffer-private.h"
-#include "cogl-onscreen-template-private.h"
-#include "cogl-clip-stack.h"
-#include "cogl-journal-private.h"
-#include "cogl-pipeline-state-private.h"
-#include "cogl-primitive-private.h"
-#include "cogl-offscreen.h"
-#include "cogl1-context.h"
-#include "cogl-private.h"
-#include "cogl-primitives-private.h"
-#include "cogl-gtype-private.h"
-#include "winsys/cogl-winsys-private.h"
+#include "cogl/cogl-debug.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-display-private.h"
+#include "cogl/cogl-renderer-private.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/cogl-util.h"
+#include "cogl/cogl-texture-private.h"
+#include "cogl/cogl-framebuffer-private.h"
+#include "cogl/cogl-onscreen-template-private.h"
+#include "cogl/cogl-clip-stack.h"
+#include "cogl/cogl-journal-private.h"
+#include "cogl/cogl-pipeline-state-private.h"
+#include "cogl/cogl-primitive-private.h"
+#include "cogl/cogl-offscreen.h"
+#include "cogl/cogl1-context.h"
+#include "cogl/cogl-private.h"
+#include "cogl/cogl-primitives-private.h"
+#include "cogl/cogl-gtype-private.h"
+#include "cogl/winsys/cogl-winsys-private.h"
 
 enum
 {
@@ -379,32 +379,24 @@ cogl_framebuffer_class_init (CoglFramebufferClass *klass)
   object_class->set_property = cogl_framebuffer_set_property;
 
   obj_props[PROP_CONTEXT] =
-    g_param_spec_boxed ("context",
-                        "context",
-                        "CoglContext",
+    g_param_spec_boxed ("context", NULL, NULL,
                         COGL_TYPE_HANDLE,
                         G_PARAM_READWRITE |
                         G_PARAM_CONSTRUCT_ONLY |
                         G_PARAM_STATIC_STRINGS);
   obj_props[PROP_DRIVER_CONFIG] =
-    g_param_spec_pointer ("driver-config",
-                          "driver-config",
-                          "CoglFramebufferDriverConfig",
+    g_param_spec_pointer ("driver-config", NULL, NULL,
                           G_PARAM_READWRITE |
                           G_PARAM_CONSTRUCT_ONLY |
                           G_PARAM_STATIC_STRINGS);
   obj_props[PROP_WIDTH] =
-    g_param_spec_int ("width",
-                      "width",
-                      "framebuffer width",
+    g_param_spec_int ("width", NULL, NULL,
                       -1, INT_MAX, -1,
                       G_PARAM_READWRITE |
                       G_PARAM_CONSTRUCT |
                       G_PARAM_STATIC_STRINGS);
   obj_props[PROP_HEIGHT] =
-    g_param_spec_int ("height",
-                      "height",
-                      "framebuffer height",
+    g_param_spec_int ("height", NULL, NULL,
                       -1, INT_MAX, -1,
                       G_PARAM_READWRITE |
                       G_PARAM_CONSTRUCT |
@@ -1613,8 +1605,9 @@ cogl_blit_framebuffer (CoglFramebuffer *framebuffer,
     }
 
   /* The buffers must use the same premult convention */
-  if ((priv->internal_format & COGL_PREMULT_BIT) !=
-      (dst_priv->internal_format & COGL_PREMULT_BIT))
+  if (((priv->internal_format & COGL_PREMULT_BIT) !=
+       (dst_priv->internal_format & COGL_PREMULT_BIT)) &&
+      dst_priv->internal_format & COGL_A_BIT)
     {
       g_set_error_literal (error, COGL_SYSTEM_ERROR,
                            COGL_SYSTEM_ERROR_UNSUPPORTED,
@@ -2006,27 +1999,6 @@ cogl_framebuffer_set_projection_matrix (CoglFramebuffer         *framebuffer,
     {
       priv->context->current_draw_buffer_changes |=
         COGL_FRAMEBUFFER_STATE_PROJECTION;
-    }
-}
-
-void
-cogl_framebuffer_push_scissor_clip (CoglFramebuffer *framebuffer,
-                                    int x,
-                                    int y,
-                                    int width,
-                                    int height)
-{
-  CoglFramebufferPrivate *priv =
-    cogl_framebuffer_get_instance_private (framebuffer);
-
-  priv->clip_stack =
-    _cogl_clip_stack_push_window_rectangle (priv->clip_stack,
-                                            x, y, width, height);
-
-  if (priv->context->current_draw_buffer == framebuffer)
-    {
-      priv->context->current_draw_buffer_changes |=
-        COGL_FRAMEBUFFER_STATE_CLIP;
     }
 }
 

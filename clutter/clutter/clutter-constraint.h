@@ -22,14 +22,13 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_CONSTRAINT_H__
-#define __CLUTTER_CONSTRAINT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-actor-meta.h>
+#include "clutter/clutter-actor-meta.h"
 
 G_BEGIN_DECLS
 
@@ -75,15 +74,6 @@ struct _ClutterConstraintClass
                                   float               for_size,
                                   float              *minimum_size,
                                   float              *natural_size);
-
-  /*< private >*/
-  void (* _clutter_constraint1) (void);
-  void (* _clutter_constraint2) (void);
-  void (* _clutter_constraint3) (void);
-  void (* _clutter_constraint4) (void);
-  void (* _clutter_constraint5) (void);
-  void (* _clutter_constraint6) (void);
-  void (* _clutter_constraint7) (void);
 };
 
 CLUTTER_EXPORT
@@ -123,5 +113,3 @@ CLUTTER_EXPORT
 gboolean           clutter_actor_has_constraints           (ClutterActor      *self);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_CONSTRAINT_H__ */

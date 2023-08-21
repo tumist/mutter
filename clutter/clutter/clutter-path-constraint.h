@@ -22,15 +22,14 @@
  *   Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_PATH_CONSTRAINT_H__
-#define __CLUTTER_PATH_CONSTRAINT_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-constraint.h>
-#include <clutter/clutter-path.h>
+#include "clutter/clutter-constraint.h"
+#include "clutter/clutter-path.h"
 
 G_BEGIN_DECLS
 
@@ -60,5 +59,3 @@ CLUTTER_EXPORT
 gfloat             clutter_path_constraint_get_offset (ClutterPathConstraint *constraint);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_PATH_CONSTRAINT_H__ */

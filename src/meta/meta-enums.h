@@ -18,49 +18,13 @@
  *
  */
 
-#ifndef META_ENUMS_H
-#define META_ENUMS_H
+#pragma once
 
 typedef enum _MetaCompositorType
 {
   META_COMPOSITOR_TYPE_WAYLAND,
   META_COMPOSITOR_TYPE_X11,
 } MetaCompositorType;
-
-/**
- * MetaFrameFlags:
- * @META_FRAME_ALLOWS_DELETE: frame allows delete
- * @META_FRAME_ALLOWS_MENU: frame allows menu
- * @META_FRAME_ALLOWS_MINIMIZE: frame allows minimize
- * @META_FRAME_ALLOWS_MAXIMIZE: frame allows maximize
- * @META_FRAME_ALLOWS_VERTICAL_RESIZE: frame allows vertical resize
- * @META_FRAME_ALLOWS_HORIZONTAL_RESIZE: frame allows horizontal resize
- * @META_FRAME_HAS_FOCUS: frame has focus
- * @META_FRAME_STUCK: frame is stuck
- * @META_FRAME_MAXIMIZED: frame is maximized
- * @META_FRAME_ALLOWS_MOVE: frame allows move
- * @META_FRAME_FULLSCREEN: frame allows fullscreen
- * @META_FRAME_ABOVE: frame is above
- * @META_FRAME_TILED_LEFT: frame is tiled to the left
- * @META_FRAME_TILED_RIGHT: frame is tiled to the right
- */
-typedef enum
-{
-  META_FRAME_ALLOWS_DELETE            = 1 << 0,
-  META_FRAME_ALLOWS_MENU              = 1 << 1,
-  META_FRAME_ALLOWS_MINIMIZE          = 1 << 2,
-  META_FRAME_ALLOWS_MAXIMIZE          = 1 << 3,
-  META_FRAME_ALLOWS_VERTICAL_RESIZE   = 1 << 4,
-  META_FRAME_ALLOWS_HORIZONTAL_RESIZE = 1 << 5,
-  META_FRAME_HAS_FOCUS                = 1 << 6,
-  META_FRAME_STUCK                    = 1 << 7,
-  META_FRAME_MAXIMIZED                = 1 << 8,
-  META_FRAME_ALLOWS_MOVE              = 1 << 9,
-  META_FRAME_FULLSCREEN               = 1 << 10,
-  META_FRAME_ABOVE                    = 1 << 11,
-  META_FRAME_TILED_LEFT               = 1 << 12,
-  META_FRAME_TILED_RIGHT              = 1 << 13
-} MetaFrameFlags;
 
 /**
  * MetaGrabOp:
@@ -343,9 +307,10 @@ typedef enum
  * @META_BUTTON_FUNCTION_CLOSE: Close
  * @META_BUTTON_FUNCTION_LAST: Marks the end of the #MetaButtonFunction enumeration
  *
- * Function a window button can have.  Note, you can't add stuff here
- * without extending the theme format to draw a new function and
- * breaking all existing themes.
+ * Function a window button can have.
+ *
+ * Note, you can't add stuff here without extending the theme format
+ * to draw a new function and breaking all existing themes.
  */
 typedef enum
 {
@@ -449,5 +414,3 @@ typedef enum
   META_A11Y_STICKY_KEYS_BEEP = 1 << 12,
   META_A11Y_FEATURE_STATE_CHANGE_BEEP = 1 << 13,
 } MetaKeyboardA11yFlags;
-
-#endif /* META_ENUMS_H */

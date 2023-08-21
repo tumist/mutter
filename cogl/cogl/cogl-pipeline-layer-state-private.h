@@ -31,11 +31,10 @@
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_PIPELINE_LAYER_STATE_PRIVATE_H
-#define __COGL_PIPELINE_LAYER_STATE_PRIVATE_H
+#pragma once
 
-#include "cogl-pipeline-layer-state.h"
-#include "cogl-pipeline-private.h"
+#include "cogl/cogl-pipeline-layer-state.h"
+#include "cogl/cogl-pipeline-private.h"
 
 CoglPipelineLayer *
 _cogl_pipeline_set_layer_unit (CoglPipeline *required_owner,
@@ -127,5 +126,3 @@ void
 _cogl_pipeline_layer_hash_fragment_snippets_state (CoglPipelineLayer *authority,
                                                    CoglPipelineLayer **authorities,
                                                    CoglPipelineHashState *state);
-
-#endif /* __COGL_PIPELINE_LAYER_STATE_PRIVATE_H */

@@ -22,16 +22,15 @@
  *      Emmanuele Bassi <ebassi@linux.intel.com>
  */
 
-#ifndef __CLUTTER_LAYOUT_META_H__
-#define __CLUTTER_LAYOUT_META_H__
+#pragma once
 
 #if !defined(__CLUTTER_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
 #error "Only <clutter/clutter.h> can be included directly."
 #endif
 
-#include <clutter/clutter-types.h>
-#include <clutter/clutter-child-meta.h>
-#include <clutter/clutter-layout-manager.h>
+#include "clutter/clutter-types.h"
+#include "clutter/clutter-child-meta.h"
+#include "clutter/clutter-layout-manager.h"
 
 G_BEGIN_DECLS
 
@@ -53,11 +52,6 @@ struct _ClutterLayoutMeta
 
   /*< public >*/
   ClutterLayoutManager *manager;
-
-  /*< private >*/
-  /* padding */
-  gint32 dummy0;
-  gpointer dummy1;
 };
 
 /**
@@ -70,12 +64,6 @@ struct _ClutterLayoutMetaClass
 {
   /*< private >*/
   ClutterChildMetaClass parent_class;
-
-  /* padding, for expansion */
-  void (*_clutter_padding1) (void);
-  void (*_clutter_padding2) (void);
-  void (*_clutter_padding3) (void);
-  void (*_clutter_padding4) (void);
 };
 
 CLUTTER_EXPORT
@@ -85,5 +73,3 @@ CLUTTER_EXPORT
 ClutterLayoutManager *clutter_layout_meta_get_manager (ClutterLayoutMeta *data);
 
 G_END_DECLS
-
-#endif /* __CLUTTER_LAYOUT_META_H__ */

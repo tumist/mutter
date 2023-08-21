@@ -23,8 +23,7 @@
  *     Jonas Ådahl <jadahl@gmail.com>
  */
 
-#ifndef META_BARRIER_PRIVATE_H
-#define META_BARRIER_PRIVATE_H
+#pragma once
 
 #include "core/meta-border.h"
 #include "meta/barrier.h"
@@ -58,6 +57,6 @@ MetaBackend * meta_barrier_get_backend (MetaBarrier *barrier);
 
 MetaBorder * meta_barrier_get_border (MetaBarrier *barrier);
 
-G_END_DECLS
+MetaBarrierFlags meta_barrier_get_flags (MetaBarrier *barrier);
 
-#endif /* META_BARRIER_PRIVATE_H */
+G_END_DECLS

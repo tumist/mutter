@@ -29,6 +29,12 @@
 
 #define META_SYSPROF_PROFILER_DBUS_PATH "/org/gnome/Sysprof3/Profiler"
 
+typedef struct
+{
+  GMainContext *main_context;
+  char *name;
+} ThreadInfo;
+
 struct _MetaProfiler
 {
   MetaDBusSysprof3ProfilerSkeleton parent_instance;
@@ -38,6 +44,9 @@ struct _MetaProfiler
 
   gboolean persistent;
   gboolean running;
+
+  GMutex mutex;
+  GList *threads;
 };
 
 static void
@@ -49,6 +58,26 @@ G_DEFINE_TYPE_WITH_CODE (MetaProfiler,
                          G_IMPLEMENT_INTERFACE (META_DBUS_TYPE_SYSPROF3_PROFILER,
                                                 meta_sysprof_capturer_init_iface))
 
+static void
+thread_info_free (ThreadInfo *thread_info)
+{
+  g_free (thread_info->name);
+  g_free (thread_info);
+}
+
+static ThreadInfo *
+thread_info_new (GMainContext *main_context,
+                 const char   *name)
+{
+  ThreadInfo *thread_info;
+
+  thread_info = g_new0 (ThreadInfo, 1);
+  thread_info->main_context = main_context;
+  thread_info->name = g_strdup (name);
+
+  return thread_info;
+}
+
 static gboolean
 handle_start (MetaDBusSysprof3Profiler *dbus_profiler,
               GDBusMethodInvocation    *invocation,
@@ -58,9 +87,11 @@ handle_start (MetaDBusSysprof3Profiler *dbus_profiler,
 {
   MetaProfiler *profiler = META_PROFILER (dbus_profiler);
   GMainContext *main_context = g_main_context_default ();
+  g_autoptr (GError) error = NULL;
   const char *group_name;
   int position;
   int fd = -1;
+  GList *l;
 
   if (profiler->running)
     {
@@ -81,16 +112,44 @@ handle_start (MetaDBusSysprof3Profiler *dbus_profiler,
 
   if (fd != -1)
     {
-      cogl_set_tracing_enabled_on_thread_with_fd (main_context,
-                                                  group_name,
-                                                  fd);
+      if (!cogl_start_tracing_with_fd (fd, &error))
+        {
+          g_dbus_method_invocation_return_error (invocation,
+                                                 G_DBUS_ERROR,
+                                                 G_DBUS_ERROR_FAILED,
+                                                 "Failed to start: %s",
+                                                 error->message);
+          return G_DBUS_METHOD_INVOCATION_HANDLED;
+        }
     }
   else
     {
-      cogl_set_tracing_enabled_on_thread (main_context,
-                                          group_name,
-                                          "mutter-profile.syscap");
+      if (!cogl_start_tracing_with_path ("mutter-profile.syscap", &error))
+        {
+          g_dbus_method_invocation_return_error (invocation,
+                                                 G_DBUS_ERROR,
+                                                 G_DBUS_ERROR_FAILED,
+                                                 "Failed to start: %s",
+                                                 error->message);
+          return G_DBUS_METHOD_INVOCATION_HANDLED;
+        }
     }
+
+  cogl_set_tracing_enabled_on_thread (main_context, group_name);
+
+  g_mutex_lock (&profiler->mutex);
+  for (l = profiler->threads; l; l = l->next)
+    {
+      ThreadInfo *thread_info = l->data;
+      g_autofree char *thread_group_name = NULL;
+
+      thread_group_name = g_strdup_printf ("%s (%s)",
+                                           group_name,
+                                           thread_info->name);
+      cogl_set_tracing_enabled_on_thread (thread_info->main_context,
+                                          thread_group_name);
+    }
+  g_mutex_unlock (&profiler->mutex);
 
   profiler->running = TRUE;
 
@@ -105,6 +164,7 @@ handle_stop (MetaDBusSysprof3Profiler *dbus_profiler,
              GDBusMethodInvocation    *invocation)
 {
   MetaProfiler *profiler = META_PROFILER (dbus_profiler);
+  GList *l;
 
   if (profiler->persistent)
     {
@@ -125,6 +185,18 @@ handle_stop (MetaDBusSysprof3Profiler *dbus_profiler,
     }
 
   cogl_set_tracing_disabled_on_thread (g_main_context_default ());
+
+  g_mutex_lock (&profiler->mutex);
+  for (l = profiler->threads; l; l = l->next)
+    {
+      ThreadInfo *thread_info = l->data;
+
+      cogl_set_tracing_disabled_on_thread (thread_info->main_context);
+    }
+  g_mutex_unlock (&profiler->mutex);
+
+  cogl_stop_tracing ();
+
   profiler->running = FALSE;
 
   g_debug ("Stopping profiler");
@@ -179,10 +251,15 @@ meta_profiler_finalize (GObject *object)
 {
   MetaProfiler *self = (MetaProfiler *)object;
 
+  if (self->persistent)
+    cogl_stop_tracing ();
+
   g_cancellable_cancel (self->cancellable);
 
   g_clear_object (&self->cancellable);
   g_clear_object (&self->connection);
+  g_mutex_clear (&self->mutex);
+  g_list_free_full (self->threads, (GDestroyNotify) thread_info_free);
 
   G_OBJECT_CLASS (meta_profiler_parent_class)->finalize (object);
 }
@@ -198,33 +275,82 @@ meta_profiler_class_init (MetaProfilerClass *klass)
 static void
 meta_profiler_init (MetaProfiler *self)
 {
-  const char *env_trace_file;
-
+  g_mutex_init (&self->mutex);
   self->cancellable = g_cancellable_new ();
 
   g_bus_get (G_BUS_TYPE_SESSION,
              self->cancellable,
              on_bus_acquired_cb,
              self);
+}
 
-  env_trace_file = g_getenv ("MUTTER_DEBUG_TRACE_FILE");
-  if (env_trace_file && env_trace_file[0])
+MetaProfiler *
+meta_profiler_new (const char *trace_file)
+{
+  MetaProfiler *profiler;
+
+  profiler = g_object_new (META_TYPE_PROFILER, NULL);
+
+  if (trace_file)
     {
       GMainContext *main_context = g_main_context_default ();
       const char *group_name;
+      g_autoptr (GError) error = NULL;
 
       /* Translators: this string will appear in Sysprof */
       group_name = _("Compositor");
 
-      cogl_set_tracing_enabled_on_thread (main_context,
-                                          group_name,
-                                          env_trace_file);
-      self->persistent = TRUE;
+      if (!cogl_start_tracing_with_path (trace_file, &error))
+        {
+          g_warning ("Failed to start persistent profiling: %s",
+                     error->message);
+        }
+      else
+        {
+          cogl_set_tracing_enabled_on_thread (main_context, group_name);
+          profiler->persistent = TRUE;
+          profiler->running = TRUE;
+        }
     }
+
+  return profiler;
 }
 
-MetaProfiler *
-meta_profiler_new (void)
+void
+meta_profiler_register_thread (MetaProfiler *profiler,
+                               GMainContext *main_context,
+                               const char   *name)
 {
-  return g_object_new (META_TYPE_PROFILER, NULL);
+  g_mutex_lock (&profiler->mutex);
+  g_warn_if_fail (!g_list_find (profiler->threads, main_context));
+  profiler->threads = g_list_prepend (profiler->threads,
+                                      thread_info_new (main_context, name));
+  if (profiler->running)
+    cogl_set_tracing_enabled_on_thread (main_context, name);
+  g_mutex_unlock (&profiler->mutex);
+}
+
+void
+meta_profiler_unregister_thread (MetaProfiler *profiler,
+                                 GMainContext *main_context)
+{
+  GList *l;
+
+  g_mutex_lock (&profiler->mutex);
+  for (l = profiler->threads; l; l = l->next)
+    {
+      ThreadInfo *thread_info = l->data;
+
+      if (thread_info->main_context == main_context)
+        {
+          thread_info_free (thread_info);
+          profiler->threads = g_list_delete_link (profiler->threads, l);
+          break;
+        }
+    }
+
+  if (profiler->running)
+    cogl_set_tracing_disabled_on_thread (main_context);
+
+  g_mutex_unlock (&profiler->mutex);
 }

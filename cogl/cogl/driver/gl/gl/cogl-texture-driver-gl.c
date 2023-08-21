@@ -35,18 +35,18 @@
 
 #include "cogl-config.h"
 
-#include "cogl-private.h"
-#include "cogl-util.h"
-#include "cogl-bitmap.h"
-#include "cogl-bitmap-private.h"
-#include "cogl-texture-private.h"
-#include "cogl-pipeline.h"
-#include "cogl-context-private.h"
-#include "cogl-object-private.h"
-#include "driver/gl/cogl-pipeline-opengl-private.h"
-#include "driver/gl/cogl-util-gl-private.h"
-#include "driver/gl/cogl-texture-gl-private.h"
-#include "driver/gl/cogl-bitmap-gl-private.h"
+#include "cogl/cogl-private.h"
+#include "cogl/cogl-util.h"
+#include "cogl/cogl-bitmap.h"
+#include "cogl/cogl-bitmap-private.h"
+#include "cogl/cogl-texture-private.h"
+#include "cogl/cogl-pipeline.h"
+#include "cogl/cogl-context-private.h"
+#include "cogl/cogl-object-private.h"
+#include "cogl/driver/gl/cogl-pipeline-opengl-private.h"
+#include "cogl/driver/gl/cogl-util-gl-private.h"
+#include "cogl/driver/gl/cogl-texture-gl-private.h"
+#include "cogl/driver/gl/cogl-bitmap-gl-private.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -405,6 +405,7 @@ _cogl_texture_driver_upload_supported (CoglContext *ctx,
     case COGL_PIXEL_FORMAT_A_8:
     case COGL_PIXEL_FORMAT_G_8:
     case COGL_PIXEL_FORMAT_RG_88:
+    case COGL_PIXEL_FORMAT_BGRX_8888:
     case COGL_PIXEL_FORMAT_BGRA_8888:
     case COGL_PIXEL_FORMAT_BGRA_8888_PRE:
     case COGL_PIXEL_FORMAT_RGB_888:
@@ -419,10 +420,13 @@ _cogl_texture_driver_upload_supported (CoglContext *ctx,
     case COGL_PIXEL_FORMAT_XRGB_2101010:
     case COGL_PIXEL_FORMAT_ARGB_2101010:
     case COGL_PIXEL_FORMAT_ARGB_2101010_PRE:
+    case COGL_PIXEL_FORMAT_RGBX_8888:
     case COGL_PIXEL_FORMAT_RGBA_8888:
     case COGL_PIXEL_FORMAT_RGBA_8888_PRE:
+    case COGL_PIXEL_FORMAT_XRGB_8888:
     case COGL_PIXEL_FORMAT_ARGB_8888:
     case COGL_PIXEL_FORMAT_ARGB_8888_PRE:
+    case COGL_PIXEL_FORMAT_XBGR_8888:
     case COGL_PIXEL_FORMAT_ABGR_8888:
     case COGL_PIXEL_FORMAT_ABGR_8888_PRE:
     case COGL_PIXEL_FORMAT_RGB_565:
@@ -431,6 +435,7 @@ _cogl_texture_driver_upload_supported (CoglContext *ctx,
     case COGL_PIXEL_FORMAT_RGBA_5551:
     case COGL_PIXEL_FORMAT_RGBA_5551_PRE:
       return TRUE;
+    case COGL_PIXEL_FORMAT_BGRX_FP_16161616:
     case COGL_PIXEL_FORMAT_BGRA_FP_16161616:
     case COGL_PIXEL_FORMAT_XRGB_FP_16161616:
     case COGL_PIXEL_FORMAT_ARGB_FP_16161616:
@@ -439,6 +444,7 @@ _cogl_texture_driver_upload_supported (CoglContext *ctx,
     case COGL_PIXEL_FORMAT_BGRA_FP_16161616_PRE:
     case COGL_PIXEL_FORMAT_ARGB_FP_16161616_PRE:
     case COGL_PIXEL_FORMAT_ABGR_FP_16161616_PRE:
+    case COGL_PIXEL_FORMAT_RGBX_FP_16161616:
     case COGL_PIXEL_FORMAT_RGBA_FP_16161616:
     case COGL_PIXEL_FORMAT_RGBA_FP_16161616_PRE:
       if (_cogl_has_private_feature

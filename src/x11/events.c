@@ -67,10 +67,9 @@ get_input_event (MetaX11Display *x11_display,
     {
       XIEvent *input_event;
 
-      /* NB: GDK event filters already have generic events
-       * allocated, so no need to do XGetEventData() on our own
-       */
       input_event = (XIEvent *) event->xcookie.data;
+      if (!input_event)
+        return NULL;
 
       switch (input_event->evtype)
         {
@@ -1923,7 +1922,7 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
   display->current_time = event_get_time (x11_display, event);
 
   if (META_IS_BACKEND_X11 (backend))
-    meta_backend_x11_handle_event (META_BACKEND_X11 (backend), event);
+    meta_backend_x11_reset_cached_logical_monitor (META_BACKEND_X11 (backend));
 
   if (x11_display->focused_by_us &&
       event->xany.serial > x11_display->focus_serial &&

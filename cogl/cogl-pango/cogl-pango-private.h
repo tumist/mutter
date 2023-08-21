@@ -33,10 +33,9 @@
  *   Matthew Allum  <mallum@openedhand.com>
  */
 
-#ifndef __COGL_PANGO_PRIVATE_H__
-#define __COGL_PANGO_PRIVATE_H__
+#pragma once
 
-#include "cogl-pango.h"
+#include "cogl-pango/cogl-pango.h"
 
 G_BEGIN_DECLS
 
@@ -61,5 +60,3 @@ PangoRenderer *
 _cogl_pango_font_map_get_renderer (CoglPangoFontMap *fm);
 
 G_END_DECLS
-
-#endif /* __COGL_PANGO_PRIVATE_H__ */
