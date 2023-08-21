@@ -6,5 +6,6 @@ debian/tests-skip-monitor-width-size-check-as-it-may-lead-to-une.patch
 debian/Support-Dynamic-triple-double-buffering.patch
 debian/tests-Disable-restore-size-test.patch
 workspace-Don-t-crash-on-invalid-argument-to-meta_workspa.patch
+workarounds/tests-Skip-thread-priority-test.patch
 ubuntu/x11-Add-support-for-fractional-scaling-using-Randr.patch
 ubuntu/window-Add-ability-to-override-the-edge-constraints.patch
