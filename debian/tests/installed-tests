@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -eu
+
+namespace=mutter-12/
+
+if [ -z "${HOME-}" ] || ! [ -w "${HOME}" ]; then
+    export HOME="${AUTOPKGTEST_TMP}"
+fi
+
+cd "$AUTOPKGTEST_TMP"
+
+if [ -z "$(ginsttest-runner -l "$namespace")" ]; then
+    echo "Error: no installed-tests found matching $namespace" >&2
+    exit 1
+fi
+
+exec ginsttest-runner \
+    --log-directory "$AUTOPKGTEST_ARTIFACTS" \
+    --tap \
+    "$namespace"
