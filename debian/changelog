@@ -7,12 +7,14 @@ mutter (45~beta.1-1) UNRELEASED; urgency=medium
   * debian/control.in: Build-Depend on libei-dev & libeis-dev
   * Drop many 44 patches applied in new release
   * Move the remaining unapplied patches to 45
+  * Drop wayland-data-device-Allow-any-drag-timestamp patch:
+    No longer needed (Closes: #1050025)
   * Refresh patches
 
   [ Daniel van Vugt ]
   * Update triple buffering patch
 
- -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 21 Aug 2023 11:09:42 -0400
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 21 Aug 2023 11:19:08 -0400
 
 mutter (44.3-6) unstable; urgency=medium
 
