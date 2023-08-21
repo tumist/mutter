@@ -13,7 +13,7 @@ Part-of: <https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3185>
 Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2690
 Bug-Debian: https://bugs.debian.org/1035092
 Bug-Debian: https://bugs.debian.org/1049934
-Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3185
 Applied-upstream: 45.rc
 ---
  src/compositor/compositor.c | 18 ++++++++++++++++++

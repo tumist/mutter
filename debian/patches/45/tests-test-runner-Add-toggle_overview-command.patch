@@ -5,8 +5,8 @@ Subject: tests/test-runner: Add `toggle_overview` command
 This will emit the `overlay-key` key which will be handled by the test
 shell.
 
-Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3186
-Applied-upstream: 44.4, commit:db924e85def8bb966d112b80c2ca5fd758916cab
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3185
+Applied-upstream: 45.rc
 ---
  src/tests/test-runner.c | 9 +++++++++
  1 file changed, 9 insertions(+)
