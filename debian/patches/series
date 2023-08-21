@@ -12,3 +12,4 @@ debian/tests-Do-not-run-screencast-tests.patch
 workarounds/tests-skip-monitor-width-size-check-as-it-may-lead-to-une.patch
 debian/Support-Dynamic-triple-double-buffering.patch
 workarounds/tests-Disable-restore-size-test.patch
+workarounds/tests-Skip-thread-priority-test.patch
