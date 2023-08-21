@@ -17,10 +17,10 @@ Applied-upstream: 45.rc
  create mode 100644 src/tests/stacking/overview-focus.metatest
 
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index 31e19d0..8be1657 100644
+index 7383ffb..64cb304 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
-@@ -577,6 +577,7 @@ stacking_tests = [
+@@ -696,6 +696,7 @@ stacking_tests = [
    'workspace-unmanaging-window',
    'click-to-focus-and-raise',
    'workspace-only-on-primary-focus',

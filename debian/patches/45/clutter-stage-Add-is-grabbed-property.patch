@@ -9,10 +9,10 @@ Applied-upstream: 45.rc
  1 file changed, 29 insertions(+)
 
 diff --git a/clutter/clutter/clutter-stage.c b/clutter/clutter/clutter-stage.c
-index 14774f6..edb31c9 100644
+index 17d4d6f..88bfb4d 100644
 --- a/clutter/clutter/clutter-stage.c
 +++ b/clutter/clutter/clutter-stage.c
-@@ -168,6 +168,8 @@ enum
+@@ -164,6 +164,8 @@ enum
    PROP_PERSPECTIVE,
    PROP_TITLE,
    PROP_KEY_FOCUS,
@@ -21,7 +21,7 @@ index 14774f6..edb31c9 100644
    PROP_LAST
  };
  
-@@ -1187,6 +1189,10 @@ clutter_stage_get_property (GObject    *gobject,
+@@ -1226,6 +1228,10 @@ clutter_stage_get_property (GObject    *gobject,
        g_value_set_object (value, priv->key_focused_actor);
        break;
  
@@ -32,7 +32,7 @@ index 14774f6..edb31c9 100644
      default:
        G_OBJECT_WARN_INVALID_PROPERTY_ID (gobject, prop_id, pspec);
        break;
-@@ -1381,6 +1387,17 @@ clutter_stage_class_init (ClutterStageClass *klass)
+@@ -1412,6 +1418,17 @@ clutter_stage_class_init (ClutterStageClass *klass)
                             CLUTTER_PARAM_READWRITE |
                             G_PARAM_EXPLICIT_NOTIFY);
  
@@ -50,7 +50,7 @@ index 14774f6..edb31c9 100644
    g_object_class_install_properties (gobject_class, PROP_LAST, obj_props);
  
    /**
-@@ -4150,6 +4167,7 @@ clutter_stage_grab (ClutterStage *stage,
+@@ -3891,6 +3908,7 @@ clutter_stage_grab_full (ClutterStage *stage,
  {
    ClutterStagePrivate *priv;
    ClutterGrab *grab;
@@ -58,7 +58,7 @@ index 14774f6..edb31c9 100644
  
    g_return_val_if_fail (CLUTTER_IS_STAGE (stage), NULL);
    g_return_val_if_fail (CLUTTER_IS_ACTOR (actor), NULL);
-@@ -4178,6 +4196,8 @@ clutter_stage_grab (ClutterStage *stage,
+@@ -3917,6 +3935,8 @@ clutter_stage_grab_full (ClutterStage *stage,
    grab->prev = NULL;
    grab->next = priv->topmost_grab;
  
@@ -67,7 +67,7 @@ index 14774f6..edb31c9 100644
    if (priv->topmost_grab)
      priv->topmost_grab->prev = grab;
  
-@@ -4199,6 +4219,9 @@ clutter_stage_grab (ClutterStage *stage,
+@@ -3938,6 +3958,9 @@ clutter_stage_grab_full (ClutterStage *stage,
    clutter_actor_attach_grab (actor, grab);
    clutter_stage_notify_grab (stage, grab, grab->next);
  
@@ -77,7 +77,7 @@ index 14774f6..edb31c9 100644
    return grab;
  }
  
-@@ -4208,6 +4231,7 @@ clutter_stage_unlink_grab (ClutterStage *stage,
+@@ -3984,6 +4007,7 @@ clutter_stage_unlink_grab (ClutterStage *stage,
  {
    ClutterStagePrivate *priv = stage->priv;
    ClutterGrab *prev, *next;
@@ -85,7 +85,7 @@ index 14774f6..edb31c9 100644
  
    /* This grab is already detached */
    if (!grab->prev && !grab->next && priv->topmost_grab != grab)
-@@ -4221,6 +4245,8 @@ clutter_stage_unlink_grab (ClutterStage *stage,
+@@ -3997,6 +4021,8 @@ clutter_stage_unlink_grab (ClutterStage *stage,
    if (next)
      next->prev = prev;
  
@@ -94,7 +94,7 @@ index 14774f6..edb31c9 100644
    if (priv->topmost_grab == grab)
      {
        /* This is the active grab */
-@@ -4243,6 +4269,9 @@ clutter_stage_unlink_grab (ClutterStage *stage,
+@@ -4019,6 +4045,9 @@ clutter_stage_unlink_grab (ClutterStage *stage,
        priv->grab_state = CLUTTER_GRAB_STATE_NONE;
      }
  

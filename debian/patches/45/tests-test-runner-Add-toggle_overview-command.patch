@@ -12,10 +12,10 @@ Applied-upstream: 45.rc
  1 file changed, 9 insertions(+)
 
 diff --git a/src/tests/test-runner.c b/src/tests/test-runner.c
-index 282c4ec..ceccdbb 100644
+index 08eddb8..abb1247 100644
 --- a/src/tests/test-runner.c
 +++ b/src/tests/test-runner.c
-@@ -1301,6 +1301,15 @@ test_case_do (TestCase *test,
+@@ -1308,6 +1308,15 @@ test_case_do (TestCase    *test,
          BAD_COMMAND("Unknown preference %s", argv[1]);
        }
      }

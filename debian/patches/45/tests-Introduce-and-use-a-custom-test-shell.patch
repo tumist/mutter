@@ -61,7 +61,7 @@ index a11f06d..bb1f418 100644
  foreach unit_test: cogl_unit_tests
    test_name = 'cogl-' + unit_test[0]
 diff --git a/src/tests/meson.build b/src/tests/meson.build
-index 1183897..31e19d0 100644
+index 01bd0fb..7383ffb 100644
 --- a/src/tests/meson.build
 +++ b/src/tests/meson.build
 @@ -13,6 +13,8 @@ mutter_test_sources = [
@@ -913,10 +913,10 @@ index 0000000..01f4c8d
 +                      META, TEST_SHELL,
 +                      MetaPlugin)
 diff --git a/src/tests/meta-test-utils.c b/src/tests/meta-test-utils.c
-index 416dc0b..65b052f 100644
+index 2b9a791..3cbff77 100644
 --- a/src/tests/meta-test-utils.c
 +++ b/src/tests/meta-test-utils.c
-@@ -751,18 +751,6 @@ meta_test_client_destroy (MetaTestClient *client)
+@@ -756,18 +756,6 @@ meta_test_client_destroy (MetaTestClient *client)
    g_free (client);
  }
  
@@ -936,7 +936,7 @@ index 416dc0b..65b052f 100644
  meta_set_custom_monitor_config_full (MetaBackend            *backend,
                                       const char             *filename,
 diff --git a/src/tests/meta-test-utils.h b/src/tests/meta-test-utils.h
-index 0232276..7cc046b 100644
+index 391d673..96b230e 100644
 --- a/src/tests/meta-test-utils.h
 +++ b/src/tests/meta-test-utils.h
 @@ -109,9 +109,6 @@ MetaTestClient * meta_test_client_new (MetaContext           *context,
