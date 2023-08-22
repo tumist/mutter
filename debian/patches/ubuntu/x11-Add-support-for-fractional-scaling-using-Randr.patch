@@ -2922,7 +2922,7 @@ index fae69d4..176e0f6 100644
  out:
    set_unredirected_window (compositor_x11, window_to_unredirect);
 diff --git a/src/core/window.c b/src/core/window.c
-index aa886ff..5bd10fc 100644
+index 3ca98fc..228b00d 100644
 --- a/src/core/window.c
 +++ b/src/core/window.c
 @@ -221,6 +221,7 @@ enum
