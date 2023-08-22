@@ -19,7 +19,9 @@ git merge --squash -e vanvugt/triple-buffering-v4
 And then git commit but using all this as the header instead of what
 git suggests. Also add Gbp-Pq: Topic debian
 
-Origin: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/1441
+Bug: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/3760
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/1441
+Applied-upstream: no, see also https://bugs.debian.org/1050020
 Last-Update: 2023-08-16
 ---
  clutter/clutter/clutter-frame-clock.c             | 260 ++++++++++++----

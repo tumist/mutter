@@ -1,3 +1,22 @@
+mutter (45~beta.1-1) experimental; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release
+  * Update binary package names for soname bump
+  * Update symbols
+  * debian/control.in: Build-Depend on libei-dev & libeis-dev
+  * Drop many 44 patches applied in new release
+  * Move the remaining unapplied patches to 45
+  * Drop wayland-data-device-Allow-any-drag-timestamp patch:
+    No longer needed (Closes: #1050025)
+  * Add patch to skip new thread priority modification test on arm
+  * Refresh patches
+
+  [ Daniel van Vugt ]
+  * Update triple buffering patch
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 21 Aug 2023 11:19:08 -0400
+
 mutter (45~beta.1-0ubuntu2) mantic; urgency=medium
 
   * Drop wayland-data-device-Allow-any-drag-timestamp patch:
@@ -23,6 +42,126 @@ mutter (45~beta.1-0ubuntu1) mantic; urgency=medium
   * Update triple buffering patch
 
  -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 17 Aug 2023 13:25:40 -0400
+
+mutter (44.3-6) unstable; urgency=medium
+
+  * Team upload
+  * d/patches: Update to upstream gnome-44 branch commit
+    44.3-15-g0b5ab083b4 (no functional changes)
+    - Patches previously in d/patches/45 have been applied to the gnome-44
+      branch and move to d/patches/44
+  * Merge packaging from unstable
+    - No functional changes; all changes relevant to this branch were
+      already in experimental
+    - d/p/tests-Reinstate-meta_test_get_plugin_name.patch intentionally
+      omitted to avoid creating longer-term delta
+  * Upload to unstable (starts transition: #1043144)
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 21:30:31 +0100
+
+mutter (43.7-2) unstable; urgency=medium
+
+  * Team upload
+  * d/patches: Update to upstream gnome-43 branch commit
+    43.7-9-g3139cbb47c, excluding CI-only changes
+    - d/p/output-kms-Use-meta_kms_connector_get_preferred_mode-in-i.patch:
+      Make the choice of preferred video mode consistent between code
+      paths, fixing choice of video mode on some monitors (mutter!3055)
+    - d/p/cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch:
+      change was already included in 43.7-1, just update metadata
+    - d/p/clutter-stage-Add-is-grabbed-property.patch,
+      d/p/window-Postpone-focusing-until-grab-ended-if-uninteractab.patch:
+      Give focus to new app windows when launched from the gnome-shell
+      overview, fixing a regression in 43.3-5 and upstream 43.4
+      (Closes: #1035092, #1049934)
+    - d/p/tests-Introduce-and-use-a-custom-test-shell.patch,
+      d/p/tests-test-shell-Emulate-overview-grabs.patch,
+      d/p/tests-test-runner-Add-toggle_overview-command.patch,
+      d/p/tests-Add-test-case-for-restoring-focus-after-overview.patch:
+      Add unit test coverage for #1035092
+  * d/p/tests-Reinstate-meta_test_get_plugin_name.patch:
+    Reinstate a symbol in libmutter-test-11 removed by the above patches,
+    in case a dependent package is using it
+  * d/libmutter-test-11.symbols: Add a new symbol introduced by the test
+    for #1035092
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 20 Aug 2023 11:35:31 +0100
+
+mutter (44.3-5) experimental; urgency=medium
+
+  * Team upload
+  * d/patches: Reorder patch series with closest-to-upstream first
+  * d/patches: Improve tracking of bug references and upstream status
+  * d/.gitignore: Add
+  * d/patches/44/, d/patches/45/: Move patches that were applied upstream
+    into topic subdirs.
+    We have enough patches in this package, some of them short-term and
+    some of them long-term delta, that it seems useful to keep track
+    of this.
+  * d/patches, d/rules: Stop trying to force gles2 driver on armel, armhf.
+    This patch was rejected by upstream, and according to comments on the
+    upstream merge request, it is no longer effective either, because
+    mutter's driver selection is now done in a higher layer.
+    Users of systems with a working gles2 driver but a broken or slow gl3
+    driver can work around this by setting environment variable
+    CLUTTER_DRIVER=gles2.
+    See #1050014 for more details of what would be involved in making this
+    driver choice happen automatically in an upstreamable way.
+  * d/p/cursor-renderer-native-Workaround-broken-arm64-drivers.patch:
+    Drop patch forcing use of simpler cursor buffers on aarch64.
+    According to the upstream and Ubuntu bugs, this should be fixed in Mesa
+    since 22.3.3, which is included in the Debian 12 initial release and in
+    Ubuntu 22.04 as an update.
+  * Merge packaging from unstable
+    - No functional changes; all changes relevant to this branch were
+      already in experimental
+  * d/gbp.conf: Use upstream/44.x branch.
+    The Ubuntu GNOME team have already started packaging v45 prereleases.
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 20:49:18 +0100
+
+mutter (43.7-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream stable release 43.7
+    - Functionally equivalent to 43.6-1
+  * d/p/wayland-outputs-Fix-potential-crash-when-output-has-no-mo.patch:
+    Drop patch, applied upstream
+  * d/gbp.conf, d/control.in: Use debian/trixie branch
+  * d/p/cogl-gl-framebuffer-Fix-inverted-test-in-ensure_bits_init.patch:
+    Add patch from upstream 45.beta to fix a test failure with recent Mesa
+    (Closes: #1042055, LP: #2025287)
+  * d/patches: Improve tracking of upstream status
+
+ -- Simon McVittie <smcv@debian.org>  Fri, 18 Aug 2023 17:40:39 +0100
+
+mutter (44.3-4) experimental; urgency=medium
+
+  * Team upload
+  * d/patches: Update to upstream gnome-44 branch commit 44.3-7-g5d0354035b,
+    excluding CI-only changes
+    - Make the choice of preferred video mode consistent between code
+      paths, fixing choice of video mode on some monitors (mutter!3055)
+    - Fix the configuration option to allow byteswapped X11 clients so
+      that it is possible to allow them (mutter#2938)
+    - Fix a crash if a window is destroyed by a Wayland protocol error
+      while it is being moved (mutter#2853)
+    - Translation update: fa
+  * d/p/clutter-stage-Add-is-grabbed-property.patch,
+    d/p/window-Postpone-focusing-until-grab-ended-if-uninteractab.patch,
+    d/p/compositor-Handle-grab-state-through-ClutterStage-is-grab.patch:
+    Add patches from upstream to give focus to new app windows when
+    launched from the gnome-shell overview (Closes: #1035092, #1049934)
+  * d/p/tests-Introduce-and-use-a-custom-test-shell.patch,
+    d/p/tests-test-shell-Emulate-overview-grabs.patch,
+    d/p/tests-test-runner-Add-toggle_overview-command.patch,
+    d/p/tests-Add-test-case-for-restoring-focus-after-overview.patch:
+    Add patches from upstream adding test coverage for #1035092
+  * d/libmutter-test-12.symbols: Update for #1035092 changes.
+    Ignore removal of meta_test_get_plugin_name(): this is a private
+    symbol and is not declared in any headers.
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 17 Aug 2023 10:44:06 +0100
 
 mutter (44.3-3ubuntu1) mantic; urgency=medium
 

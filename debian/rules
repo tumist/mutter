@@ -37,11 +37,6 @@ CONFFLAGS = \
 	-Dremote_desktop=false
 endif
 
-ifeq ($(DEB_HOST_ARCH),$(findstring $(DEB_HOST_ARCH),armel armhf))
-CONFFLAGS += \
-	-Ddefault_driver=gles2
-endif
-
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		$(CONFFLAGS)
