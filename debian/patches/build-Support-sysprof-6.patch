@@ -13,6 +13,7 @@ sysprof-4, so accept either dependency.
 https://gitlab.gnome.org/GNOME/mutter/-/issues/2962
 
 Origin: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3187
+Applied-upstream: 45.rc
 ---
  meson.build | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
