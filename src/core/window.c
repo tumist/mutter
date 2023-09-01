@@ -2007,15 +2007,6 @@ window_state_on_map (MetaWindow *window,
       return;
     }
 
-  /* Do not focus window on map if input is already taken by the
-   * compositor.
-   */
-  if (!meta_display_windows_are_interactable (window->display))
-    {
-      *takes_focus = FALSE;
-      return;
-    }
-
   /* Terminal usage may be different; some users intend to launch
    * many apps in quick succession or to just view things in the new
    * window while still interacting with the terminal.  In that case,
@@ -2337,7 +2328,10 @@ meta_window_show (MetaWindow *window)
 
           timestamp = meta_display_get_current_time_roundtrip (window->display);
 
-          meta_window_focus (window, timestamp);
+          if (meta_display_windows_are_interactable (window->display))
+            meta_window_focus (window, timestamp);
+          else
+            meta_display_queue_focus (window->display, window);
         }
       else if (display->x11_display)
         {
@@ -4524,14 +4518,38 @@ meta_window_make_most_recent (MetaWindow *window)
   for (l = workspace_manager->workspaces; l != NULL; l = l->next)
     {
       MetaWorkspace *workspace = l->data;
-      GList *link;
+      GList *self, *link;
 
-      link = g_list_find (workspace->mru_list, window);
-      if (!link)
+      self = g_list_find (workspace->mru_list, window);
+      if (!self)
         continue;
 
-      workspace->mru_list = g_list_delete_link (workspace->mru_list, link);
-      workspace->mru_list = g_list_prepend (workspace->mru_list, window);
+      /*
+       * Move to the front of the MRU list if the window is on the
+       * active workspace or was explicitly made sticky
+       */
+      if (workspace == workspace_manager->active_workspace ||
+          window->on_all_workspaces_requested)
+        {
+          workspace->mru_list = g_list_delete_link (workspace->mru_list, self);
+          workspace->mru_list = g_list_prepend (workspace->mru_list, window);
+          continue;
+        }
+
+      /* Otherwise move it before other sticky windows */
+      for (link = workspace->mru_list; link; link = link->next)
+        {
+          MetaWindow *mru_window = link->data;
+
+          if (mru_window->workspace == NULL)
+            break;
+        }
+
+      if (link == self)
+        continue;
+
+      workspace->mru_list = g_list_delete_link (workspace->mru_list, self);
+      workspace->mru_list = g_list_insert_before (workspace->mru_list, link, window);
     }
 }
 
