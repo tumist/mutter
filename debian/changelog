@@ -1,3 +1,9 @@
+mutter (44.4-2) unstable; urgency=medium
+
+  * Don't enable sysprof profiling integration on i386
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Fri, 01 Sep 2023 14:27:36 -0400
+
 mutter (44.4-1) unstable; urgency=medium
 
   * New upstream release
