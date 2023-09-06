@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -45,11 +43,11 @@ meta_renderer_x11_cm_init_screen_view (MetaRendererX11Cm *renderer_x11_cm,
   MetaRenderer *renderer = META_RENDERER (renderer_x11_cm);
   MetaBackend *backend = meta_renderer_get_backend (renderer);
   ClutterActor *stage = meta_backend_get_stage (backend);
-  cairo_rectangle_int_t view_layout;
+  MtkRectangle view_layout;
 
   g_return_if_fail (!renderer_x11_cm->screen_view);
 
-  view_layout = (cairo_rectangle_int_t) {
+  view_layout = (MtkRectangle) {
     .width = width,
     .height = height,
   };
@@ -68,9 +66,9 @@ meta_renderer_x11_cm_resize (MetaRendererX11Cm *renderer_x11_cm,
                              int                width,
                              int                height)
 {
-  cairo_rectangle_int_t view_layout;
+  MtkRectangle view_layout;
 
-  view_layout = (cairo_rectangle_int_t) {
+  view_layout = (MtkRectangle) {
     .width = width,
     .height = height,
   };

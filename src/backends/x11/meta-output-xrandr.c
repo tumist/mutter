@@ -27,9 +27,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -46,6 +44,7 @@
 #include "backends/meta-crtc.h"
 #include "backends/x11/meta-monitor-manager-xrandr.h"
 #include "meta/util.h"
+#include "mtk/mtk-x11.h"
 
 struct _MetaOutputXrandr
 {
@@ -455,11 +454,11 @@ output_get_max_bpc_range_xrandr (Display      *xdisplay,
 
   atom = XInternAtom (xdisplay, "max bpc", False);
 
-  meta_clutter_x11_trap_x_errors ();
+  mtk_x11_error_trap_push (xdisplay);
   property_info = XRRQueryOutputProperty (xdisplay,
                                           (XID) output_id,
                                           atom);
-  meta_clutter_x11_untrap_x_errors ();
+  mtk_x11_error_trap_pop (xdisplay);
 
   if (!property_info)
     return FALSE;

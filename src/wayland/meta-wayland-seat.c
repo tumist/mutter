@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -457,13 +455,17 @@ meta_wayland_seat_get_grab_info (MetaWaylandSeat       *seat,
   if (meta_wayland_seat_has_touch (seat))
     {
       ClutterEventSequence *sequence;
+
       sequence = meta_wayland_touch_find_grab_sequence (seat->touch,
                                                         surface,
                                                         serial);
       if (sequence)
         {
+          ClutterSeat *clutter_seat =
+            clutter_backend_get_default_seat (clutter_get_default_backend ());
+
           if (device_out)
-            *device_out = seat->pointer->device;
+            *device_out = clutter_seat_get_pointer (clutter_seat);
           if (sequence_out)
             *sequence_out = sequence;
 

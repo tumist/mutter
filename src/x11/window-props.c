@@ -6,7 +6,7 @@
  * A system which can inspect sets of properties of given windows
  * and take appropriate action given their values.
  *
- * Note that all the meta_window_reload_propert* functions require a
+ * Note that all the meta_window_reload_property* functions require a
  * round trip to the server.
  *
  * The guts of this system are in meta_display_init_window_prop_hooks().
@@ -329,7 +329,7 @@ reload_icon_geometry (MetaWindow    *window,
         }
       else
         {
-          MetaRectangle geometry;
+          MtkRectangle geometry;
 
           geometry.x = (int)value->v.cardinal_list.cardinals[0];
           geometry.y = (int)value->v.cardinal_list.cardinals[1];
@@ -672,7 +672,7 @@ reload_opaque_region (MetaWindow    *window,
       uint32_t *region = value->v.cardinal_list.cardinals;
       int nitems = value->v.cardinal_list.n_cardinals;
 
-      cairo_rectangle_int_t *rects;
+      MtkRectangle *rects;
       int i, rect_index, nrects;
 
       if (nitems % 4 != 0)
@@ -687,13 +687,13 @@ reload_opaque_region (MetaWindow    *window,
 
       nrects = nitems / 4;
 
-      rects = g_new (cairo_rectangle_int_t, nrects);
+      rects = g_new (MtkRectangle, nrects);
 
       rect_index = 0;
       i = 0;
       while (i < nitems)
         {
-          cairo_rectangle_int_t *rect = &rects[rect_index];
+          MtkRectangle *rect = &rects[rect_index];
 
           rect->x = region[i++];
           rect->y = region[i++];
@@ -1894,7 +1894,7 @@ RELOAD_STRING (gtk_menubar_object_path,     "gtk-menubar-object-path")
 
 /**
  * meta_x11_display_init_window_prop_hooks:
- * @x11_display: The #MetaDX11isplay
+ * @x11_display: The #MetaX11Display
  *
  * Initialises the property hooks system.  Each row in the table named "hooks"
  * represents an action to take when a property is found on a newly-created

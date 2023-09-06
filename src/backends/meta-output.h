@@ -13,9 +13,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -183,8 +181,6 @@ void meta_output_info_parse_edid (MetaOutputInfo *output_info,
 
 gboolean meta_output_info_is_color_space_supported (const MetaOutputInfo *output_info,
                                                     MetaOutputColorspace  color_space);
-
-gboolean meta_output_is_laptop  (MetaOutput *output);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (MetaOutputInfo, meta_output_info_unref)
 

@@ -43,8 +43,8 @@
 #include "core/meta-workspace-manager-private.h"
 #include "core/workspace-private.h"
 #include "meta/compositor.h"
-#include "meta/meta-x11-errors.h"
 #include "meta/prefs.h"
+#include "mtk/mtk-x11.h"
 #include "x11/meta-x11-display-private.h"
 #include "x11/window-x11.h"
 
@@ -1203,7 +1203,7 @@ meta_change_button_grab (MetaKeyBindingManager *keys,
 
   mods = calc_grab_modifiers (keys, modmask);
 
-  meta_clutter_x11_trap_x_errors ();
+  mtk_x11_error_trap_push (xdisplay);
 
   if (window->frame)
     xwindow = window->frame->xwindow;
@@ -1225,7 +1225,7 @@ meta_change_button_grab (MetaKeyBindingManager *keys,
 
   XSync (xdisplay, False);
 
-  meta_clutter_x11_untrap_x_errors ();
+  mtk_x11_error_trap_pop (xdisplay);
 
   g_array_free (mods, TRUE);
 }
@@ -1447,7 +1447,7 @@ meta_change_keygrab (MetaKeyBindingManager *keys,
 
   mods = calc_grab_modifiers (keys, resolved_combo->mask);
 
-  meta_clutter_x11_trap_x_errors ();
+  mtk_x11_error_trap_push (xdisplay);
 
   for (i = 0; i < resolved_combo->len; i++)
     {
@@ -1473,7 +1473,7 @@ meta_change_keygrab (MetaKeyBindingManager *keys,
 
   XSync (xdisplay, False);
 
-  meta_clutter_x11_untrap_x_errors ();
+  mtk_x11_error_trap_pop (xdisplay);
 
   g_array_free (mods, TRUE);
 }
@@ -2376,8 +2376,8 @@ handle_move_to_corner_backend (MetaDisplay           *display,
                                MetaWindow            *window,
                                MetaGravity            gravity)
 {
-  MetaRectangle work_area;
-  MetaRectangle frame_rect;
+  MtkRectangle work_area;
+  MtkRectangle frame_rect;
   int new_x, new_y;
 
   if (!window->monitor)
@@ -2519,8 +2519,8 @@ handle_move_to_center (MetaDisplay           *display,
                        MetaKeyBinding        *binding,
                        gpointer               user_data)
 {
-  MetaRectangle work_area;
-  MetaRectangle frame_rect;
+  MtkRectangle work_area;
+  MtkRectangle frame_rect;
 
   meta_window_get_work_area_current_monitor (window, &work_area);
   meta_window_get_frame_rect (window, &frame_rect);
@@ -2564,8 +2564,8 @@ handle_activate_window_menu (MetaDisplay           *display,
   if (display->focus_window)
     {
       int x, y;
-      MetaRectangle frame_rect;
-      cairo_rectangle_int_t child_rect;
+      MtkRectangle frame_rect;
+      MtkRectangle child_rect;
 
       meta_window_get_frame_rect (display->focus_window, &frame_rect);
       meta_window_get_client_area_rect (display->focus_window, &child_rect);
@@ -2926,7 +2926,7 @@ handle_raise_or_lower (MetaDisplay           *display,
 
   while (above)
     {
-      MetaRectangle tmp, win_rect, above_rect;
+      MtkRectangle tmp, win_rect, above_rect;
 
       if (above->mapped && meta_window_should_be_showing (above))
         {
@@ -2934,7 +2934,7 @@ handle_raise_or_lower (MetaDisplay           *display,
           meta_window_get_frame_rect (above, &above_rect);
 
           /* Check if obscured */
-          if (meta_rectangle_intersect (&win_rect, &above_rect, &tmp))
+          if (mtk_rectangle_intersect (&win_rect, &above_rect, &tmp))
             {
               meta_window_raise (window);
               return;

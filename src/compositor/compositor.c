@@ -56,6 +56,7 @@
 
 #include "clutter/clutter-mutter.h"
 #include "cogl/cogl.h"
+#include "compositor/meta-cullable.h"
 #include "compositor/meta-later-private.h"
 #include "compositor/meta-window-actor-private.h"
 #include "compositor/meta-window-group-private.h"
@@ -114,6 +115,7 @@ typedef struct _MetaCompositorPrivate
   gulong after_paint_handler_id;
   gulong window_visibility_updated_id;
   gulong monitors_changed_internal_id;
+  gulong grabbed_notify_handler_id;
 
   int64_t server_time_query_time;
   int64_t server_time_offset;
@@ -396,8 +398,8 @@ meta_compositor_create_view (MetaCompositor   *compositor,
 }
 
 gboolean
-meta_compositor_do_manage (MetaCompositor  *compositor,
-                           GError         **error)
+meta_compositor_manage (MetaCompositor  *compositor,
+                        GError         **error)
 {
   MetaCompositorPrivate *priv =
     meta_compositor_get_instance_private (compositor);
@@ -425,15 +427,6 @@ meta_compositor_do_manage (MetaCompositor  *compositor,
   meta_plugin_manager_start (priv->plugin_mgr);
 
   return TRUE;
-}
-
-void
-meta_compositor_manage (MetaCompositor *compositor)
-{
-  GError *error = NULL;
-
-  if (!meta_compositor_do_manage (compositor, &error))
-    g_error ("Compositor failed to manage display: %s", error->message);
 }
 
 static void
@@ -627,11 +620,11 @@ meta_compositor_hide_window (MetaCompositor *compositor,
 }
 
 void
-meta_compositor_size_change_window (MetaCompositor    *compositor,
-                                    MetaWindow        *window,
-                                    MetaSizeChange     which_change,
-                                    MetaRectangle     *old_frame_rect,
-                                    MetaRectangle     *old_buffer_rect)
+meta_compositor_size_change_window (MetaCompositor *compositor,
+                                    MetaWindow     *window,
+                                    MetaSizeChange  which_change,
+                                    MtkRectangle   *old_frame_rect,
+                                    MtkRectangle   *old_buffer_rect)
 {
   MetaWindowActor *window_actor = meta_window_actor_from_window (window);
 
@@ -663,7 +656,7 @@ meta_compositor_switch_workspace (MetaCompositor     *compositor,
       /* We have to explicitly call this to fix up stacking order of the
        * actors; this is because the abs stacking position of actors does not
        * necessarily change during the window hiding/unhiding, only their
-       * relative position toward the destkop window.
+       * relative position toward the desktop window.
        */
       meta_finish_workspace_switch (compositor);
     }
@@ -776,8 +769,8 @@ update_top_window_actor (MetaCompositor *compositor)
     {
       MetaWindowActor *window_actor = l->data;
       MetaWindow *window = meta_window_actor_get_meta_window (window_actor);
-      MetaRectangle buffer_rect;
-      MetaRectangle display_rect = { 0 };
+      MtkRectangle buffer_rect;
+      MtkRectangle display_rect = { 0 };
 
       if (!window->visible_to_compositor)
         continue;
@@ -786,7 +779,7 @@ update_top_window_actor (MetaCompositor *compositor)
       meta_display_get_size (priv->display,
                              &display_rect.width, &display_rect.height);
 
-      if (meta_rectangle_overlap (&display_rect, &buffer_rect))
+      if (mtk_rectangle_overlap (&display_rect, &buffer_rect))
         {
           top_window_actor = window_actor;
           break;
@@ -1028,8 +1021,29 @@ meta_compositor_real_before_paint (MetaCompositor     *compositor,
 {
   MetaCompositorPrivate *priv =
     meta_compositor_get_instance_private (compositor);
+  ClutterActor *stage = meta_backend_get_stage (priv->backend);
   ClutterStageView *stage_view;
+  MtkRectangle stage_rect;
+  cairo_region_t *unobscured_region;
   GList *l;
+
+  stage_rect = (MtkRectangle) {
+    0, 0,
+    clutter_actor_get_width (stage),
+    clutter_actor_get_height (stage),
+  };
+
+  unobscured_region = cairo_region_create_rectangle (&stage_rect);
+  meta_cullable_cull_unobscured (META_CULLABLE (priv->window_group), unobscured_region);
+  cairo_region_destroy (unobscured_region);
+
+  unobscured_region = cairo_region_create_rectangle (&stage_rect);
+  meta_cullable_cull_unobscured (META_CULLABLE (priv->top_window_group), unobscured_region);
+  cairo_region_destroy (unobscured_region);
+
+  unobscured_region = cairo_region_create_rectangle (&stage_rect);
+  meta_cullable_cull_unobscured (META_CULLABLE (priv->feedback_group), unobscured_region);
+  cairo_region_destroy (unobscured_region);
 
   stage_view = meta_compositor_view_get_stage_view (compositor_view);
 
@@ -1167,6 +1181,17 @@ on_monitors_changed_internal (MetaMonitorManager *monitor_manager,
 }
 
 static void
+on_is_grabbed_changed_cb (ClutterStage   *stage,
+                          GParamSpec     *pspec,
+                          MetaCompositor *compositor)
+{
+  if (clutter_stage_get_grab_actor (stage) != NULL)
+    meta_compositor_grab_begin (compositor);
+  else
+    meta_compositor_grab_end (compositor);
+}
+
+static void
 meta_compositor_set_property (GObject      *object,
                               guint         prop_id,
                               const GValue *value,
@@ -1242,6 +1267,11 @@ meta_compositor_constructed (GObject *object)
                             "after-paint",
                             G_CALLBACK (on_after_paint),
                             compositor);
+  priv->grabbed_notify_handler_id =
+    g_signal_connect (stage,
+                      "notify::is-grabbed",
+                      G_CALLBACK (on_is_grabbed_changed_cb),
+                      compositor);
 
   priv->window_visibility_updated_id =
     g_signal_connect (priv->display,
@@ -1275,6 +1305,7 @@ meta_compositor_dispose (GObject *object)
   g_clear_signal_handler (&priv->stage_presented_id, stage);
   g_clear_signal_handler (&priv->before_paint_handler_id, stage);
   g_clear_signal_handler (&priv->after_paint_handler_id, stage);
+  g_clear_signal_handler (&priv->grabbed_notify_handler_id, stage);
   g_clear_signal_handler (&priv->window_visibility_updated_id, priv->display);
 
   g_clear_pointer (&priv->windows, g_list_free);
@@ -1484,7 +1515,7 @@ meta_compositor_monotonic_to_high_res_xserver_time (MetaCompositor *compositor,
 void
 meta_compositor_show_tile_preview (MetaCompositor *compositor,
                                    MetaWindow     *window,
-                                   MetaRectangle  *tile_rect,
+                                   MtkRectangle   *tile_rect,
                                    int             tile_monitor_number)
 {
   MetaCompositorPrivate *priv =
@@ -1514,18 +1545,6 @@ meta_compositor_show_window_menu (MetaCompositor     *compositor,
     meta_compositor_get_instance_private (compositor);
 
   meta_plugin_manager_show_window_menu (priv->plugin_mgr, window, menu, x, y);
-}
-
-void
-meta_compositor_show_window_menu_for_rect (MetaCompositor     *compositor,
-                                           MetaWindow         *window,
-                                           MetaWindowMenuType  menu,
-                                           MetaRectangle      *rect)
-{
-  MetaCompositorPrivate *priv =
-    meta_compositor_get_instance_private (compositor);
-
-  meta_plugin_manager_show_window_menu_for_rect (priv->plugin_mgr, window, menu, rect);
 }
 
 MetaCloseDialog *

@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -36,6 +34,7 @@
 #include "backends/meta-dbus-session-watcher.h"
 #include "backends/meta-dbus-session-manager.h"
 #include "backends/meta-eis.h"
+#include "backends/meta-logical-monitor.h"
 #include "backends/meta-screen-cast-session.h"
 #include "backends/meta-remote-access-controller-private.h"
 #include "backends/x11/meta-backend-x11.h"
@@ -90,6 +89,7 @@ struct _MetaRemoteDesktopSession
   gulong screen_cast_session_closed_handler_id;
   guint started : 1;
 
+  MetaEis *eis;
   ClutterVirtualInputDevice *virtual_pointer;
   ClutterVirtualInputDevice *virtual_keyboard;
   ClutterVirtualInputDevice *virtual_touchscreen;
@@ -103,6 +103,10 @@ struct _MetaRemoteDesktopSession
   MetaSelectionSourceRemote *current_source;
   GHashTable *transfer_requests;
   guint transfer_request_timeout_id;
+
+  GHashTable *mapping_ids;
+
+  gulong monitors_changed_handler_id;
 };
 
 static void initable_init_iface (GInitableIface *iface);
@@ -134,8 +138,123 @@ G_DEFINE_TYPE (MetaRemoteDesktopSessionHandle,
                meta_remote_desktop_session_handle,
                META_TYPE_REMOTE_ACCESS_HANDLE)
 
+struct _MetaLogicalMonitorViewport
+{
+  GObject parent;
+
+  MetaLogicalMonitor *logical_monitor;
+};
+
+#define META_TYPE_LOGICAL_MONITOR_VIEWPORT (meta_logical_monitor_viewport_get_type ())
+G_DECLARE_FINAL_TYPE (MetaLogicalMonitorViewport, meta_logical_monitor_viewport,
+                      META, LOGICAL_MONITOR_VIEWPORT,
+                      GObject)
+
+static void meta_eis_viewport_init_iface (MetaEisViewportInterface *iface);
+
+G_DEFINE_FINAL_TYPE_WITH_CODE (MetaLogicalMonitorViewport,
+                               meta_logical_monitor_viewport,
+                               G_TYPE_OBJECT,
+                               G_IMPLEMENT_INTERFACE (META_TYPE_EIS_VIEWPORT,
+                                                      meta_eis_viewport_init_iface))
+
 static MetaRemoteDesktopSessionHandle *
 meta_remote_desktop_session_handle_new (MetaRemoteDesktopSession *session);
+
+static gboolean
+meta_logical_monitor_viewport_is_standalone (MetaEisViewport *viewport)
+{
+  return FALSE;
+}
+
+static const char *
+meta_logical_monitor_viewport_get_mapping_id (MetaEisViewport *viewport)
+{
+  return NULL;
+}
+
+static gboolean
+meta_logical_monitor_viewport_get_position (MetaEisViewport *viewport,
+                                            int             *out_x,
+                                            int             *out_y)
+{
+  MetaLogicalMonitorViewport *logical_monitor_viewport =
+    META_LOGICAL_MONITOR_VIEWPORT (viewport);
+  MtkRectangle layout;
+
+  layout = meta_logical_monitor_get_layout (logical_monitor_viewport->logical_monitor);
+  *out_x = layout.x;
+  *out_y = layout.y;
+  return TRUE;
+}
+
+static void
+meta_logical_monitor_viewport_get_size (MetaEisViewport *viewport,
+                                        int             *out_width,
+                                        int             *out_height)
+{
+  MetaLogicalMonitorViewport *logical_monitor_viewport =
+    META_LOGICAL_MONITOR_VIEWPORT (viewport);
+  MtkRectangle layout;
+
+  layout = meta_logical_monitor_get_layout (logical_monitor_viewport->logical_monitor);
+  *out_width = layout.width;
+  *out_height = layout.height;
+}
+
+static double
+meta_logical_monitor_viewport_get_physical_scale (MetaEisViewport *viewport)
+{
+  MetaLogicalMonitorViewport *logical_monitor_viewport =
+    META_LOGICAL_MONITOR_VIEWPORT (viewport);
+
+  return meta_logical_monitor_get_scale (logical_monitor_viewport->logical_monitor);
+}
+
+static gboolean
+meta_logical_monitor_viewport_transform_coordinate (MetaEisViewport *viewport,
+                                                    double           x,
+                                                    double           y,
+                                                    double          *out_x,
+                                                    double          *out_y)
+{
+  *out_x = x;
+  *out_y = y;
+  return TRUE;
+}
+
+static void
+meta_eis_viewport_init_iface (MetaEisViewportInterface *eis_viewport_iface)
+{
+  eis_viewport_iface->is_standalone = meta_logical_monitor_viewport_is_standalone;
+  eis_viewport_iface->get_mapping_id = meta_logical_monitor_viewport_get_mapping_id;
+  eis_viewport_iface->get_position = meta_logical_monitor_viewport_get_position;
+  eis_viewport_iface->get_size = meta_logical_monitor_viewport_get_size;
+  eis_viewport_iface->get_physical_scale = meta_logical_monitor_viewport_get_physical_scale;
+  eis_viewport_iface->transform_coordinate = meta_logical_monitor_viewport_transform_coordinate;
+}
+
+static void
+meta_logical_monitor_viewport_class_init (MetaLogicalMonitorViewportClass *klass)
+{
+}
+
+static void
+meta_logical_monitor_viewport_init (MetaLogicalMonitorViewport *logical_monitor_viewport)
+{
+}
+
+static MetaLogicalMonitorViewport *
+meta_logical_monitor_viewport_new (MetaLogicalMonitor *logical_monitor)
+{
+  MetaLogicalMonitorViewport *logical_monitor_viewport;
+
+  logical_monitor_viewport = g_object_new (META_TYPE_LOGICAL_MONITOR_VIEWPORT,
+                                           NULL);
+  logical_monitor_viewport->logical_monitor = logical_monitor;
+
+  return logical_monitor_viewport;
+}
 
 static MetaDisplay *
 display_from_session (MetaRemoteDesktopSession *session)
@@ -202,6 +321,121 @@ ensure_virtual_device (MetaRemoteDesktopSession *session,
   *virtual_device_ptr = clutter_seat_create_virtual_device (seat, device_type);
 }
 
+static void
+on_stream_is_configured (MetaScreenCastStream     *stream,
+                         GParamSpec               *pspec,
+                         MetaRemoteDesktopSession *session)
+{
+  g_signal_handlers_disconnect_by_func (stream,
+                                        on_stream_is_configured,
+                                        session);
+
+  g_return_if_fail (meta_screen_cast_stream_is_configured (stream));
+
+  meta_eis_add_viewport (session->eis, META_EIS_VIEWPORT (stream));
+}
+
+static void
+on_stream_added (MetaScreenCastSession    *screen_cast_session,
+                 MetaScreenCastStream     *stream,
+                 MetaRemoteDesktopSession *session)
+{
+  if (meta_screen_cast_stream_is_configured (stream))
+    {
+      meta_eis_add_viewport (session->eis, META_EIS_VIEWPORT (stream));
+    }
+  else
+    {
+      g_signal_connect (stream, "notify::is-configured",
+                        G_CALLBACK (on_stream_is_configured), session);
+    }
+}
+
+static void
+on_stream_removed (MetaScreenCastSession    *screen_cast_session,
+                   MetaScreenCastStream     *stream,
+                   MetaRemoteDesktopSession *session)
+{
+  if (g_signal_handlers_disconnect_by_func (stream,
+                                            on_stream_is_configured,
+                                            session) == 0)
+    meta_eis_remove_viewport (session->eis, META_EIS_VIEWPORT (stream));
+}
+
+static void
+add_logical_monitor_viewports (MetaRemoteDesktopSession *session)
+{
+  MetaBackend *backend =
+    meta_dbus_session_manager_get_backend (session->session_manager);
+  MetaMonitorManager *monitor_manager =
+    meta_backend_get_monitor_manager (backend);
+  GList *logical_monitors;
+  GList *l;
+  GList *viewports = NULL;
+
+  logical_monitors =
+    meta_monitor_manager_get_logical_monitors (monitor_manager);
+  for (l = logical_monitors; l; l = l->next)
+    {
+      MetaLogicalMonitor *logical_monitor = l->data;
+      MetaLogicalMonitorViewport *logical_monitor_viewport;
+
+      logical_monitor_viewport =
+        meta_logical_monitor_viewport_new (logical_monitor);
+      viewports = g_list_append (viewports, logical_monitor_viewport);
+    }
+
+  meta_eis_remove_all_viewports (session->eis);
+  meta_eis_take_viewports (session->eis, viewports);
+}
+
+static void
+on_monitors_changed (MetaMonitorManager       *monitor_manager,
+                     MetaRemoteDesktopSession *session)
+{
+  add_logical_monitor_viewports (session);
+}
+
+static void
+initialize_viewports (MetaRemoteDesktopSession *session)
+{
+  if (session->screen_cast_session)
+    {
+      GList *streams;
+      GList *l;
+
+      streams =
+        meta_screen_cast_session_peek_streams (session->screen_cast_session);
+      for (l = streams; l; l = l->next)
+        {
+          MetaScreenCastStream *stream = META_SCREEN_CAST_STREAM (l->data);
+
+          meta_eis_add_viewport (session->eis, META_EIS_VIEWPORT (stream));
+        }
+
+      g_signal_connect (session->screen_cast_session,
+                        "stream-added",
+                        G_CALLBACK (on_stream_added),
+                        session);
+      g_signal_connect (session->screen_cast_session,
+                        "stream-removed",
+                        G_CALLBACK (on_stream_removed),
+                        session);
+    }
+  else
+    {
+      MetaBackend *backend =
+        meta_dbus_session_manager_get_backend (session->session_manager);
+      MetaMonitorManager *monitor_manager =
+        meta_backend_get_monitor_manager (backend);
+
+      add_logical_monitor_viewports (session);
+      session->monitors_changed_handler_id =
+        g_signal_connect (monitor_manager, "monitors-changed",
+                          G_CALLBACK (on_monitors_changed), session);
+    }
+}
+
 static gboolean
 meta_remote_desktop_session_start (MetaRemoteDesktopSession *session,
                                    GError                  **error)
@@ -214,6 +448,9 @@ meta_remote_desktop_session_start (MetaRemoteDesktopSession *session,
         return FALSE;
     }
 
+  if (session->eis)
+    initialize_viewports (session);
+
   init_remote_access_handle (session);
   session->started = TRUE;
 
@@ -225,10 +462,12 @@ meta_remote_desktop_session_close (MetaDbusSession *dbus_session)
 {
   MetaRemoteDesktopSession *session =
     META_REMOTE_DESKTOP_SESSION (dbus_session);
-  MetaBackend *backend =
-    meta_dbus_session_manager_get_backend (session->session_manager);
   MetaDBusRemoteDesktopSession *skeleton =
     META_DBUS_REMOTE_DESKTOP_SESSION (session);
+  MetaBackend *backend =
+    meta_dbus_session_manager_get_backend (session->session_manager);
+  MetaMonitorManager *monitor_manager =
+    meta_backend_get_monitor_manager (backend);
 
   session->started = FALSE;
 
@@ -243,9 +482,13 @@ meta_remote_desktop_session_close (MetaDbusSession *dbus_session)
       session->screen_cast_session = NULL;
     }
 
+  g_clear_signal_handler (&session->monitors_changed_handler_id,
+                          monitor_manager);
+
   g_clear_object (&session->virtual_pointer);
   g_clear_object (&session->virtual_keyboard);
   g_clear_object (&session->virtual_touchscreen);
+  g_clear_object (&session->eis);
 
   meta_dbus_session_notify_closed (META_DBUS_SESSION (session));
   meta_dbus_remote_desktop_session_emit_closed (skeleton);
@@ -258,8 +501,6 @@ meta_remote_desktop_session_close (MetaDbusSession *dbus_session)
 
       meta_remote_access_handle_notify_stopped (remote_access_handle);
     }
-
-  meta_eis_remove_all_clients (meta_backend_get_eis (backend));
 
   g_object_unref (session);
 }
@@ -283,6 +524,13 @@ meta_remote_desktop_session_register_screen_cast (MetaRemoteDesktopSession  *ses
                                                   MetaScreenCastSession     *screen_cast_session,
                                                   GError                   **error)
 {
+  if (session->started)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Remote desktop session already started");
+      return FALSE;
+    }
+
   if (session->screen_cast_session)
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
@@ -298,6 +546,25 @@ meta_remote_desktop_session_register_screen_cast (MetaRemoteDesktopSession  *ses
                       session);
 
   return TRUE;
+}
+
+const char *
+meta_remote_desktop_session_acquire_mapping_id (MetaRemoteDesktopSession *session)
+{
+  while (TRUE)
+    {
+      char *mapping_id;
+
+      mapping_id = g_uuid_string_random ();
+      if (g_hash_table_contains (session->mapping_ids, mapping_id))
+        {
+          g_free (mapping_id);
+          continue;
+        }
+
+      g_hash_table_add (session->mapping_ids, mapping_id);
+      return mapping_id;
+    }
 }
 
 static gboolean
@@ -1158,7 +1425,7 @@ meta_remote_desktop_session_cancel_transfer_requests (MetaRemoteDesktopSession *
 }
 
 static gboolean
-transfer_request_cleanup_timout (gpointer user_data)
+transfer_request_cleanup_timeout (gpointer user_data)
 {
   MetaRemoteDesktopSession *session = user_data;
 
@@ -1307,7 +1574,7 @@ reset_transfer_cleanup_timeout (MetaRemoteDesktopSession *session)
   g_clear_handle_id (&session->transfer_request_timeout_id, g_source_remove);
   session->transfer_request_timeout_id =
     g_timeout_add (TRANSFER_REQUEST_CLEANUP_TIMEOUT_MS,
-                   transfer_request_cleanup_timout,
+                   transfer_request_cleanup_timeout,
                    session);
 }
 
@@ -1630,6 +1897,21 @@ handle_selection_read (MetaDBusRemoteDesktopSession *skeleton,
   return TRUE;
 }
 
+static MetaEisDeviceTypes
+device_types_to_eis_device_types (MetaRemoteDesktopDeviceTypes device_types)
+{
+  MetaEisDeviceTypes eis_device_types = META_EIS_DEVICE_TYPE_NONE;
+
+  if (device_types & META_REMOTE_DESKTOP_DEVICE_TYPE_KEYBOARD)
+    eis_device_types |= META_EIS_DEVICE_TYPE_KEYBOARD;
+  if (device_types & META_REMOTE_DESKTOP_DEVICE_TYPE_POINTER)
+    eis_device_types |= META_EIS_DEVICE_TYPE_POINTER;
+  if (device_types & META_REMOTE_DESKTOP_DEVICE_TYPE_TOUCHSCREEN)
+    eis_device_types |= META_EIS_DEVICE_TYPE_TOUCHSCREEN;
+
+  return eis_device_types;
+}
+
 static gboolean
 handle_connect_to_eis (MetaDBusRemoteDesktopSession *skeleton,
                        GDBusMethodInvocation        *invocation,
@@ -1643,11 +1925,33 @@ handle_connect_to_eis (MetaDBusRemoteDesktopSession *skeleton,
   int fd_idx;
   GVariant *fd_variant;
   int fd;
-  MetaEis *meis;
 
-  meis = meta_backend_get_eis (backend);
+  if (!session->eis)
+    {
+      uint32_t device_types_bitmask;
+      MetaRemoteDesktopDeviceTypes device_types;
+      MetaEisDeviceTypes eis_device_types;
 
-  fd = meta_eis_add_client_get_fd (meis);
+      if (g_variant_lookup (arg_options, "device-types", "u",
+                            &device_types_bitmask))
+        {
+          device_types = device_types_bitmask;
+        }
+      else
+        {
+          device_types = (META_REMOTE_DESKTOP_DEVICE_TYPE_KEYBOARD |
+                          META_REMOTE_DESKTOP_DEVICE_TYPE_POINTER |
+                          META_REMOTE_DESKTOP_DEVICE_TYPE_TOUCHSCREEN);
+        }
+
+      eis_device_types = device_types_to_eis_device_types (device_types);
+      session->eis = meta_eis_new (backend, eis_device_types);
+
+      if (session->started)
+        initialize_viewports (session);
+    }
+
+  fd = meta_eis_add_client_get_fd (session->eis);
   if (fd < 0)
     {
       g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR,
@@ -1701,6 +2005,8 @@ meta_remote_desktop_session_initable_init (GInitable     *initable,
                           session, "num-lock-state",
                           G_BINDING_DEFAULT | G_BINDING_SYNC_CREATE);
 
+  session->mapping_ids = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+
   return TRUE;
 }
 
@@ -1753,6 +2059,8 @@ meta_remote_desktop_session_finalize (GObject *object)
   reset_current_selection_source (session);
   cancel_selection_read (session);
   g_hash_table_unref (session->transfer_requests);
+
+  g_clear_pointer (&session->mapping_ids, g_hash_table_unref);
 
   g_clear_object (&session->handle);
   g_free (session->peer_name);

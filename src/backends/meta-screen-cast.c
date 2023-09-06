@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -59,9 +57,10 @@ meta_screen_cast_disable_dma_bufs (MetaScreenCast *screen_cast)
 }
 
 CoglDmaBufHandle *
-meta_screen_cast_create_dma_buf_handle (MetaScreenCast *screen_cast,
-                                        int             width,
-                                        int             height)
+meta_screen_cast_create_dma_buf_handle (MetaScreenCast  *screen_cast,
+                                        CoglPixelFormat  format,
+                                        int              width,
+                                        int              height)
 {
   MetaDbusSessionManager *session_manager =
     META_DBUS_SESSION_MANAGER (screen_cast);
@@ -79,6 +78,7 @@ meta_screen_cast_create_dma_buf_handle (MetaScreenCast *screen_cast,
     return NULL;
 
   dmabuf_handle = cogl_renderer_create_dma_buf (cogl_renderer,
+                                                format,
                                                 width, height,
                                                 &error);
   if (!dmabuf_handle)
@@ -93,22 +93,17 @@ meta_screen_cast_create_dma_buf_handle (MetaScreenCast *screen_cast,
   return dmabuf_handle;
 }
 
-static gboolean
-register_remote_desktop_screen_cast_session (MetaScreenCastSession  *session,
-                                             const char             *remote_desktop_session_id,
-                                             GError                **error)
+static MetaRemoteDesktopSession *
+find_remote_desktop_session (MetaDbusSessionManager  *session_manager,
+                             const char              *remote_desktop_session_id,
+                             GError                 **error)
 {
-  MetaScreenCast *screen_cast =
-    meta_screen_cast_session_get_screen_cast (session);
-  MetaDbusSessionManager *session_manager =
-    META_DBUS_SESSION_MANAGER (screen_cast);
   MetaBackend *backend =
     meta_dbus_session_manager_get_backend (session_manager);
   MetaRemoteDesktop *remote_desktop = meta_backend_get_remote_desktop (backend);
   MetaDbusSessionManager *remote_desktop_session_manager =
     META_DBUS_SESSION_MANAGER (remote_desktop);
   MetaDbusSession *remote_desktop_dbus_session;
-  MetaRemoteDesktopSession *remote_desktop_session;
 
   remote_desktop_dbus_session =
     meta_dbus_session_manager_get_session (remote_desktop_session_manager,
@@ -117,17 +112,10 @@ register_remote_desktop_screen_cast_session (MetaScreenCastSession  *session,
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
                    "No remote desktop session found");
-      return FALSE;
+      return NULL;
     }
 
-  remote_desktop_session =
-    META_REMOTE_DESKTOP_SESSION (remote_desktop_dbus_session);
-  if (!meta_remote_desktop_session_register_screen_cast (remote_desktop_session,
-                                                         session,
-                                                         error))
-    return FALSE;
-
-  return TRUE;
+  return META_REMOTE_DESKTOP_SESSION (remote_desktop_dbus_session);
 }
 
 static gboolean
@@ -139,7 +127,7 @@ handle_create_session (MetaDBusScreenCast    *skeleton,
   MetaDbusSessionManager *session_manager =
     META_DBUS_SESSION_MANAGER (screen_cast);
   char *remote_desktop_session_id = NULL;
-  MetaScreenCastSessionType session_type;
+  MetaRemoteDesktopSession *remote_desktop_session = NULL;
   MetaDbusSession *dbus_session;
   MetaScreenCastSession *session;
   g_autoptr (GError) error = NULL;
@@ -150,15 +138,24 @@ handle_create_session (MetaDBusScreenCast    *skeleton,
                     &remote_desktop_session_id);
 
   if (remote_desktop_session_id)
-    session_type = META_SCREEN_CAST_SESSION_TYPE_REMOTE_DESKTOP;
-  else
-    session_type = META_SCREEN_CAST_SESSION_TYPE_NORMAL;
+    {
+      remote_desktop_session = find_remote_desktop_session (session_manager,
+                                                            remote_desktop_session_id,
+                                                            &error);
+      if (!remote_desktop_session)
+        {
+          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR,
+                                                 G_DBUS_ERROR_FAILED,
+                                                 "%s", error->message);
+          return G_DBUS_METHOD_INVOCATION_HANDLED;
+        }
+    }
 
   dbus_session =
     meta_dbus_session_manager_create_session (session_manager,
                                               invocation,
                                               &error,
-                                              "session-type", session_type,
+                                              "remote-desktop-session", remote_desktop_session,
                                               NULL);
   if (!dbus_session)
     {
@@ -168,20 +165,6 @@ handle_create_session (MetaDBusScreenCast    *skeleton,
       return G_DBUS_METHOD_INVOCATION_HANDLED;
     }
   session = META_SCREEN_CAST_SESSION (dbus_session);
-
-  if (remote_desktop_session_id)
-    {
-      if (!register_remote_desktop_screen_cast_session (session,
-                                                        remote_desktop_session_id,
-                                                        &error))
-        {
-          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR,
-                                                 G_DBUS_ERROR_FAILED,
-                                                 "%s", error->message);
-          meta_dbus_session_close (dbus_session);
-          return G_DBUS_METHOD_INVOCATION_HANDLED;
-        }
-    }
 
   if (g_variant_lookup (properties, "disable-animations", "b",
                         &disable_animations))

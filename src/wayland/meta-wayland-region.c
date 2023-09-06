@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -24,6 +22,7 @@
 
 #include "config.h"
 
+#include "mtk/mtk.h"
 #include "wayland/meta-wayland-region.h"
 
 struct _MetaWaylandRegion
@@ -48,7 +47,7 @@ wl_region_add (struct wl_client *client,
                gint32 height)
 {
   MetaWaylandRegion *region = wl_resource_get_user_data (resource);
-  cairo_rectangle_int_t rectangle = { x, y, width, height };
+  MtkRectangle rectangle = { x, y, width, height };
 
   cairo_region_union_rectangle (region->region, &rectangle);
 }
@@ -62,7 +61,7 @@ wl_region_subtract (struct wl_client *client,
                     gint32 height)
 {
   MetaWaylandRegion *region = wl_resource_get_user_data (resource);
-  cairo_rectangle_int_t rectangle = { x, y, width, height };
+  MtkRectangle rectangle = { x, y, width, height };
 
   cairo_region_subtract_rectangle (region->region, &rectangle);
 }

@@ -20,7 +20,6 @@
 #include "clutter/clutter-stage-view.h"
 #include "clutter/clutter-stage-view-private.h"
 
-#include <cairo-gobject.h>
 #include <math.h>
 
 #include "clutter/clutter-damage-history.h"
@@ -64,7 +63,7 @@ typedef struct _ClutterStageViewPrivate
 
   ClutterStage *stage;
 
-  cairo_rectangle_int_t layout;
+  MtkRectangle layout;
   float scale;
   CoglFramebuffer *framebuffer;
 
@@ -116,8 +115,8 @@ clutter_stage_view_destroy (ClutterStageView *view)
 }
 
 void
-clutter_stage_view_get_layout (ClutterStageView      *view,
-                               cairo_rectangle_int_t *rect)
+clutter_stage_view_get_layout (ClutterStageView *view,
+                               MtkRectangle     *rect)
 {
   ClutterStageViewPrivate *priv =
     clutter_stage_view_get_instance_private (view);
@@ -213,11 +212,11 @@ clutter_stage_view_invalidate_offscreen_blit_pipeline (ClutterStageView *view)
 }
 
 void
-clutter_stage_view_transform_rect_to_onscreen (ClutterStageView            *view,
-                                               const cairo_rectangle_int_t *src_rect,
-                                               int                          dst_width,
-                                               int                          dst_height,
-                                               cairo_rectangle_int_t       *dst_rect)
+clutter_stage_view_transform_rect_to_onscreen (ClutterStageView   *view,
+                                               const MtkRectangle *src_rect,
+                                               int                 dst_width,
+                                               int                 dst_height,
+                                               MtkRectangle       *dst_rect)
 {
   ClutterStageViewClass *view_class = CLUTTER_STAGE_VIEW_GET_CLASS (view);
 
@@ -238,8 +237,8 @@ paint_transformed_framebuffer (ClutterStageView     *view,
   graphene_matrix_t matrix;
   unsigned int n_rectangles, i;
   int dst_width, dst_height;
-  cairo_rectangle_int_t view_layout;
-  cairo_rectangle_int_t onscreen_layout;
+  MtkRectangle view_layout;
+  MtkRectangle onscreen_layout;
   float view_scale;
   float *coordinates;
 
@@ -247,7 +246,7 @@ paint_transformed_framebuffer (ClutterStageView     *view,
   dst_height = cogl_framebuffer_get_height (dst_framebuffer);
   clutter_stage_view_get_layout (view, &view_layout);
   clutter_stage_view_transform_rect_to_onscreen (view,
-                                                 &(cairo_rectangle_int_t) {
+                                                 &(MtkRectangle) {
                                                    .width = view_layout.width,
                                                    .height = view_layout.height,
                                                  },
@@ -275,14 +274,12 @@ paint_transformed_framebuffer (ClutterStageView     *view,
 
   for (i = 0; i < n_rectangles; i++)
     {
-      cairo_rectangle_int_t src_rect;
-      cairo_rectangle_int_t dst_rect;
+      MtkRectangle src_rect;
+      MtkRectangle dst_rect;
 
       cairo_region_get_rectangle (redraw_clip, i, &src_rect);
-      _clutter_util_rectangle_offset (&src_rect,
-                                      -view_layout.x,
-                                      -view_layout.y,
-                                      &src_rect);
+      src_rect.x -= view_layout.x;
+      src_rect.y -= view_layout.y;
 
       clutter_stage_view_transform_rect_to_onscreen (view,
                                                      &src_rect,
@@ -351,12 +348,14 @@ init_dma_buf_shadowfbs (ClutterStageView  *view,
     }
 
   priv->shadow.dma_buf.handles[0] = cogl_renderer_create_dma_buf (cogl_renderer,
+                                                                  COGL_PIXEL_FORMAT_BGRX_8888,
                                                                   width, height,
                                                                   error);
   if (!priv->shadow.dma_buf.handles[0])
     return FALSE;
 
   priv->shadow.dma_buf.handles[1] = cogl_renderer_create_dma_buf (cogl_renderer,
+                                                                  COGL_PIXEL_FORMAT_BGRX_8888,
                                                                   width, height,
                                                                   error);
   if (!priv->shadow.dma_buf.handles[1])
@@ -497,11 +496,11 @@ clutter_stage_view_after_paint (ClutterStageView *view,
 }
 
 static gboolean
-is_tile_dirty (cairo_rectangle_int_t *tile,
-               uint8_t               *current_data,
-               uint8_t               *prev_data,
-               int                    bpp,
-               int                    stride)
+is_tile_dirty (MtkRectangle *tile,
+               uint8_t      *current_data,
+               uint8_t      *prev_data,
+               int           bpp,
+               int           stride)
 {
   int y;
 
@@ -530,8 +529,8 @@ find_damaged_tiles (ClutterStageView      *view,
   ClutterStageViewPrivate *priv =
     clutter_stage_view_get_instance_private (view);
   cairo_region_t *tile_damage_region;
-  cairo_rectangle_int_t damage_extents;
-  cairo_rectangle_int_t fb_rect;
+  MtkRectangle damage_extents;
+  MtkRectangle fb_rect;
   int prev_dma_buf_idx;
   CoglDmaBufHandle *prev_dma_buf_handle;
   uint8_t *prev_data;
@@ -570,7 +569,7 @@ find_damaged_tiles (ClutterStageView      *view,
   if (!current_data)
     goto err_mmap_current;
 
-  fb_rect = (cairo_rectangle_int_t) {
+  fb_rect = (MtkRectangle) {
     .width = width,
     .height = height,
   };
@@ -590,7 +589,7 @@ find_damaged_tiles (ClutterStageView      *view,
     {
       for (tile_x = tile_x_min; tile_x <= tile_x_max; tile_x++)
         {
-          cairo_rectangle_int_t tile = {
+          MtkRectangle tile = {
             .x = tile_x * tile_size,
             .y = tile_y * tile_size,
             .width = tile_size,
@@ -601,7 +600,7 @@ find_damaged_tiles (ClutterStageView      *view,
               CAIRO_REGION_OVERLAP_OUT)
             continue;
 
-          _clutter_util_rectangle_intersection (&tile, &fb_rect, &tile);
+          mtk_rectangle_intersect (&tile, &fb_rect, &tile);
 
           if (is_tile_dirty (&tile, current_data, prev_data, bpp, stride))
             cairo_region_union_rectangle (tile_damage_region, &tile);
@@ -674,7 +673,7 @@ copy_shadowfb_to_onscreen (ClutterStageView     *view,
 
   if (cairo_region_is_empty (swap_region))
     {
-      cairo_rectangle_int_t full_damage = {
+      MtkRectangle full_damage = {
         .width = cogl_framebuffer_get_width (priv->framebuffer),
         .height = cogl_framebuffer_get_height (priv->framebuffer),
       };
@@ -746,7 +745,7 @@ copy_shadowfb_to_onscreen (ClutterStageView     *view,
     {
       CoglFramebuffer *shadowfb = COGL_FRAMEBUFFER (priv->shadow.framebuffer);
       g_autoptr (GError) error = NULL;
-      cairo_rectangle_int_t rect;
+      MtkRectangle rect;
 
       cairo_region_get_rectangle (damage_region, i, &rect);
 
@@ -939,17 +938,17 @@ maybe_mark_full_redraw (ClutterStageView  *view,
 
   if (cairo_region_num_rectangles (*region) == 1)
     {
-      cairo_rectangle_int_t region_extents;
+      MtkRectangle region_extents;
 
       cairo_region_get_extents (*region, &region_extents);
-      if (clutter_util_rectangle_equal (&priv->layout, &region_extents))
+      if (mtk_rectangle_equal (&priv->layout, &region_extents))
         g_clear_pointer (region, cairo_region_destroy);
     }
 }
 
 void
-clutter_stage_view_add_redraw_clip (ClutterStageView            *view,
-                                    const cairo_rectangle_int_t *clip)
+clutter_stage_view_add_redraw_clip (ClutterStageView   *view,
+                                    const MtkRectangle *clip)
 {
   ClutterStageViewPrivate *priv =
     clutter_stage_view_get_instance_private (view);
@@ -969,7 +968,7 @@ clutter_stage_view_add_redraw_clip (ClutterStageView            *view,
 
   if (!priv->redraw_clip)
     {
-      if (!clutter_util_rectangle_equal (&priv->layout, clip))
+      if (!mtk_rectangle_equal (&priv->layout, clip))
         priv->redraw_clip = cairo_region_create_rectangle (clip);
     }
   else
@@ -1408,8 +1407,7 @@ clutter_stage_view_set_property (GObject      *object,
   ClutterStageView *view = CLUTTER_STAGE_VIEW (object);
   ClutterStageViewPrivate *priv =
     clutter_stage_view_get_instance_private (view);
-  cairo_rectangle_int_t *layout;
-
+  MtkRectangle *layout;
   switch (prop_id)
     {
     case PROP_NAME:
@@ -1550,7 +1548,7 @@ clutter_stage_view_class_init (ClutterStageViewClass *klass)
 
   obj_props[PROP_LAYOUT] =
     g_param_spec_boxed ("layout", NULL, NULL,
-                        CAIRO_GOBJECT_TYPE_RECTANGLE_INT,
+                        MTK_TYPE_RECTANGLE,
                         G_PARAM_READWRITE |
                         G_PARAM_CONSTRUCT |
                         G_PARAM_STATIC_STRINGS);

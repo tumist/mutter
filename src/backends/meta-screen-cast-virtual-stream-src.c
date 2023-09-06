@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +22,9 @@
 
 #include "backends/meta-crtc-mode.h"
 #include "backends/meta-cursor-tracker-private.h"
+#include "backends/meta-eis-viewport.h"
+#include "backends/meta-monitor.h"
+#include "backends/meta-output.h"
 #include "backends/meta-screen-cast-session.h"
 #include "backends/meta-stage-private.h"
 #include "backends/meta-virtual-monitor.h"
@@ -108,6 +109,16 @@ ClutterStageView *
 meta_screen_cast_virtual_stream_src_get_view (MetaScreenCastVirtualStreamSrc *virtual_src)
 {
   return view_from_src (META_SCREEN_CAST_STREAM_SRC (virtual_src));
+}
+
+MetaLogicalMonitor *
+meta_screen_cast_virtual_stream_src_logical_monitor (MetaScreenCastVirtualStreamSrc *virtual_src)
+{
+  MetaVirtualMonitor *virtual_monitor = virtual_src->virtual_monitor;
+  MetaOutput *output = meta_virtual_monitor_get_output (virtual_monitor);
+  MetaMonitor *monitor = meta_output_get_monitor (output);
+
+  return meta_monitor_get_logical_monitor (monitor);
 }
 
 static void
@@ -233,10 +244,13 @@ on_monitors_changed (MetaMonitorManager             *monitor_manager,
 {
   MetaScreenCastStreamSrc *src = META_SCREEN_CAST_STREAM_SRC (virtual_src);
   MetaStage *stage = META_STAGE (stage_from_src (src));
+  MetaScreenCastStream *stream = meta_screen_cast_stream_src_get_stream (src);
 
   meta_stage_remove_watch (stage, virtual_src->watch);
   virtual_src->watch = NULL;
   add_watch (virtual_src);
+
+  meta_eis_viewport_notify_changed (META_EIS_VIEWPORT (stream));
 }
 
 static void
@@ -272,6 +286,8 @@ init_record_callbacks (MetaScreenCastVirtualStreamSrc *virtual_src)
       add_watch (virtual_src);
       break;
     }
+
+  meta_screen_cast_stream_notify_is_configured (stream);
 
   if (meta_screen_cast_stream_get_cursor_mode (stream) ==
       META_SCREEN_CAST_CURSOR_MODE_EMBEDDED)
@@ -362,7 +378,7 @@ meta_screen_cast_virtual_stream_src_record_to_buffer (MetaScreenCastStreamSrc  *
   MetaScreenCastStream *stream;
   ClutterPaintFlag paint_flags;
   ClutterStageView *view;
-  MetaRectangle view_rect;
+  MtkRectangle view_rect;
   float scale;
 
   stream = meta_screen_cast_stream_src_get_stream (src);
@@ -421,7 +437,7 @@ meta_screen_cast_virtual_stream_src_record_to_framebuffer (MetaScreenCastStreamS
 static void
 meta_screen_cast_virtual_stream_record_follow_up (MetaScreenCastStreamSrc *src)
 {
-  MetaRectangle damage;
+  MtkRectangle damage;
 
   clutter_stage_view_get_layout (view_from_src (src), &damage);
   damage.width = 1;
@@ -439,12 +455,12 @@ is_cursor_in_stream (MetaScreenCastVirtualStreamSrc *virtual_src)
   MetaCursorRenderer *cursor_renderer =
     meta_backend_get_cursor_renderer (backend);
   ClutterStageView *stage_view = view_from_src (src);
-  MetaRectangle view_layout;
+  MtkRectangle view_layout;
   graphene_rect_t view_rect;
   MetaCursorSprite *cursor_sprite;
 
   clutter_stage_view_get_layout (stage_view, &view_layout);
-  view_rect = meta_rectangle_to_graphene_rect (&view_layout);
+  view_rect = mtk_rectangle_to_graphene_rect (&view_layout);
 
   cursor_sprite = meta_cursor_renderer_get_cursor (cursor_renderer);
   if (cursor_sprite)
@@ -480,7 +496,7 @@ meta_screen_cast_virtual_stream_src_set_cursor_metadata (MetaScreenCastStreamSrc
     meta_backend_get_cursor_tracker (backend);
   MetaCursorSprite *cursor_sprite;
   ClutterStageView *stage_view;
-  MetaRectangle view_layout;
+  MtkRectangle view_layout;
   float view_scale;
   graphene_rect_t view_rect;
   graphene_point_t cursor_position;
@@ -498,7 +514,7 @@ meta_screen_cast_virtual_stream_src_set_cursor_metadata (MetaScreenCastStreamSrc
 
   stage_view = view_from_src (src);
   clutter_stage_view_get_layout (stage_view, &view_layout);
-  view_rect = meta_rectangle_to_graphene_rect (&view_layout);
+  view_rect = mtk_rectangle_to_graphene_rect (&view_layout);
   view_scale = clutter_stage_view_get_scale (stage_view);
 
   meta_cursor_tracker_get_pointer (cursor_tracker, &cursor_position, NULL);

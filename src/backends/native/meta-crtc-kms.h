@@ -15,9 +15,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -38,12 +36,6 @@ META_EXPORT_TEST
 G_DECLARE_FINAL_TYPE (MetaCrtcKms, meta_crtc_kms,
                       META, CRTC_KMS,
                       MetaCrtcNative)
-
-gpointer meta_crtc_kms_get_cursor_renderer_private (MetaCrtcKms *crtc_kms);
-
-void meta_crtc_kms_set_cursor_renderer_private (MetaCrtcKms    *crtc_kms,
-                                                gpointer        cursor_renderer_private,
-                                                GDestroyNotify  destroy_notify);
 
 void meta_crtc_kms_apply_transform (MetaCrtcKms            *crtc_kms,
                                     MetaKmsPlaneAssignment *kms_plane_assignment);
@@ -70,8 +62,6 @@ meta_crtc_kms_copy_drm_format_list (MetaCrtcKms *crtc_kms);
 gboolean
 meta_crtc_kms_supports_format (MetaCrtcKms *crtc_kms,
                                uint32_t     drm_format);
-
-gboolean meta_crtc_kms_is_gamma_invalid (MetaCrtcKms *crtc_kms);
 
 const MetaGammaLut * meta_crtc_kms_peek_gamma_lut (MetaCrtcKms *crtc_kms);
 

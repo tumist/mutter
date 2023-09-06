@@ -72,91 +72,8 @@ static guint signals[N_SIGNALS] = { 0 };
 G_DEFINE_TYPE (MetaStack, meta_stack, G_TYPE_OBJECT)
 
 static void
-on_stack_changed (MetaStack *stack)
-{
-  MetaDisplay *display = stack->display;
-  GArray *all_root_children_stacked;
-  GList *l;
-  GArray *hidden_stack_ids;
-  GList *sorted;
-
-  COGL_TRACE_BEGIN_SCOPED (StackChanged, "Stack changed");
-
-  meta_topic (META_DEBUG_STACK, "Syncing window stack to server");
-
-  all_root_children_stacked = g_array_new (FALSE, FALSE, sizeof (uint64_t));
-  hidden_stack_ids = g_array_new (FALSE, FALSE, sizeof (uint64_t));
-
-  meta_topic (META_DEBUG_STACK, "Bottom to top: ");
-
-  sorted = meta_stack_list_windows (stack, NULL);
-
-  for (l = sorted; l; l = l->next)
-    {
-      MetaWindow *w = l->data;
-      uint64_t top_level_window;
-      uint64_t stack_id;
-
-      if (w->unmanaging)
-        continue;
-
-      meta_topic (META_DEBUG_STACK, "  %u:%d - %s ",
-		  w->layer, w->stack_position, w->desc);
-
-      if (w->frame)
-	top_level_window = w->frame->xwindow;
-      else
-	top_level_window = w->xwindow;
-
-      if (w->client_type == META_WINDOW_CLIENT_TYPE_X11)
-        stack_id = top_level_window;
-      else
-        stack_id = w->stamp;
-
-      /* We don't restack hidden windows along with the rest, though they are
-       * reflected in the _NET hints. Hidden windows all get pushed below
-       * the screens fullscreen guard_window. */
-      if (w->hidden)
-	{
-          g_array_append_val (hidden_stack_ids, stack_id);
-	  continue;
-	}
-
-      g_array_append_val (all_root_children_stacked, stack_id);
-    }
-
-  if (display->x11_display)
-    {
-      uint64_t guard_window_id;
-
-      /* The screen guard window sits above all hidden windows and acts as
-       * a barrier to input reaching these windows. */
-      guard_window_id = display->x11_display->guard_window;
-      g_array_append_val (hidden_stack_ids, guard_window_id);
-    }
-
-  /* Sync to server */
-
-  meta_topic (META_DEBUG_STACK, "Restacking %u windows",
-              all_root_children_stacked->len);
-
-  meta_stack_tracker_restack_managed (display->stack_tracker,
-                                      (uint64_t *)all_root_children_stacked->data,
-                                      all_root_children_stacked->len);
-  meta_stack_tracker_restack_at_bottom (display->stack_tracker,
-                                        (uint64_t *)hidden_stack_ids->data,
-                                        hidden_stack_ids->len);
-
-  g_array_free (hidden_stack_ids, TRUE);
-  g_array_free (all_root_children_stacked, TRUE);
-  g_list_free (sorted);
-}
-
-static void
 meta_stack_init (MetaStack *stack)
 {
-  g_signal_connect (stack, "changed",
-                    G_CALLBACK (on_stack_changed), NULL);
 }
 
 static void
@@ -943,20 +860,6 @@ meta_stack_get_top (MetaStack *stack)
 }
 
 MetaWindow *
-meta_stack_get_bottom (MetaStack  *stack)
-{
-  GList *link;
-
-  stack_ensure_sorted (stack);
-
-  link = g_list_last (stack->sorted);
-  if (link != NULL)
-    return link->data;
-  else
-    return NULL;
-}
-
-MetaWindow *
 meta_stack_get_above (MetaStack  *stack,
                       MetaWindow *window,
                       gboolean    only_within_layer)
@@ -1054,111 +957,6 @@ meta_stack_windows_cmp (MetaStack  *stack,
     return 1;
   else
     return 0; /* not reached */
-}
-
-static int
-compare_just_window_stack_position (void *a,
-                                    void *b)
-{
-  MetaWindow *window_a = a;
-  MetaWindow *window_b = b;
-
-  if (window_a->stack_position < window_b->stack_position)
-    return -1; /* move window_a earlier in list */
-  else if (window_a->stack_position > window_b->stack_position)
-    return 1;
-  else
-    return 0; /* not reached */
-}
-
-GList *
-meta_stack_get_positions (MetaStack *stack)
-{
-  GList *tmp;
-
-  /* Make sure to handle any adds or removes */
-  stack_ensure_sorted (stack);
-
-  tmp = g_list_copy (stack->sorted);
-  tmp = g_list_sort (tmp, (GCompareFunc) compare_just_window_stack_position);
-
-  return tmp;
-}
-
-static gint
-compare_pointers (gconstpointer a,
-                  gconstpointer b)
-{
-  if (a > b)
-    return 1;
-  else if (a < b)
-    return -1;
-  else
-    return 0;
-}
-
-static gboolean
-lists_contain_same_windows (GList *a,
-                            GList *b)
-{
-  GList *copy1, *copy2;
-  GList *tmp1, *tmp2;
-
-  if (g_list_length (a) != g_list_length (b))
-    return FALSE;
-
-  tmp1 = copy1 = g_list_sort (g_list_copy (a), compare_pointers);
-  tmp2 = copy2 = g_list_sort (g_list_copy (b), compare_pointers);
-
-  while (tmp1 && tmp1->data == tmp2->data)   /* tmp2 is non-NULL if tmp1 is */
-    {
-      tmp1 = tmp1->next;
-      tmp2 = tmp2->next;
-    }
-
-  g_list_free (copy1);
-  g_list_free (copy2);
-
-  return (tmp1 == NULL);    /* tmp2 is non-NULL if tmp1 is */
-}
-
-void
-meta_stack_set_positions (MetaStack *stack,
-                          GList     *windows)
-{
-  int i;
-  GList *tmp;
-
-  /* Make sure any adds or removes aren't in limbo -- is this needed? */
-  stack_ensure_sorted (stack);
-
-  if (!lists_contain_same_windows (windows, stack->sorted))
-    {
-      meta_warning ("This list of windows has somehow changed; not resetting "
-                    "positions of the windows.");
-      return;
-    }
-
-  g_list_free (stack->sorted);
-  stack->sorted = g_list_copy (windows);
-
-  stack->need_resort = TRUE;
-  stack->need_constrain = TRUE;
-
-  i = 0;
-  tmp = windows;
-  while (tmp != NULL)
-    {
-      MetaWindow *w = tmp->data;
-      w->stack_position = i++;
-      tmp = tmp->next;
-    }
-
-  meta_topic (META_DEBUG_STACK,
-              "Reset the stack positions of (nearly) all windows");
-
-  meta_stack_changed (stack);
-  meta_stack_update_window_tile_matches (stack, NULL);
 }
 
 void

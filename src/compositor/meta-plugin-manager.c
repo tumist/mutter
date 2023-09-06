@@ -272,8 +272,8 @@ gboolean
 meta_plugin_manager_event_size_change (MetaPluginManager *plugin_mgr,
                                        MetaWindowActor   *actor,
                                        MetaSizeChange     which_change,
-                                       MetaRectangle     *old_frame_rect,
-                                       MetaRectangle     *old_buffer_rect)
+                                       MtkRectangle      *old_frame_rect,
+                                       MtkRectangle      *old_buffer_rect)
 {
   MetaPlugin *plugin = plugin_mgr->plugin;
   MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
@@ -357,7 +357,7 @@ meta_plugin_manager_confirm_display_change (MetaPluginManager *plugin_mgr)
 gboolean
 meta_plugin_manager_show_tile_preview (MetaPluginManager *plugin_mgr,
                                        MetaWindow        *window,
-                                       MetaRectangle     *tile_rect,
+                                       MtkRectangle      *tile_rect,
                                        int                tile_monitor_number)
 {
   MetaPlugin *plugin = plugin_mgr->plugin;
@@ -408,22 +408,6 @@ meta_plugin_manager_show_window_menu (MetaPluginManager  *plugin_mgr,
 
   if (klass->show_window_menu)
     klass->show_window_menu (plugin, window, menu, x, y);
-}
-
-void
-meta_plugin_manager_show_window_menu_for_rect (MetaPluginManager  *plugin_mgr,
-                                               MetaWindow         *window,
-                                               MetaWindowMenuType  menu,
-					       MetaRectangle      *rect)
-{
-  MetaPlugin *plugin = plugin_mgr->plugin;
-  MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
-
-  if (!should_start_effect (plugin_mgr))
-    return;
-
-  if (klass->show_window_menu_for_rect)
-    klass->show_window_menu_for_rect (plugin, window, menu, rect);
 }
 
 MetaCloseDialog *

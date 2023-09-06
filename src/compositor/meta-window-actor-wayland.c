@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Georges Basile Stavracas Neto <gbsneto@gnome.org>
@@ -80,24 +78,24 @@ surface_container_new (MetaWindowActor *window_actor)
 }
 
 static void
-surface_container_cull_out (MetaCullable   *cullable,
-                            cairo_region_t *unobscured_region,
-                            cairo_region_t *clip_region)
+surface_container_cull_unobscured (MetaCullable   *cullable,
+                                   cairo_region_t *unobscured_region)
 {
-  meta_cullable_cull_out_children (cullable, unobscured_region, clip_region);
+  meta_cullable_cull_unobscured_children (cullable, unobscured_region);
 }
 
 static void
-surface_container_reset_culling (MetaCullable *cullable)
+surface_container_cull_redraw_clip (MetaCullable   *cullable,
+                                    cairo_region_t *clip_region)
 {
-  meta_cullable_reset_culling_children (cullable);
+  meta_cullable_cull_redraw_clip_children (cullable, clip_region);
 }
 
 static void
 surface_container_cullable_iface_init (MetaCullableInterface *iface)
 {
-  iface->cull_out = surface_container_cull_out;
-  iface->reset_culling = surface_container_reset_culling;
+  iface->cull_unobscured = surface_container_cull_unobscured;
+  iface->cull_redraw_clip = surface_container_cull_redraw_clip;
 }
 
 static void
@@ -109,7 +107,7 @@ surface_container_apply_transform (ClutterActor      *actor,
     CLUTTER_ACTOR_CLASS (meta_surface_container_actor_wayland_parent_class);
   MetaWindow *window;
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle monitor_rect;
+  MtkRectangle monitor_rect;
   float scale;
   float rel_x, rel_y;
   float abs_x, abs_y;
@@ -199,6 +197,9 @@ set_surface_actor_index (GNode    *node,
   ClutterActor *container = traverse_data->surface_container;
   ClutterActor *surface_actor =
     CLUTTER_ACTOR (meta_wayland_surface_get_actor (surface));
+  MetaSurfaceContainerActorWayland *surface_container =
+    META_SURFACE_CONTAINER_ACTOR_WAYLAND (container);
+  MetaWindowActor *window_actor = surface_container->window_actor;
 
   if (clutter_actor_contains (container, surface_actor))
     {
@@ -212,6 +213,8 @@ set_surface_actor_index (GNode    *node,
     }
   else
     {
+      meta_window_actor_add_surface_actor (window_actor,
+                                           META_SURFACE_ACTOR (surface_actor));
       clutter_actor_insert_child_at_index (container,
                                            surface_actor,
                                            traverse_data->index);
@@ -250,6 +253,9 @@ meta_window_actor_wayland_rebuild_surface_tree (MetaWindowActor *actor)
 
       if (!g_list_find (surface_actors, child_actor))
         {
+          MetaSurfaceActor *surface_actor = META_SURFACE_ACTOR (child_actor);
+
+          meta_window_actor_remove_surface_actor (actor, surface_actor);
           clutter_actor_remove_child (CLUTTER_ACTOR (self->surface_container),
                                       child_actor);
         }
@@ -272,10 +278,10 @@ calculate_background_cull_region (MetaWindowActorWayland *self)
 {
   MetaWindowActor *window_actor = META_WINDOW_ACTOR (self);
   int geometry_scale;
-  cairo_rectangle_int_t rect;
+  MtkRectangle rect;
 
   geometry_scale = meta_window_actor_get_geometry_scale (window_actor);
-  rect = (cairo_rectangle_int_t) {
+  rect = (MtkRectangle) {
     .x = 0,
     .y = 0,
     .width = clutter_actor_get_width (self->background) * geometry_scale,
@@ -286,16 +292,12 @@ calculate_background_cull_region (MetaWindowActorWayland *self)
 }
 
 static void
-meta_window_actor_wayland_cull_out (MetaCullable   *cullable,
-                                    cairo_region_t *unobscured_region,
-                                    cairo_region_t *clip_region)
+subtract_background_opaque_region (MetaWindowActorWayland *self,
+                                   cairo_region_t         *region)
 {
-  MetaWindowActorWayland *self =
-    META_WINDOW_ACTOR_WAYLAND (cullable);
+  if (!region)
+    return;
 
-  meta_cullable_cull_out_children (META_CULLABLE (self),
-                                   unobscured_region,
-                                   clip_region);
   if (self->background &&
       clutter_actor_get_paint_opacity (CLUTTER_ACTOR (self)) == 0xff)
     {
@@ -303,26 +305,41 @@ meta_window_actor_wayland_cull_out (MetaCullable   *cullable,
 
       background_cull_region = calculate_background_cull_region (self);
 
-      if (unobscured_region)
-        cairo_region_subtract (unobscured_region, background_cull_region);
-      if (clip_region)
-        cairo_region_subtract (clip_region, background_cull_region);
+      cairo_region_subtract (region, background_cull_region);
 
       cairo_region_destroy (background_cull_region);
     }
 }
 
 static void
-meta_window_actor_wayland_reset_culling (MetaCullable *cullable)
+meta_window_actor_wayland_cull_unobscured (MetaCullable   *cullable,
+                                           cairo_region_t *unobscured_region)
 {
-  meta_cullable_reset_culling_children (cullable);
+  MetaWindowActorWayland *self =
+    META_WINDOW_ACTOR_WAYLAND (cullable);
+
+  meta_cullable_cull_unobscured_children (META_CULLABLE (self), unobscured_region);
+
+  subtract_background_opaque_region (self, unobscured_region);
+}
+
+static void
+meta_window_actor_wayland_cull_redraw_clip (MetaCullable   *cullable,
+                                            cairo_region_t *clip_region)
+{
+  MetaWindowActorWayland *self =
+    META_WINDOW_ACTOR_WAYLAND (cullable);
+
+  meta_cullable_cull_redraw_clip_children (META_CULLABLE (self), clip_region);
+
+  subtract_background_opaque_region (self, clip_region);
 }
 
 static void
 cullable_iface_init (MetaCullableInterface *iface)
 {
-  iface->cull_out = meta_window_actor_wayland_cull_out;
-  iface->reset_culling = meta_window_actor_wayland_reset_culling;
+  iface->cull_unobscured = meta_window_actor_wayland_cull_unobscured;
+  iface->cull_redraw_clip = meta_window_actor_wayland_cull_redraw_clip;
 }
 
 static MetaSurfaceActor *
@@ -461,7 +478,7 @@ maybe_configure_black_background (MetaWindowActorWayland *self,
   MetaWindow *window = meta_window_actor_get_meta_window (window_actor);
   MetaLogicalMonitor *logical_monitor;
   int geometry_scale;
-  MetaRectangle fullscreen_layout;
+  MtkRectangle fullscreen_layout;
   ClutterActor *child;
   ClutterActorIter iter;
   float max_width = 0;
@@ -509,8 +526,8 @@ maybe_configure_black_background (MetaWindowActorWayland *self,
 }
 
 static void
-meta_window_actor_wayland_sync_geometry (MetaWindowActor     *actor,
-                                         const MetaRectangle *actor_rect)
+meta_window_actor_wayland_sync_geometry (MetaWindowActor    *actor,
+                                         const MtkRectangle *actor_rect)
 {
   MetaWindowActorWayland *self = META_WINDOW_ACTOR_WAYLAND (actor);
   ClutterActor *surface_container = CLUTTER_ACTOR (self->surface_container);

@@ -656,8 +656,9 @@ input_mapper_monitors_changed_cb (MetaMonitorManager *monitor_manager,
 }
 
 static void
-input_mapper_power_save_mode_changed_cb (MetaMonitorManager *monitor_manager,
-                                         MetaInputMapper    *mapper)
+input_mapper_power_save_mode_changed_cb (MetaMonitorManager        *monitor_manager,
+                                         MetaPowerSaveChangeReason  reason,
+                                         MetaInputMapper           *mapper)
 {
   ClutterInputDevice *device;
   MetaLogicalMonitor *logical_monitor;
@@ -912,7 +913,7 @@ handle_get_device_mapping (MetaDBusInputMapping  *skeleton,
 
   if (logical_monitor)
     {
-      MetaRectangle rect;
+      MtkRectangle rect;
 
       rect = meta_logical_monitor_get_layout (logical_monitor);
       g_dbus_method_invocation_return_value (invocation,

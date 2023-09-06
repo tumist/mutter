@@ -15,9 +15,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -36,7 +34,7 @@
 /* Global/master objects (version exported by wl_registry and negotiated through bind) */
 #define META_WL_COMPOSITOR_VERSION          5
 #define META_WL_DATA_DEVICE_MANAGER_VERSION 3
-#define META_XDG_WM_BASE_VERSION            4
+#define META_XDG_WM_BASE_VERSION            6
 #define META_WL_SEAT_VERSION                8
 #define META_WL_OUTPUT_VERSION              4
 #define META_XSERVER_VERSION                1
@@ -55,6 +53,7 @@
 #define META_ZWP_PRIMARY_SELECTION_V1_VERSION 1
 #define META_WP_PRESENTATION_VERSION        1
 #define META_XDG_ACTIVATION_V1_VERSION 1
+#define META_ZWP_IDLE_INHIBIT_V1_VERSION    1
 #define META_WP_SINGLE_PIXEL_BUFFER_V1_VERSION 1
 #define META_MUTTER_X11_INTEROP_VERSION 1
 #define META_WP_FRACTIONAL_SCALE_VERSION 1

@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,7 +29,7 @@ meta_screen_cast_window_default_init (MetaScreenCastWindowInterface *iface)
 
 void
 meta_screen_cast_window_get_buffer_bounds (MetaScreenCastWindow *screen_cast_window,
-                                           MetaRectangle        *bounds)
+                                           MtkRectangle         *bounds)
 {
   META_SCREEN_CAST_WINDOW_GET_IFACE (screen_cast_window)->get_buffer_bounds (screen_cast_window,
                                                                              bounds);
@@ -72,7 +70,7 @@ meta_screen_cast_window_transform_cursor_position (MetaScreenCastWindow *screen_
 
 void
 meta_screen_cast_window_capture_into (MetaScreenCastWindow *screen_cast_window,
-                                      MetaRectangle        *bounds,
+                                      MtkRectangle         *bounds,
                                       uint8_t              *data)
 {
   META_SCREEN_CAST_WINDOW_GET_IFACE (screen_cast_window)->capture_into (screen_cast_window,
@@ -82,7 +80,7 @@ meta_screen_cast_window_capture_into (MetaScreenCastWindow *screen_cast_window,
 
 gboolean
 meta_screen_cast_window_blit_to_framebuffer (MetaScreenCastWindow *screen_cast_window,
-                                             MetaRectangle        *bounds,
+                                             MtkRectangle         *bounds,
                                              CoglFramebuffer      *framebuffer)
 {
   MetaScreenCastWindowInterface *iface =

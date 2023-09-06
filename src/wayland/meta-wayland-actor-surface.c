@@ -13,9 +13,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -181,7 +179,7 @@ meta_wayland_actor_surface_real_sync_actor_state (MetaWaylandActorSurface *actor
   MetaSurfaceActor *surface_actor;
   MetaShapedTexture *stex;
   MetaWaylandBuffer *buffer;
-  cairo_rectangle_int_t surface_rect;
+  MtkRectangle surface_rect;
   MetaWaylandSurface *subsurface_surface;
 
   surface_actor = priv->actor;
@@ -209,7 +207,7 @@ meta_wayland_actor_surface_real_sync_actor_state (MetaWaylandActorSurface *actor
       meta_shaped_texture_set_texture (stex, NULL);
     }
 
-  surface_rect = (cairo_rectangle_int_t) {
+  surface_rect = (MtkRectangle) {
     .width = meta_wayland_surface_get_width (surface),
     .height = meta_wayland_surface_get_height (surface),
   };
@@ -336,7 +334,7 @@ meta_wayland_actor_surface_is_on_logical_monitor (MetaWaylandSurfaceRole *surfac
   MetaBackend *backend = meta_context_get_backend (context);
   MetaRenderer *renderer = meta_backend_get_renderer (backend);
   ClutterActor *actor = CLUTTER_ACTOR (priv->actor);
-  MetaRectangle logical_monitor_layout;
+  MtkRectangle logical_monitor_layout;
   GList *l;
 
   logical_monitor_layout = meta_logical_monitor_get_layout (logical_monitor);
@@ -344,12 +342,12 @@ meta_wayland_actor_surface_is_on_logical_monitor (MetaWaylandSurfaceRole *surfac
   for (l = meta_renderer_get_views (renderer); l; l = l->next)
     {
       ClutterStageView *stage_view = l->data;
-      MetaRectangle view_layout;
+      MtkRectangle view_layout;
 
       clutter_stage_view_get_layout (stage_view, &view_layout);
 
-      if (meta_rectangle_overlap (&logical_monitor_layout,
-                                  &view_layout) &&
+      if (mtk_rectangle_overlap (&logical_monitor_layout,
+                                 &view_layout) &&
           clutter_actor_is_effectively_on_stage_view (CLUTTER_ACTOR (actor),
                                                       stage_view))
         return TRUE;
@@ -446,6 +444,8 @@ meta_wayland_actor_surface_reset_actor (MetaWaylandActorSurface *actor_surface)
     g_signal_connect (priv->actor, "destroy",
                       G_CALLBACK (on_actor_destroyed),
                       actor_surface);
+
+  meta_wayland_surface_notify_actor_changed (surface);
 
   g_signal_connect_swapped (priv->actor, "notify::allocation",
                             G_CALLBACK (meta_wayland_surface_notify_geometry_changed),

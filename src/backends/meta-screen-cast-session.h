@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +22,7 @@
 
 #include "backends/meta-screen-cast.h"
 
+#include "backends/meta-backend-types.h"
 #include "backends/meta-screen-cast-stream.h"
 #include "meta/meta-remote-access-controller.h"
 
@@ -50,10 +49,14 @@ char * meta_screen_cast_session_get_peer_name (MetaScreenCastSession *session);
 
 MetaScreenCastSessionType meta_screen_cast_session_get_session_type (MetaScreenCastSession *session);
 
+MetaRemoteDesktopSession * meta_screen_cast_session_get_remote_desktop_session (MetaScreenCastSession *session);
+
 gboolean meta_screen_cast_session_start (MetaScreenCastSession  *session,
                                          GError                **error);
 
 gboolean meta_screen_cast_session_is_active (MetaScreenCastSession *session);
+
+GList * meta_screen_cast_session_peek_streams (MetaScreenCastSession *session);
 
 MetaScreenCastStream * meta_screen_cast_session_get_stream (MetaScreenCastSession *session,
                                                             const char            *path);

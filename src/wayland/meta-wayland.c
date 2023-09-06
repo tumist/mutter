@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -39,6 +37,7 @@
 #include "wayland/meta-wayland-dma-buf.h"
 #include "wayland/meta-wayland-egl-stream.h"
 #include "wayland/meta-wayland-filter-manager.h"
+#include "wayland/meta-wayland-idle-inhibit.h"
 #include "wayland/meta-wayland-inhibit-shortcuts-dialog.h"
 #include "wayland/meta-wayland-inhibit-shortcuts.h"
 #include "wayland/meta-wayland-legacy-xdg-foreign.h"
@@ -805,6 +804,7 @@ meta_wayland_compositor_new (MetaContext *context)
   meta_wayland_init_presentation_time (compositor);
   meta_wayland_activation_init (compositor);
   meta_wayland_transaction_init (compositor);
+  meta_wayland_idle_inhibit_init (compositor);
 
 #ifdef HAVE_WAYLAND_EGLSTREAM
   {

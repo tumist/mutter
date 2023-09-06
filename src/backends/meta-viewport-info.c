@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Carlos Garnacho <carlosg@gnome.org>
@@ -29,7 +27,7 @@ typedef struct _ViewInfo ViewInfo;
 
 struct _ViewInfo
 {
-  MetaRectangle rect;
+  MtkRectangle rect;
   float scale;
 };
 
@@ -67,10 +65,10 @@ meta_viewport_info_init (MetaViewportInfo *info)
 }
 
 MetaViewportInfo *
-meta_viewport_info_new (cairo_rectangle_int_t *views,
-                        float                 *scales,
-                        int                    n_views,
-                        gboolean               is_views_scaled)
+meta_viewport_info_new (MtkRectangle *views,
+                        float        *scales,
+                        int           n_views,
+                        gboolean      is_views_scaled)
 {
   MetaViewportInfo *viewport_info;
   int i;
@@ -110,10 +108,10 @@ meta_viewport_info_get_view_at (MetaViewportInfo *viewport_info,
 }
 
 gboolean
-meta_viewport_info_get_view_info (MetaViewportInfo      *viewport_info,
-                                  int                    idx,
-                                  cairo_rectangle_int_t *rect,
-                                  float                 *scale)
+meta_viewport_info_get_view_info (MetaViewportInfo *viewport_info,
+                                  int               idx,
+                                  MtkRectangle     *rect,
+                                  float            *scale)
 {
   ViewInfo *info;
 
@@ -130,30 +128,30 @@ meta_viewport_info_get_view_info (MetaViewportInfo      *viewport_info,
 }
 
 static gboolean
-view_has_neighbor (cairo_rectangle_int_t *view,
-                   cairo_rectangle_int_t *neighbor,
-                   MetaDisplayDirection   neighbor_direction)
+view_has_neighbor (MtkRectangle         *view,
+                   MtkRectangle         *neighbor,
+                   MetaDisplayDirection  neighbor_direction)
 {
   switch (neighbor_direction)
     {
     case META_DISPLAY_RIGHT:
       if (neighbor->x == (view->x + view->width) &&
-          meta_rectangle_vert_overlap (neighbor, view))
+          mtk_rectangle_vert_overlap (neighbor, view))
         return TRUE;
       break;
     case META_DISPLAY_LEFT:
       if (view->x == (neighbor->x + neighbor->width) &&
-          meta_rectangle_vert_overlap (neighbor, view))
+          mtk_rectangle_vert_overlap (neighbor, view))
         return TRUE;
       break;
     case META_DISPLAY_UP:
       if (view->y == (neighbor->y + neighbor->height) &&
-          meta_rectangle_horiz_overlap (neighbor, view))
+          mtk_rectangle_horiz_overlap (neighbor, view))
         return TRUE;
       break;
     case META_DISPLAY_DOWN:
       if (neighbor->y == (view->y + view->height) &&
-          meta_rectangle_horiz_overlap (neighbor, view))
+          mtk_rectangle_horiz_overlap (neighbor, view))
         return TRUE;
       break;
     }
@@ -166,7 +164,7 @@ meta_viewport_info_get_neighbor (MetaViewportInfo     *viewport_info,
                                  int                   idx,
                                  MetaDisplayDirection  direction)
 {
-  cairo_rectangle_int_t rect;
+  MtkRectangle rect;
   int i;
 
   if (!meta_viewport_info_get_view_info (viewport_info, idx, &rect, NULL))

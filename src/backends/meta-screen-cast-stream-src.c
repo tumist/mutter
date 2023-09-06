@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -59,6 +57,8 @@
 #define DEFAULT_FRAME_RATE SPA_FRACTION (60, 1)
 #define MIN_FRAME_RATE SPA_FRACTION (1, 1)
 #define MAX_FRAME_RATE SPA_FRACTION (1000, 1)
+
+#define DEFAULT_COGL_PIXEL_FORMAT COGL_PIXEL_FORMAT_BGRX_8888
 
 enum
 {
@@ -115,6 +115,52 @@ typedef struct _MetaScreenCastStreamSrcPrivate
 
   cairo_region_t *redraw_clip;
 } MetaScreenCastStreamSrcPrivate;
+
+static const struct {
+  CoglPixelFormat cogl_format;
+  enum spa_video_format spa_video_format;
+} supported_formats[] = {
+  { COGL_PIXEL_FORMAT_BGRX_8888, SPA_VIDEO_FORMAT_BGRx },
+  { COGL_PIXEL_FORMAT_BGRA_8888_PRE, SPA_VIDEO_FORMAT_BGRA },
+};
+
+static gboolean
+spa_video_format_from_cogl_pixel_format (CoglPixelFormat        cogl_format,
+                                         enum spa_video_format *out_spa_format)
+{
+  size_t i;
+
+  for (i = 0; i < G_N_ELEMENTS (supported_formats); i++)
+    {
+      if (supported_formats[i].cogl_format == cogl_format)
+        {
+          if (out_spa_format)
+            *out_spa_format = supported_formats[i].spa_video_format;
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
+static gboolean
+cogl_pixel_format_from_spa_video_format (enum spa_video_format  spa_format,
+                                         CoglPixelFormat       *out_cogl_format)
+{
+  size_t i;
+
+  for (i = 0; i < G_N_ELEMENTS (supported_formats); i++)
+    {
+      if (supported_formats[i].spa_video_format == spa_format)
+        {
+          if (out_cogl_format)
+            *out_cogl_format = supported_formats[i].cogl_format;
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
 
 static struct spa_pod *
 push_format_object (struct spa_pod_builder *pod_builder,
@@ -195,7 +241,7 @@ meta_screen_cast_stream_src_get_specs (MetaScreenCastStreamSrc *src,
 
 static gboolean
 meta_screen_cast_stream_src_get_videocrop (MetaScreenCastStreamSrc *src,
-                                           MetaRectangle           *crop_rect)
+                                           MtkRectangle            *crop_rect)
 {
   MetaScreenCastStreamSrcClass *klass =
     META_SCREEN_CAST_STREAM_SRC_GET_CLASS (src);
@@ -649,7 +695,7 @@ maybe_add_damaged_regions_metadata (MetaScreenCastStreamSrc *src,
         {
           spa_meta_for_each (meta_region, spa_meta_video_damage)
           {
-            g_warning ("Not enough buffers (%d) to accomodate damaged "
+            g_warning ("Not enough buffers (%d) to accommodate damaged "
                        "regions (%d)", num_buffers_available, n_rectangles);
             meta_region->region = SPA_REGION (0, 0,
                                               priv->video_format.size.width,
@@ -662,7 +708,7 @@ maybe_add_damaged_regions_metadata (MetaScreenCastStreamSrc *src,
         {
           spa_meta_for_each (meta_region, spa_meta_video_damage)
           {
-            cairo_rectangle_int_t rect;
+            MtkRectangle rect;
 
             cairo_region_get_rectangle (priv->redraw_clip, i, &rect);
             meta_region->region = SPA_REGION (rect.x, rect.y,
@@ -700,7 +746,7 @@ meta_screen_cast_stream_src_maybe_record_frame_with_timestamp (MetaScreenCastStr
     meta_screen_cast_stream_src_get_instance_private (src);
   MetaScreenCastRecordResult record_result =
      META_SCREEN_CAST_RECORD_RESULT_RECORDED_NOTHING;
-  MetaRectangle crop_rect;
+  MtkRectangle crop_rect;
   struct pw_buffer *buffer;
   struct spa_buffer *spa_buffer;
   struct spa_meta_header *header;
@@ -1059,10 +1105,28 @@ on_stream_add_buffer (void             *data,
 
   if (spa_data[0].type & (1 << SPA_DATA_DmaBuf))
     {
+      CoglPixelFormat cogl_format;
+
+      if (!cogl_pixel_format_from_spa_video_format (priv->video_format.format,
+                                                    &cogl_format))
+        {
+          cogl_format = DEFAULT_COGL_PIXEL_FORMAT;
+        }
+
       dmabuf_handle =
         meta_screen_cast_create_dma_buf_handle (screen_cast,
+                                                cogl_format,
                                                 priv->video_format.size.width,
                                                 priv->video_format.size.height);
+
+      if (!dmabuf_handle && cogl_format != DEFAULT_COGL_PIXEL_FORMAT)
+        {
+          dmabuf_handle =
+            meta_screen_cast_create_dma_buf_handle (screen_cast,
+                                                    DEFAULT_COGL_PIXEL_FORMAT,
+                                                    priv->video_format.size.width,
+                                                    priv->video_format.size.height);
+        }
     }
   else
     {
@@ -1201,6 +1265,16 @@ create_pipewire_stream (MetaScreenCastStreamSrc  *src,
     clutter_backend_get_cogl_context (clutter_backend);
   CoglRenderer *cogl_renderer = cogl_context_get_renderer (cogl_context);
 #endif /* HAVE_NATIVE_BACKEND */
+  CoglPixelFormat preferred_cogl_format =
+    meta_screen_cast_stream_src_get_preferred_format (src);
+  enum spa_video_format preferred_spa_video_format;
+  enum spa_video_format spa_video_formats[2];
+  struct spa_rectangle default_size = DEFAULT_SIZE;
+  struct spa_rectangle min_size = MIN_SIZE;
+  struct spa_rectangle max_size = MAX_SIZE;
+  struct spa_fraction default_framerate = DEFAULT_FRAME_RATE;
+  struct spa_fraction min_framerate = MIN_FRAME_RATE;
+  struct spa_fraction max_framerate = MAX_FRAME_RATE;
   struct pw_stream *pipewire_stream;
   uint8_t buffer[1024];
   struct spa_pod_builder pod_builder =
@@ -1208,9 +1282,11 @@ create_pipewire_stream (MetaScreenCastStreamSrc  *src,
   int width;
   int height;
   float frame_rate;
-  const struct spa_pod *params[2];
+  const struct spa_pod *params[4];
+  int n_spa_video_formats = 0;
   int n_params = 0;
   int result;
+  int i;
 
   priv->node_id = SPA_ID_INVALID;
 
@@ -1228,60 +1304,29 @@ create_pipewire_stream (MetaScreenCastStreamSrc  *src,
   if (meta_screen_cast_stream_src_get_specs (src, &width, &height, &frame_rate))
     {
       MetaFraction frame_rate_fraction;
-      struct spa_fraction max_framerate;
-      struct spa_fraction min_framerate;
 
       frame_rate_fraction = meta_fraction_from_double (frame_rate);
 
       min_framerate = SPA_FRACTION (1, 1);
       max_framerate = SPA_FRACTION (frame_rate_fraction.num,
                                     frame_rate_fraction.denom);
-
-#ifdef HAVE_NATIVE_BACKEND
-      if (cogl_renderer_is_dma_buf_supported (cogl_renderer))
-        {
-          uint64_t modifier = DRM_FORMAT_MOD_INVALID;
-
-          params[n_params++] = push_format_object (
-            &pod_builder,
-            SPA_VIDEO_FORMAT_BGRx, &modifier, 1,
-            SPA_FORMAT_VIDEO_size, SPA_POD_Rectangle (&SPA_RECTANGLE (width,
-                                                                      height)),
-            SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction (&SPA_FRACTION (0, 1)),
-            SPA_FORMAT_VIDEO_maxFramerate,
-            SPA_POD_CHOICE_RANGE_Fraction (&max_framerate,
-                                           &min_framerate,
-                                           &max_framerate),
-            0);
-          params[n_params++] = push_format_object (
-            &pod_builder,
-            SPA_VIDEO_FORMAT_BGRx, NULL, 0,
-            SPA_FORMAT_VIDEO_size, SPA_POD_Rectangle (&SPA_RECTANGLE (width,
-                                                                      height)),
-            SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction (&SPA_FRACTION (0, 1)),
-            SPA_FORMAT_VIDEO_maxFramerate,
-            SPA_POD_CHOICE_RANGE_Fraction (&max_framerate,
-                                           &min_framerate,
-                                           &max_framerate),
-            0);
-        }
-      else
-#endif /* HAVE_NATIVE_BACKEND */
-        {
-          params[n_params++] = push_format_object (
-            &pod_builder,
-            SPA_VIDEO_FORMAT_BGRx, NULL, 0,
-            SPA_FORMAT_VIDEO_size, SPA_POD_Rectangle (&SPA_RECTANGLE (width,
-                                                                      height)),
-            SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction (&SPA_FRACTION (0, 1)),
-            SPA_FORMAT_VIDEO_maxFramerate,
-            SPA_POD_CHOICE_RANGE_Fraction (&max_framerate,
-                                           &min_framerate,
-                                           &max_framerate),
-            0);
-        }
+      default_framerate = max_framerate;
+      min_size = max_size = default_size = SPA_RECTANGLE (width, height);
     }
-  else
+
+  if (preferred_cogl_format != DEFAULT_COGL_PIXEL_FORMAT &&
+      spa_video_format_from_cogl_pixel_format (preferred_cogl_format,
+                                               &preferred_spa_video_format))
+    {
+      spa_video_formats[n_spa_video_formats++] = preferred_spa_video_format;
+    }
+
+  spa_video_formats[n_spa_video_formats++] = SPA_VIDEO_FORMAT_BGRx;
+
+  g_assert (n_spa_video_formats > 0 &&
+            n_spa_video_formats <= G_N_ELEMENTS (spa_video_formats));
+
+  for (i = 0; i < n_spa_video_formats; i++)
     {
 #ifdef HAVE_NATIVE_BACKEND
       if (cogl_renderer_is_dma_buf_supported (cogl_renderer))
@@ -1290,45 +1335,31 @@ create_pipewire_stream (MetaScreenCastStreamSrc  *src,
 
           params[n_params++] = push_format_object (
             &pod_builder,
-            SPA_VIDEO_FORMAT_BGRx, &modifier, 1,
-            SPA_FORMAT_VIDEO_size, SPA_POD_CHOICE_RANGE_Rectangle (&DEFAULT_SIZE,
-                                                                   &MIN_SIZE,
-                                                                   &MAX_SIZE),
+            spa_video_formats[i], &modifier, 1,
+            SPA_FORMAT_VIDEO_size, SPA_POD_CHOICE_RANGE_Rectangle (&default_size,
+                                                                   &min_size,
+                                                                   &max_size),
             SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction (&SPA_FRACTION (0, 1)),
             SPA_FORMAT_VIDEO_maxFramerate,
-            SPA_POD_CHOICE_RANGE_Fraction (&DEFAULT_FRAME_RATE,
-                                           &MIN_FRAME_RATE,
-                                           &MAX_FRAME_RATE),
-            0);
-          params[n_params++] = push_format_object (
-            &pod_builder,
-            SPA_VIDEO_FORMAT_BGRx, NULL, 0,
-            SPA_FORMAT_VIDEO_size, SPA_POD_CHOICE_RANGE_Rectangle (&DEFAULT_SIZE,
-                                                                   &MIN_SIZE,
-                                                                   &MAX_SIZE),
-            SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction (&SPA_FRACTION (0, 1)),
-            SPA_FORMAT_VIDEO_maxFramerate,
-            SPA_POD_CHOICE_RANGE_Fraction (&DEFAULT_FRAME_RATE,
-                                           &MIN_FRAME_RATE,
-                                           &MAX_FRAME_RATE),
+            SPA_POD_CHOICE_RANGE_Fraction (&default_framerate,
+                                           &min_framerate,
+                                           &max_framerate),
             0);
         }
-      else
-#endif /* HAVE_NATIVE_BACKEND */
-        {
-          params[n_params++] = push_format_object (
-            &pod_builder,
-            SPA_VIDEO_FORMAT_BGRx, NULL, 0,
-            SPA_FORMAT_VIDEO_size, SPA_POD_CHOICE_RANGE_Rectangle (&DEFAULT_SIZE,
-                                                                   &MIN_SIZE,
-                                                                   &MAX_SIZE),
-            SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction (&SPA_FRACTION (0, 1)),
-            SPA_FORMAT_VIDEO_maxFramerate,
-            SPA_POD_CHOICE_RANGE_Fraction (&DEFAULT_FRAME_RATE,
-                                           &MIN_FRAME_RATE,
-                                           &MAX_FRAME_RATE),
-            0);
-        }
+#endif
+
+      params[n_params++] = push_format_object (
+        &pod_builder,
+        spa_video_formats[i], NULL, 0,
+        SPA_FORMAT_VIDEO_size, SPA_POD_CHOICE_RANGE_Rectangle (&default_size,
+                                                               &min_size,
+                                                               &max_size),
+        SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction (&SPA_FRACTION (0, 1)),
+        SPA_FORMAT_VIDEO_maxFramerate,
+        SPA_POD_CHOICE_RANGE_Fraction (&default_framerate,
+                                       &min_framerate,
+                                       &max_framerate),
+        0);
     }
 
   pw_stream_add_listener (pipewire_stream,
@@ -1513,6 +1544,12 @@ meta_screen_cast_stream_src_get_stream (MetaScreenCastStreamSrc *src)
   return priv->stream;
 }
 
+static CoglPixelFormat
+meta_screen_cast_stream_src_default_get_preferred_format (MetaScreenCastStreamSrc *src)
+{
+  return DEFAULT_COGL_PIXEL_FORMAT;
+}
+
 static void
 meta_screen_cast_stream_src_dispose (GObject *object)
 {
@@ -1592,6 +1629,9 @@ meta_screen_cast_stream_src_class_init (MetaScreenCastStreamSrcClass *klass)
   object_class->set_property = meta_screen_cast_stream_src_set_property;
   object_class->get_property = meta_screen_cast_stream_src_get_property;
 
+  klass->get_preferred_format =
+    meta_screen_cast_stream_src_default_get_preferred_format;
+
   g_object_class_install_property (object_class,
                                    PROP_STREAM,
                                    g_param_spec_object ("stream", NULL, NULL,
@@ -1622,4 +1662,13 @@ meta_screen_cast_stream_src_uses_dma_bufs (MetaScreenCastStreamSrc *src)
     meta_screen_cast_stream_src_get_instance_private (src);
 
   return priv->uses_dma_bufs;
+}
+
+CoglPixelFormat
+meta_screen_cast_stream_src_get_preferred_format (MetaScreenCastStreamSrc *src)
+{
+  MetaScreenCastStreamSrcClass *klass =
+    META_SCREEN_CAST_STREAM_SRC_GET_CLASS (src);
+
+  return klass->get_preferred_format (src);
 }

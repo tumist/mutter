@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
@@ -95,20 +93,6 @@ meta_wayland_tablet_pad_group_create_new_resource (MetaWaylandTabletPadGroup *gr
                                   group, unbind_resource);
   wl_resource_set_user_data (resource, group);
   wl_list_insert (&group->resource_list, wl_resource_get_link (resource));
-
-  return resource;
-}
-
-struct wl_resource *
-meta_wayland_tablet_pad_group_lookup_resource (MetaWaylandTabletPadGroup *group,
-                                               struct wl_client          *client)
-{
-  struct wl_resource *resource;
-
-  resource = wl_resource_find_for_client (&group->resource_list, client);
-
-  if (!resource)
-    resource = wl_resource_find_for_client (&group->focus_resource_list, client);
 
   return resource;
 }

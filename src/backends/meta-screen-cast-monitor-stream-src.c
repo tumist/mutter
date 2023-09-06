@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -228,7 +226,7 @@ is_cursor_in_stream (MetaScreenCastMonitorStreamSrc *monitor_src)
     meta_backend_get_cursor_renderer (backend);
   MetaMonitor *monitor;
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle logical_monitor_layout;
+  MtkRectangle logical_monitor_layout;
   graphene_rect_t logical_monitor_rect;
   MetaCursorSprite *cursor_sprite;
 
@@ -236,7 +234,7 @@ is_cursor_in_stream (MetaScreenCastMonitorStreamSrc *monitor_src)
   logical_monitor = meta_monitor_get_logical_monitor (monitor);
   logical_monitor_layout = meta_logical_monitor_get_layout (logical_monitor);
   logical_monitor_rect =
-    meta_rectangle_to_graphene_rect (&logical_monitor_layout);
+    mtk_rectangle_to_graphene_rect (&logical_monitor_layout);
 
   cursor_sprite = meta_cursor_renderer_get_cursor (cursor_renderer);
   if (cursor_sprite)
@@ -366,7 +364,7 @@ add_view_watches (MetaScreenCastMonitorStreamSrc *monitor_src,
   MetaStage *meta_stage;
   MetaMonitor *monitor;
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle logical_monitor_layout;
+  MtkRectangle logical_monitor_layout;
   GList *l;
 
   stage = get_stage (monitor_src);
@@ -378,10 +376,10 @@ add_view_watches (MetaScreenCastMonitorStreamSrc *monitor_src,
   for (l = meta_renderer_get_views (renderer); l; l = l->next)
     {
       MetaRendererView *view = l->data;
-      MetaRectangle view_layout;
+      MtkRectangle view_layout;
 
       clutter_stage_view_get_layout (CLUTTER_STAGE_VIEW (view), &view_layout);
-      if (meta_rectangle_overlap (&logical_monitor_layout, &view_layout))
+      if (mtk_rectangle_overlap (&logical_monitor_layout, &view_layout))
         {
           MetaStageWatch *watch;
 
@@ -592,7 +590,7 @@ meta_screen_cast_monitor_stream_src_record_to_framebuffer (MetaScreenCastStreamS
   ClutterStage *stage = get_stage (monitor_src);
   MetaMonitor *monitor;
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle logical_monitor_layout;
+  MtkRectangle logical_monitor_layout;
   float view_scale;
   ClutterPaintFlag paint_flags = CLUTTER_PAINT_FLAG_CLEAR;
 
@@ -637,7 +635,7 @@ meta_screen_cast_monitor_stream_record_follow_up (MetaScreenCastStreamSrc *src)
   ClutterStage *stage = get_stage (monitor_src);
   MetaMonitor *monitor;
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle logical_monitor_layout;
+  MtkRectangle logical_monitor_layout;
   GList *l;
 
   g_clear_handle_id (&monitor_src->maybe_record_idle_id, g_source_remove);
@@ -649,15 +647,15 @@ meta_screen_cast_monitor_stream_record_follow_up (MetaScreenCastStreamSrc *src)
   for (l = meta_renderer_get_views (renderer); l; l = l->next)
     {
       MetaRendererView *view = l->data;
-      MetaRectangle view_layout;
-      MetaRectangle damage;
+      MtkRectangle view_layout;
+      MtkRectangle damage;
 
       clutter_stage_view_get_layout (CLUTTER_STAGE_VIEW (view), &view_layout);
 
-      if (!meta_rectangle_overlap (&logical_monitor_layout, &view_layout))
+      if (!mtk_rectangle_overlap (&logical_monitor_layout, &view_layout))
         continue;
 
-      damage = (cairo_rectangle_int_t) {
+      damage = (MtkRectangle) {
         .x = view_layout.x,
         .y = view_layout.y,
         .width = 1,
@@ -681,7 +679,7 @@ meta_screen_cast_monitor_stream_src_set_cursor_metadata (MetaScreenCastStreamSrc
   MetaCursorSprite *cursor_sprite;
   MetaMonitor *monitor;
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle logical_monitor_layout;
+  MtkRectangle logical_monitor_layout;
   graphene_rect_t logical_monitor_rect;
   float view_scale;
   graphene_point_t cursor_position;
@@ -701,7 +699,7 @@ meta_screen_cast_monitor_stream_src_set_cursor_metadata (MetaScreenCastStreamSrc
   logical_monitor = meta_monitor_get_logical_monitor (monitor);
   logical_monitor_layout = meta_logical_monitor_get_layout (logical_monitor);
   logical_monitor_rect =
-    meta_rectangle_to_graphene_rect (&logical_monitor_layout);
+    mtk_rectangle_to_graphene_rect (&logical_monitor_layout);
 
   if (meta_backend_is_stage_views_scaled (backend))
     view_scale = meta_logical_monitor_get_scale (logical_monitor);

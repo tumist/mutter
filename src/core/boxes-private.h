@@ -40,13 +40,6 @@ typedef enum
   FIXED_DIRECTION_Y    = 1 << 1,
 } FixedDirections;
 
-typedef enum _MetaRoundingStrategy
-{
-  META_ROUNDING_STRATEGY_SHRINK,
-  META_ROUNDING_STRATEGY_GROW,
-  META_ROUNDING_STRATEGY_ROUND,
-} MetaRoundingStrategy;
-
 /* Output functions -- note that the output buffer had better be big enough:
  *   rect_to_string:   RECT_LENGTH
  *   region_to_string: (RECT_LENGTH+strlen(separator_string)) *
@@ -57,12 +50,10 @@ typedef enum _MetaRoundingStrategy
  */
 #define RECT_LENGTH 27
 #define EDGE_LENGTH 37
-char* meta_rectangle_to_string        (const MetaRectangle *rect,
-                                       char                *output);
+char* meta_rectangle_to_string        (const MtkRectangle *rect,
+                                       char               *output);
 char* meta_rectangle_region_to_string (GList               *region,
                                        const char          *separator_string,
-                                       char                *output);
-char* meta_rectangle_edge_to_string   (const MetaEdge      *edge,
                                        char                *output);
 char* meta_rectangle_edge_list_to_string (
                                        GList               *edge_list,
@@ -77,11 +68,11 @@ char* meta_rectangle_edge_list_to_string (
  * it in a MoveResize operation if you muck with old_rect just right).
  */
 META_EXPORT_TEST
-void meta_rectangle_resize_with_gravity (const MetaRectangle *old_rect,
-                                         MetaRectangle       *rect,
-                                         MetaGravity          gravity,
-                                         int                  new_width,
-                                         int                  new_height);
+void meta_rectangle_resize_with_gravity (const MtkRectangle *old_rect,
+                                         MtkRectangle       *rect,
+                                         MetaGravity         gravity,
+                                         int                 new_width,
+                                         int                 new_height);
 
 /* find a list of rectangles with the property that a window is contained
  * in the given region if and only if it is contained in one of the
@@ -96,8 +87,8 @@ void meta_rectangle_resize_with_gravity (const MetaRectangle *old_rect,
  */
 META_EXPORT_TEST
 GList*   meta_rectangle_get_minimal_spanning_set_for_region (
-                                         const MetaRectangle *basic_rect,
-                                         const GSList        *all_struts);
+                                         const MtkRectangle *basic_rect,
+                                         const GSList       *all_struts);
 
 /* Expand all rectangles in region by the given amount on each side */
 GList*   meta_rectangle_expand_region   (GList               *region,
@@ -123,8 +114,8 @@ GList*   meta_rectangle_expand_region_conditionally (
  */
 META_EXPORT_TEST
 void     meta_rectangle_expand_to_avoiding_struts (
-                                         MetaRectangle       *rect,
-                                         const MetaRectangle *expand_to,
+                                         MtkRectangle        *rect,
+                                         const MtkRectangle  *expand_to,
                                          const MetaDirection  direction,
                                          const GSList        *all_struts);
 
@@ -144,49 +135,49 @@ void     meta_rectangle_free_list_and_elements (GList *filled_list);
  */
 META_EXPORT_TEST
 gboolean meta_rectangle_could_fit_in_region (
-                                         const GList         *spanning_rects,
-                                         const MetaRectangle *rect);
+                                         const GList        *spanning_rects,
+                                         const MtkRectangle *rect);
 
 META_EXPORT_TEST
 gboolean meta_rectangle_contained_in_region (
-                                         const GList         *spanning_rects,
-                                         const MetaRectangle *rect);
+                                         const GList        *spanning_rects,
+                                         const MtkRectangle *rect);
 
 META_EXPORT_TEST
 gboolean meta_rectangle_overlaps_with_region (
-                                         const GList         *spanning_rects,
-                                         const MetaRectangle *rect);
+                                         const GList        *spanning_rects,
+                                         const MtkRectangle *rect);
 
 gboolean meta_rectangle_is_adjacent_to_any_in_region (
-                                         const GList   *spanning_rects,
-                                         MetaRectangle *rect);
+                                         const GList  *spanning_rects,
+                                         MtkRectangle *rect);
 
 /* Make the rectangle small enough to fit into one of the spanning_rects,
  * but make it no smaller than min_size.
  */
 META_EXPORT_TEST
 void     meta_rectangle_clamp_to_fit_into_region (
-                                         const GList         *spanning_rects,
-                                         FixedDirections      fixed_directions,
-                                         MetaRectangle       *rect,
-                                         const MetaRectangle *min_size);
+                                         const GList        *spanning_rects,
+                                         FixedDirections     fixed_directions,
+                                         MtkRectangle       *rect,
+                                         const MtkRectangle *min_size);
 
 /* Clip the rectangle so that it fits into one of the spanning_rects, assuming
  * it overlaps with at least one of them
  */
 META_EXPORT_TEST
-void     meta_rectangle_clip_to_region  (const GList         *spanning_rects,
-                                         FixedDirections      fixed_directions,
-                                         MetaRectangle       *rect);
+void     meta_rectangle_clip_to_region  (const GList     *spanning_rects,
+                                         FixedDirections  fixed_directions,
+                                         MtkRectangle    *rect);
 
 /* Shove the rectangle into one of the spanning_rects, assuming it fits in
  * one of them.
  */
 META_EXPORT_TEST
 void     meta_rectangle_shove_into_region(
-                                         const GList         *spanning_rects,
-                                         FixedDirections      fixed_directions,
-                                         MetaRectangle       *rect);
+                                         const GList     *spanning_rects,
+                                         FixedDirections  fixed_directions,
+                                         MtkRectangle    *rect);
 
 /* Finds the point on the line connecting (x1,y1) to (x2,y2) which is closest
  * to (px, py).  Useful for finding an optimal rectangle size when given a
@@ -208,8 +199,8 @@ void meta_rectangle_find_linepoint_closest_to_point (double x1,    double y1,
  * nonzero-width dimension of the edge.
  */
 META_EXPORT_TEST
-gboolean meta_rectangle_edge_aligns (const MetaRectangle *rect,
-                                     const MetaEdge      *edge);
+gboolean meta_rectangle_edge_aligns (const MtkRectangle *rect,
+                                     const MetaEdge     *edge);
 
 /* Compare two edges, so that sorting functions can put a list of edges in
  * canonical order.
@@ -235,8 +226,8 @@ GList* meta_rectangle_remove_intersections_with_boxes_from_edges (
  * MetaEdgeRect's.
  */
 META_EXPORT_TEST
-GList* meta_rectangle_find_onscreen_edges (const MetaRectangle *basic_rect,
-                                           const GSList        *all_struts);
+GList* meta_rectangle_find_onscreen_edges (const MtkRectangle *basic_rect,
+                                           const GSList       *all_struts);
 
 /* Finds edges between adjacent monitors which are not covered by the given
  * struts.
@@ -247,43 +238,24 @@ GList* meta_rectangle_find_nonintersected_monitor_edges (
                                            const GSList        *all_struts);
 
 META_EXPORT_TEST
-gboolean meta_rectangle_is_adjacent_to (MetaRectangle *rect,
-                                        MetaRectangle *other);
+gboolean meta_rectangle_is_adjacent_to (MtkRectangle *rect,
+                                        MtkRectangle *other);
 
 META_EXPORT_TEST
-void meta_rectangle_scale_double (const MetaRectangle  *rect,
-                                  double                scale,
-                                  MetaRoundingStrategy  rounding_strategy,
-                                  MetaRectangle        *dest);
-
-static inline graphene_rect_t
-meta_rectangle_to_graphene_rect (MetaRectangle *rect)
-{
-  return (graphene_rect_t) {
-    .origin = {
-      .x = rect->x,
-      .y = rect->y
-    },
-    .size = {
-      .width = rect->width,
-      .height = rect->height
-    }
-  };
-}
+void meta_rectangle_scale_double (const MtkRectangle  *rect,
+                                  double               scale,
+                                  MtkRoundingStrategy  rounding_strategy,
+                                  MtkRectangle        *dest);
 
 META_EXPORT_TEST
-void meta_rectangle_transform (const MetaRectangle  *rect,
+void meta_rectangle_transform (const MtkRectangle   *rect,
                                MetaMonitorTransform  transform,
                                int                   width,
                                int                   height,
-                               MetaRectangle        *dest);
+                               MtkRectangle         *dest);
 
-void meta_rectangle_from_graphene_rect (const graphene_rect_t *rect,
-                                        MetaRoundingStrategy   rounding_strategy,
-                                        MetaRectangle         *dest);
-
-void meta_rectangle_crop_and_scale (const MetaRectangle *rect,
-                                    graphene_rect_t     *src_rect,
-                                    int                  dst_width,
-                                    int                  dst_height,
-                                    MetaRectangle       *dest);
+void meta_rectangle_crop_and_scale (const MtkRectangle *rect,
+                                    graphene_rect_t    *src_rect,
+                                    int                 dst_width,
+                                    int                 dst_height,
+                                    MtkRectangle       *dest);

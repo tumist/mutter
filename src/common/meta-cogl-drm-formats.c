@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
@@ -48,6 +46,28 @@ meta_cogl_pixel_format_from_drm_format (uint32_t                drm_format,
 
   if (out_multi_texture_format)
     *out_multi_texture_format = meta_cogl_drm_format_map[i].multi_texture_format;
+
+  return TRUE;
+}
+
+gboolean
+meta_drm_format_from_cogl_pixel_format (CoglPixelFormat  cogl_format,
+                                        uint32_t        *out_drm_format)
+{
+  const size_t n = G_N_ELEMENTS (meta_cogl_drm_format_map);
+  size_t i;
+
+  for (i = 0; i < n; i++)
+    {
+      if (meta_cogl_drm_format_map[i].cogl_format == cogl_format)
+        break;
+    }
+
+  if (i == n)
+    return FALSE;
+
+  if (out_drm_format)
+    *out_drm_format = meta_cogl_drm_format_map[i].drm_format;
 
   return TRUE;
 }

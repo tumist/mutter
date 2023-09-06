@@ -229,7 +229,7 @@ struct _MetaBackgroundContent
   ChangedFlags changed;
   CoglPipeline *pipeline;
   PipelineFlags pipeline_flags;
-  cairo_rectangle_int_t texture_area;
+  MtkRectangle texture_area;
   int texture_width, texture_height;
 
   cairo_region_t *clip_region;
@@ -389,7 +389,7 @@ static void
 setup_pipeline (MetaBackgroundContent *self,
                 ClutterActor          *actor,
                 ClutterPaintContext   *paint_context,
-                cairo_rectangle_int_t *actor_pixel_rect)
+                MtkRectangle          *actor_pixel_rect)
 {
   MetaContext *context = meta_display_get_context (self->display);
   MetaBackend *backend = meta_context_get_backend (context);
@@ -456,7 +456,7 @@ setup_pipeline (MetaBackgroundContent *self,
 
   if (self->changed & CHANGED_GRADIENT_PARAMETERS)
     {
-      MetaRectangle monitor_geometry;
+      MtkRectangle monitor_geometry;
       float gradient_height_perc;
 
       meta_display_get_monitor_geometry (self->display,
@@ -566,7 +566,7 @@ setup_pipeline (MetaBackgroundContent *self,
 
 static void
 set_glsl_parameters (MetaBackgroundContent *self,
-                     cairo_rectangle_int_t *actor_pixel_rect)
+                     MtkRectangle          *actor_pixel_rect)
 {
   MetaContext *context = meta_display_get_context (self->display);
   MetaBackend *backend = meta_context_get_backend (context);
@@ -616,7 +616,7 @@ static void
 paint_clipped_rectangle (MetaBackgroundContent *self,
                          ClutterPaintNode      *node,
                          ClutterActorBox       *actor_box,
-                         cairo_rectangle_int_t *rect)
+                         MtkRectangle          *rect)
 {
   g_autoptr (ClutterPaintNode) pipeline_node = NULL;
   float h_scale, v_scale;
@@ -659,8 +659,8 @@ meta_background_content_paint_content (ClutterContent      *content,
 {
   MetaBackgroundContent *self = META_BACKGROUND_CONTENT (content);
   ClutterActorBox actor_box;
-  cairo_rectangle_int_t rect_within_actor;
-  cairo_rectangle_int_t rect_within_stage;
+  MtkRectangle rect_within_actor;
+  MtkRectangle rect_within_stage;
   cairo_region_t *region;
   int i, n_rects;
   float transformed_x, transformed_y, transformed_width, transformed_height;
@@ -758,14 +758,14 @@ meta_background_content_paint_content (ClutterContent      *content,
     {
       for (i = 0; i < n_rects; i++)
         {
-          cairo_rectangle_int_t rect;
+          MtkRectangle rect;
           cairo_region_get_rectangle (region, i, &rect);
           paint_clipped_rectangle (self, node, &actor_box, &rect);
         }
     }
   else
     {
-      cairo_rectangle_int_t rect;
+      MtkRectangle rect;
       cairo_region_get_extents (region, &rect);
       paint_clipped_rectangle (self, node, &actor_box, &rect);
     }
@@ -780,7 +780,7 @@ meta_background_content_get_preferred_size (ClutterContent *content,
 
 {
   MetaBackgroundContent *background_content = META_BACKGROUND_CONTENT (content);
-  MetaRectangle monitor_geometry;
+  MtkRectangle monitor_geometry;
 
   meta_display_get_monitor_geometry (background_content->display,
                                      background_content->monitor,
@@ -806,8 +806,8 @@ static void
 set_monitor (MetaBackgroundContent *self,
              int                    monitor)
 {
-  MetaRectangle old_monitor_geometry;
-  MetaRectangle new_monitor_geometry;
+  MtkRectangle old_monitor_geometry;
+  MtkRectangle new_monitor_geometry;
   MetaDisplay *display = self->display;
 
   if(self->monitor == monitor)
@@ -1215,17 +1215,15 @@ meta_background_content_get_clip_region (MetaBackgroundContent *self)
 }
 
 void
-meta_background_content_cull_out (MetaBackgroundContent *self,
-                                  cairo_region_t        *unobscured_region,
-                                  cairo_region_t        *clip_region)
+meta_background_content_cull_unobscured (MetaBackgroundContent *self,
+                                         cairo_region_t        *unobscured_region)
 {
   set_unobscured_region (self, unobscured_region);
-  set_clip_region (self, clip_region);
 }
 
 void
-meta_background_content_reset_culling (MetaBackgroundContent *self)
+meta_background_content_cull_redraw_clip (MetaBackgroundContent *self,
+                                          cairo_region_t        *clip_region)
 {
-  set_unobscured_region (self, NULL);
-  set_clip_region (self, NULL);
+  set_clip_region (self, clip_region);
 }

@@ -54,6 +54,8 @@ typedef struct _MetaWindowActorPrivate
 
   MetaSurfaceActor *surface;
 
+  GPtrArray *surface_actors;
+
   int geometry_scale;
 
   /*
@@ -93,8 +95,14 @@ static guint signals[LAST_SIGNAL] = { 0 };
 
 enum
 {
-  PROP_META_WINDOW = 1,
+  PROP_0,
+
+  PROP_META_WINDOW,
+
+  N_PROPS
 };
+
+static GParamSpec *obj_props[N_PROPS];
 
 static void meta_window_actor_dispose    (GObject *object);
 static void meta_window_actor_constructed (GObject *object);
@@ -112,6 +120,11 @@ static MetaSurfaceActor * meta_window_actor_real_get_scanout_candidate (MetaWind
 static void meta_window_actor_real_assign_surface_actor (MetaWindowActor  *self,
                                                          MetaSurfaceActor *surface_actor);
 
+static void on_cloned (ClutterActor *actor,
+                       ClutterClone *clone);
+static void on_decloned (ClutterActor *actor,
+                         ClutterClone *clone);
+
 static void screen_cast_window_iface_init (MetaScreenCastWindowInterface *iface);
 
 G_DEFINE_ABSTRACT_TYPE_WITH_CODE (MetaWindowActor, meta_window_actor, CLUTTER_TYPE_ACTOR,
@@ -122,7 +135,6 @@ static void
 meta_window_actor_class_init (MetaWindowActorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  GParamSpec   *pspec;
 
   object_class->dispose      = meta_window_actor_dispose;
   object_class->set_property = meta_window_actor_set_property;
@@ -198,13 +210,13 @@ meta_window_actor_class_init (MetaWindowActorClass *klass)
                   NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
 
-  pspec = g_param_spec_object ("meta-window", NULL, NULL,
-                               META_TYPE_WINDOW,
-                               G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
-
-  g_object_class_install_property (object_class,
-                                   PROP_META_WINDOW,
-                                   pspec);
+  obj_props[PROP_META_WINDOW] =
+    g_param_spec_object ("meta-window",
+                         "MetaWindow",
+                         "The displayed MetaWindow",
+                         META_TYPE_WINDOW,
+                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
+  g_object_class_install_properties (object_class, N_PROPS, obj_props);
 }
 
 static void
@@ -213,7 +225,13 @@ meta_window_actor_init (MetaWindowActor *self)
   MetaWindowActorPrivate *priv =
     meta_window_actor_get_instance_private (self);
 
+  priv->surface_actors = g_ptr_array_new ();
   priv->geometry_scale = 1;
+
+  g_signal_connect (self, "cloned",
+                    G_CALLBACK (on_cloned), NULL);
+  g_signal_connect (self, "decloned",
+                    G_CALLBACK (on_decloned), NULL);
 }
 
 static void
@@ -352,6 +370,8 @@ meta_window_actor_real_assign_surface_actor (MetaWindowActor  *self,
   g_clear_object (&priv->surface);
   priv->surface = g_object_ref_sink (surface_actor);
 
+  meta_window_actor_add_surface_actor (self, surface_actor);
+
   if (meta_window_actor_is_frozen (self))
     meta_window_actor_set_frozen (self, TRUE);
   else
@@ -364,6 +384,103 @@ meta_window_actor_assign_surface_actor (MetaWindowActor  *self,
 {
   META_WINDOW_ACTOR_GET_CLASS (self)->assign_surface_actor (self,
                                                             surface_actor);
+}
+
+static void
+is_surface_actor_obscured_changed (MetaSurfaceActor *surface_actor,
+                                   GParamSpec       *pspec,
+                                   MetaWindowActor  *window_actor)
+{
+  MetaWindowActorPrivate *priv =
+    meta_window_actor_get_instance_private (window_actor);
+
+  if (meta_surface_actor_is_obscured (surface_actor))
+    meta_window_uninhibit_suspend_state (priv->window);
+  else
+    meta_window_inhibit_suspend_state (priv->window);
+}
+
+static void
+disconnect_surface_actor_from (MetaSurfaceActor *surface_actor,
+                               MetaWindowActor  *window_actor)
+{
+  MetaWindowActorPrivate *priv =
+    meta_window_actor_get_instance_private (window_actor);
+
+  g_signal_handlers_disconnect_by_func (surface_actor,
+                                        is_surface_actor_obscured_changed,
+                                        window_actor);
+  if (!meta_surface_actor_is_obscured (surface_actor))
+    meta_window_uninhibit_suspend_state (priv->window);
+}
+
+void
+meta_window_actor_add_surface_actor (MetaWindowActor  *window_actor,
+                                     MetaSurfaceActor *surface_actor)
+{
+  MetaWindowActorPrivate *priv =
+    meta_window_actor_get_instance_private (window_actor);
+
+  g_signal_connect (surface_actor,
+                    "notify::is-obscured",
+                    G_CALLBACK (is_surface_actor_obscured_changed),
+                    window_actor);
+  if (!meta_surface_actor_is_obscured (surface_actor))
+    meta_window_inhibit_suspend_state (priv->window);
+  g_ptr_array_add (priv->surface_actors, surface_actor);
+}
+
+void
+meta_window_actor_remove_surface_actor (MetaWindowActor  *window_actor,
+                                        MetaSurfaceActor *surface_actor)
+{
+  MetaWindowActorPrivate *priv =
+    meta_window_actor_get_instance_private (window_actor);
+
+  disconnect_surface_actor_from (surface_actor, window_actor);
+  g_ptr_array_remove (priv->surface_actors, surface_actor);
+}
+
+static void
+on_clone_notify_mapped (ClutterClone    *clone,
+                        GParamSpec      *pspec,
+                        MetaWindowActor *window_actor)
+{
+  MetaWindowActorPrivate *priv =
+    meta_window_actor_get_instance_private (window_actor);
+
+  if (clutter_actor_is_mapped (CLUTTER_ACTOR (clone)))
+    meta_window_inhibit_suspend_state (priv->window);
+  else
+    meta_window_uninhibit_suspend_state (priv->window);
+}
+
+static void
+on_cloned (ClutterActor *actor,
+           ClutterClone *clone)
+{
+  MetaWindowActor *window_actor = META_WINDOW_ACTOR (actor);
+  MetaWindowActorPrivate *priv =
+    meta_window_actor_get_instance_private (window_actor);
+
+  g_signal_connect (clone, "notify::mapped",
+                    G_CALLBACK (on_clone_notify_mapped), actor);
+  if (clutter_actor_is_mapped (CLUTTER_ACTOR (clone)))
+    meta_window_inhibit_suspend_state (priv->window);
+}
+
+static void
+on_decloned (ClutterActor *actor,
+             ClutterClone *clone)
+{
+  MetaWindowActor *window_actor = META_WINDOW_ACTOR (actor);
+  MetaWindowActorPrivate *priv =
+    meta_window_actor_get_instance_private (window_actor);
+
+  g_signal_handlers_disconnect_by_func (clone, on_clone_notify_mapped, actor);
+  if (clutter_actor_is_mapped (CLUTTER_ACTOR (clone)) &&
+      priv->window)
+    meta_window_uninhibit_suspend_state (priv->window);
 }
 
 static void
@@ -448,6 +565,10 @@ meta_window_actor_dispose (GObject *object)
 
   priv->disposed = TRUE;
 
+  g_ptr_array_foreach (priv->surface_actors,
+                       (GFunc) disconnect_surface_actor_from,
+                       self);
+  g_clear_pointer (&priv->surface_actors, g_ptr_array_unref);
   g_clear_signal_handler (&priv->stage_views_changed_id, self);
 
   meta_compositor_remove_window_actor (compositor, self);
@@ -818,7 +939,7 @@ meta_window_actor_sync_actor_geometry (MetaWindowActor *self,
 {
   MetaWindowActorPrivate *priv =
     meta_window_actor_get_instance_private (self);
-  MetaRectangle actor_rect;
+  MtkRectangle actor_rect;
   ClutterActor *actor = CLUTTER_ACTOR (self);
   MetaWindowActorChanges changes = 0;
 
@@ -953,10 +1074,10 @@ meta_window_actor_hide (MetaWindowActor *self,
 }
 
 void
-meta_window_actor_size_change (MetaWindowActor    *self,
-                               MetaSizeChange      which_change,
-                               MetaRectangle      *old_frame_rect,
-                               MetaRectangle      *old_buffer_rect)
+meta_window_actor_size_change (MetaWindowActor *self,
+                               MetaSizeChange   which_change,
+                               MtkRectangle    *old_frame_rect,
+                               MtkRectangle    *old_buffer_rect)
 {
   MetaWindowActorPrivate *priv =
     meta_window_actor_get_instance_private (self);
@@ -1103,7 +1224,7 @@ meta_window_actor_get_geometry_scale (MetaWindowActor *window_actor)
 
 static void
 meta_window_actor_get_buffer_bounds (MetaScreenCastWindow *screen_cast_window,
-                                     MetaRectangle        *bounds)
+                                     MtkRectangle         *bounds)
 {
   MetaWindowActor *window_actor = META_WINDOW_ACTOR (screen_cast_window);
   MetaWindowActorPrivate *priv =
@@ -1111,7 +1232,7 @@ meta_window_actor_get_buffer_bounds (MetaScreenCastWindow *screen_cast_window,
   MetaShapedTexture *stex;
 
   stex = meta_surface_actor_get_texture (priv->surface);
-  *bounds = (MetaRectangle) {
+  *bounds = (MtkRectangle) {
     .width = floorf (meta_shaped_texture_get_unscaled_width (stex)),
     .height = floorf (meta_shaped_texture_get_unscaled_height (stex)),
   };
@@ -1128,7 +1249,7 @@ meta_window_actor_transform_relative_position (MetaScreenCastWindow *screen_cast
   MetaWindowActor *window_actor = META_WINDOW_ACTOR (screen_cast_window);
   MetaWindowActorPrivate *priv =
     meta_window_actor_get_instance_private (window_actor);
-  MetaRectangle bounds;
+  MtkRectangle bounds;
   graphene_point3d_t v1 = { 0.f, }, v2 = { 0.f, };
 
   meta_window_actor_get_buffer_bounds (screen_cast_window, &bounds);
@@ -1223,7 +1344,7 @@ meta_window_actor_transform_cursor_position (MetaScreenCastWindow *screen_cast_w
 
 static void
 meta_window_actor_capture_into (MetaScreenCastWindow *screen_cast_window,
-                                MetaRectangle        *bounds,
+                                MtkRectangle         *bounds,
                                 uint8_t              *data)
 {
   MetaWindowActor *window_actor = META_WINDOW_ACTOR (screen_cast_window);
@@ -1279,7 +1400,7 @@ meta_window_actor_capture_into (MetaScreenCastWindow *screen_cast_window,
 
 static gboolean
 meta_window_actor_blit_to_framebuffer (MetaScreenCastWindow *screen_cast_window,
-                                       MetaRectangle        *bounds,
+                                       MtkRectangle         *bounds,
                                        CoglFramebuffer      *framebuffer)
 {
   MetaWindowActor *window_actor = META_WINDOW_ACTOR (screen_cast_window);
@@ -1330,7 +1451,7 @@ meta_window_actor_blit_to_framebuffer (MetaScreenCastWindow *screen_cast_window,
                                  0, 0,
                                  unscaled_width, unscaled_height);
 
-  scaled_clip = meta_rectangle_to_graphene_rect (bounds);
+  scaled_clip = mtk_rectangle_to_graphene_rect (bounds);
   graphene_rect_scale (&scaled_clip,
                        unscaled_width / width,
                        unscaled_height / height,
@@ -1439,7 +1560,7 @@ meta_window_actor_notify_damaged (MetaWindowActor *window_actor)
 
 static CoglFramebuffer *
 create_framebuffer_from_window_actor (MetaWindowActor  *self,
-                                      MetaRectangle    *clip,
+                                      MtkRectangle     *clip,
                                       GError          **error)
 {
   MetaWindowActorPrivate *priv = meta_window_actor_get_instance_private (self);
@@ -1515,14 +1636,14 @@ meta_window_actor_is_single_surface_actor (MetaWindowActor *self)
  */
 cairo_surface_t *
 meta_window_actor_get_image (MetaWindowActor *self,
-                             MetaRectangle   *clip)
+                             MtkRectangle    *clip)
 {
   MetaWindowActorPrivate *priv = meta_window_actor_get_instance_private (self);
   ClutterActor *actor = CLUTTER_ACTOR (self);
   MetaShapedTexture *stex;
   cairo_surface_t *surface = NULL;
   CoglFramebuffer *framebuffer;
-  MetaRectangle framebuffer_clip;
+  MtkRectangle framebuffer_clip;
   float resource_scale;
   float x, y, width, height;
 
@@ -1535,7 +1656,7 @@ meta_window_actor_get_image (MetaWindowActor *self,
   if (!meta_shaped_texture_should_get_via_offscreen (stex) &&
       meta_window_actor_is_single_surface_actor (self))
     {
-      MetaRectangle *surface_clip = NULL;
+      MtkRectangle *surface_clip = NULL;
 
       if (clip)
         {
@@ -1544,7 +1665,7 @@ meta_window_actor_get_image (MetaWindowActor *self,
           geometry_scale =
             meta_window_actor_get_geometry_scale (self);
 
-          surface_clip = g_alloca (sizeof (MetaRectangle));
+          surface_clip = g_alloca (sizeof (MtkRectangle));
           surface_clip->x = clip->x / geometry_scale,
           surface_clip->y = clip->y / geometry_scale;
           surface_clip->width = clip->width / geometry_scale;
@@ -1561,7 +1682,7 @@ meta_window_actor_get_image (MetaWindowActor *self,
   if (width == 0 || height == 0)
     goto out;
 
-  framebuffer_clip = (MetaRectangle) {
+  framebuffer_clip = (MtkRectangle) {
     .x = floorf (x),
     .y = floorf (y),
     .width = ceilf (width),
@@ -1570,15 +1691,15 @@ meta_window_actor_get_image (MetaWindowActor *self,
 
   if (clip)
     {
-      MetaRectangle tmp_clip;
-      MetaRectangle intersected_clip;
+      MtkRectangle tmp_clip;
+      MtkRectangle intersected_clip;
 
       tmp_clip = *clip;
       tmp_clip.x += floorf (x);
       tmp_clip.y += floorf (y);
-      if (!meta_rectangle_intersect (&framebuffer_clip,
-                                     &tmp_clip,
-                                     &intersected_clip))
+      if (!mtk_rectangle_intersect (&framebuffer_clip,
+                                    &tmp_clip,
+                                    &intersected_clip))
         goto out;
 
       framebuffer_clip = intersected_clip;
@@ -1625,7 +1746,7 @@ out:
  */
 ClutterContent *
 meta_window_actor_paint_to_content (MetaWindowActor  *self,
-                                    MetaRectangle    *clip,
+                                    MtkRectangle     *clip,
                                     GError          **error)
 {
   MetaWindowActorPrivate *priv = meta_window_actor_get_instance_private (self);
@@ -1633,7 +1754,7 @@ meta_window_actor_paint_to_content (MetaWindowActor  *self,
   ClutterContent *content = NULL;
   CoglFramebuffer *framebuffer;
   CoglTexture *texture;
-  MetaRectangle framebuffer_clip;
+  MtkRectangle framebuffer_clip;
   float x, y, width, height;
 
   if (!priv->surface)
@@ -1647,7 +1768,7 @@ meta_window_actor_paint_to_content (MetaWindowActor  *self,
   if (width == 0 || height == 0)
     goto out;
 
-  framebuffer_clip = (MetaRectangle) {
+  framebuffer_clip = (MtkRectangle) {
     .x = floorf (x),
     .y = floorf (y),
     .width = ceilf (width),
@@ -1656,9 +1777,9 @@ meta_window_actor_paint_to_content (MetaWindowActor  *self,
 
   if (clip)
     {
-      MetaRectangle tmp_clip;
+      MtkRectangle tmp_clip;
 
-      if (!meta_rectangle_intersect (&framebuffer_clip, clip, &tmp_clip))
+      if (!mtk_rectangle_intersect (&framebuffer_clip, clip, &tmp_clip))
         goto out;
 
       framebuffer_clip = tmp_clip;

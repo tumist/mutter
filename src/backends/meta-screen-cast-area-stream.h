@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,7 +31,7 @@ G_DECLARE_FINAL_TYPE (MetaScreenCastAreaStream,
 
 MetaScreenCastAreaStream * meta_screen_cast_area_stream_new (MetaScreenCastSession     *session,
                                                              GDBusConnection           *connection,
-                                                             MetaRectangle             *area,
+                                                             MtkRectangle              *area,
                                                              ClutterStage              *stage,
                                                              MetaScreenCastCursorMode   cursor_mode,
                                                              MetaScreenCastFlag         flags,
@@ -41,6 +39,6 @@ MetaScreenCastAreaStream * meta_screen_cast_area_stream_new (MetaScreenCastSessi
 
 ClutterStage * meta_screen_cast_area_stream_get_stage (MetaScreenCastAreaStream *area_stream);
 
-MetaRectangle * meta_screen_cast_area_stream_get_area (MetaScreenCastAreaStream *area_stream);
+MtkRectangle * meta_screen_cast_area_stream_get_area (MetaScreenCastAreaStream *area_stream);
 
 float meta_screen_cast_area_stream_get_scale (MetaScreenCastAreaStream *area_stream);

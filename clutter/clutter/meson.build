@@ -355,6 +355,7 @@ if have_introspection
     namespace: 'Clutter',
     export_packages: [libmutter_clutter_name],
     includes: [
+      libmutter_mtk_gir[0],
       libmutter_cogl_gir[0],
       libmutter_cogl_pango_gir[0],
       'GL-1.0',
@@ -376,8 +377,10 @@ if have_introspection
       cally_headers,
     ],
     nsversion: libmutter_api_version,
+    header: 'cally/cally.h',
     namespace: 'Cally',
     includes: [
+      libmutter_mtk_gir[0],
       libmutter_cogl_gir[0],
       libmutter_cogl_pango_gir[0],
       libmutter_clutter_gir[0],
@@ -405,7 +408,7 @@ pkg.generate(libmutter_clutter,
   description: 'Mutters Clutter Private Library',
   libraries: [m_dep],
   subdirs: pkgname / 'clutter',
-  requires: [clutter_pkg_deps, libmutter_cogl_name],
+  requires: [clutter_pkg_deps, libmutter_cogl_name, libmutter_mtk_name],
   version: meson.project_version(),
   variables: [
     'apiversion=' + libmutter_api_version,

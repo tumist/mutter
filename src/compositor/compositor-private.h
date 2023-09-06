@@ -40,9 +40,6 @@ struct _MetaCompositorClass
                                         ClutterStageView *stage_view);
 };
 
-gboolean meta_compositor_do_manage (MetaCompositor  *compositor,
-                                    GError         **error);
-
 void meta_compositor_remove_window_actor (MetaCompositor  *compositor,
                                           MetaWindowActor *window_actor);
 
@@ -93,7 +90,8 @@ void meta_compositor_grab_end (MetaCompositor *compositor);
 
 void meta_compositor_destroy (MetaCompositor *compositor);
 
-void meta_compositor_manage   (MetaCompositor *compositor);
+gboolean meta_compositor_manage (MetaCompositor  *compositor,
+                                 GError         **error);
 
 void meta_compositor_unmanage (MetaCompositor *compositor);
 
@@ -125,11 +123,11 @@ void meta_compositor_switch_workspace (MetaCompositor      *compositor,
                                        MetaWorkspace       *to,
                                        MetaMotionDirection  direction);
 
-void meta_compositor_size_change_window (MetaCompositor      *compositor,
-                                         MetaWindow          *window,
-                                         MetaSizeChange       which_change,
-                                         MetaRectangle       *old_frame_rect,
-                                         MetaRectangle       *old_buffer_rect);
+void meta_compositor_size_change_window (MetaCompositor *compositor,
+                                         MetaWindow     *window,
+                                         MetaSizeChange  which_change,
+                                         MtkRectangle   *old_frame_rect,
+                                         MtkRectangle   *old_buffer_rect);
 
 void meta_compositor_sync_window_geometry (MetaCompositor *compositor,
                                            MetaWindow     *window,
@@ -150,7 +148,7 @@ void meta_compositor_flash_display (MetaCompositor *compositor,
 
 void meta_compositor_show_tile_preview (MetaCompositor *compositor,
                                         MetaWindow     *window,
-                                        MetaRectangle  *tile_rect,
+                                        MtkRectangle   *tile_rect,
                                         int             tile_monitor_number);
 
 void meta_compositor_hide_tile_preview (MetaCompositor *compositor);
@@ -160,11 +158,6 @@ void meta_compositor_show_window_menu (MetaCompositor     *compositor,
 				       MetaWindowMenuType  menu,
                                        int                 x,
                                        int                 y);
-
-void meta_compositor_show_window_menu_for_rect (MetaCompositor     *compositor,
-                                                MetaWindow         *window,
-				                MetaWindowMenuType  menu,
-                                                MetaRectangle      *rect);
 
 /*
  * This function takes a 64 bit time stamp from the monotonic clock, and clamps

@@ -52,14 +52,14 @@ typedef struct _MetaRegionIterator MetaRegionIterator;
 
 struct _MetaRegionIterator {
   cairo_region_t *region;
-  cairo_rectangle_int_t rectangle;
+  MtkRectangle rectangle;
   gboolean line_start;
   gboolean line_end;
   int i;
 
   /*< private >*/
   int n_rectangles;
-  cairo_rectangle_int_t next_rectangle;
+  MtkRectangle next_rectangle;
 };
 
 typedef struct _MetaRegionBuilder MetaRegionBuilder;
@@ -95,10 +95,6 @@ void     meta_region_iterator_next      (MetaRegionIterator *iter);
 
 cairo_region_t * meta_region_scale (cairo_region_t *region,
                                     int             scale);
-
-cairo_region_t * meta_region_scale_double (cairo_region_t       *region,
-                                           double                scale,
-                                           MetaRoundingStrategy  rounding_strategy);
 
 cairo_region_t * meta_make_border_region (cairo_region_t *region,
                                           int             x_amount,
