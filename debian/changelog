@@ -1,3 +1,9 @@
+mutter (45~rc-0ubuntu1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 06 Sep 2023 13:38:59 -0400
+
 mutter (45~beta.1-1ubuntu2) mantic; urgency=medium
 
   * Cherry-pick 2 proposed patches to build with sysprof 45
