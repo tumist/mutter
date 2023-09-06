@@ -208,7 +208,7 @@ check_current_monitor_mode (MetaMonitor         *monitor,
 
 static MetaLogicalMonitor *
 logical_monitor_from_layout (MetaMonitorManager *monitor_manager,
-                             MetaRectangle      *layout)
+                             MtkRectangle       *layout)
 {
   GList *l;
 
@@ -216,7 +216,7 @@ logical_monitor_from_layout (MetaMonitorManager *monitor_manager,
     {
       MetaLogicalMonitor *logical_monitor = l->data;
 
-      if (meta_rectangle_equal (layout, &logical_monitor->rect))
+      if (mtk_rectangle_equal (layout, &logical_monitor->rect))
         return logical_monitor;
     }
 
@@ -572,7 +572,7 @@ meta_check_monitor_configuration (MetaContext           *context,
           const GList *outputs = meta_crtc_get_outputs (crtc);
           const GList *l_output;
           MetaRendererView *view;
-          cairo_rectangle_int_t view_layout;
+          MtkRectangle view_layout;
 
           for (l_output = outputs;
                l_output;

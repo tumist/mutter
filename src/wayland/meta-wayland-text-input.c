@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
@@ -67,7 +65,7 @@ struct _MetaWaylandTextInput
     uint32_t anchor;
   } surrounding;
 
-  cairo_rectangle_int_t cursor_rect;
+  MtkRectangle cursor_rect;
 
   uint32_t content_type_hint;
   uint32_t content_type_purpose;
@@ -586,7 +584,7 @@ text_input_set_cursor_rectangle (struct wl_client   *client,
   if (!client_matches_focus (text_input, client))
     return;
 
-  text_input->cursor_rect = (cairo_rectangle_int_t) { x, y, width, height };
+  text_input->cursor_rect = (MtkRectangle) { x, y, width, height };
   text_input->pending_state |= META_WAYLAND_PENDING_STATE_INPUT_RECT;
 }
 
@@ -597,7 +595,7 @@ meta_wayland_text_input_reset (MetaWaylandTextInput *text_input)
   text_input->content_type_hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_NONE;
   text_input->content_type_purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL;
   text_input->text_change_cause = ZWP_TEXT_INPUT_V3_CHANGE_CAUSE_INPUT_METHOD;
-  text_input->cursor_rect = (cairo_rectangle_int_t) { 0, 0, 0, 0 };
+  text_input->cursor_rect = (MtkRectangle) { 0, 0, 0, 0 };
   text_input->pending_state = META_WAYLAND_PENDING_STATE_NONE;
 }
 
@@ -663,7 +661,7 @@ text_input_commit_state (struct wl_client   *client,
     {
       graphene_rect_t cursor_rect;
       float x1, y1, x2, y2;
-      cairo_rectangle_int_t rect;
+      MtkRectangle rect;
 
       rect = text_input->cursor_rect;
       meta_wayland_surface_get_absolute_coordinates (text_input->surface,

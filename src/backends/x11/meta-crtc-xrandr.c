@@ -26,9 +26,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -50,7 +48,7 @@ struct _MetaCrtcXrandr
 {
   MetaCrtc parent;
 
-  MetaRectangle rect;
+  MtkRectangle rect;
   MetaMonitorTransform transform;
   MetaCrtcMode *current_mode;
 };
@@ -256,7 +254,7 @@ meta_crtc_xrandr_new (MetaGpuXrandr      *gpu_xrandr,
   panning = XRRGetPanning (xdisplay, resources, crtc_id);
   if (panning && panning->width > 0 && panning->height > 0)
     {
-      crtc_xrandr->rect = (MetaRectangle) {
+      crtc_xrandr->rect = (MtkRectangle) {
         .x = panning->left,
         .y = panning->top,
         .width = panning->width,
@@ -265,7 +263,7 @@ meta_crtc_xrandr_new (MetaGpuXrandr      *gpu_xrandr,
     }
   else
     {
-      crtc_xrandr->rect = (MetaRectangle) {
+      crtc_xrandr->rect = (MtkRectangle) {
         .x = xrandr_crtc->x,
         .y = xrandr_crtc->y,
         .width = xrandr_crtc->width,

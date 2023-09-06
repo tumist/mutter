@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -59,6 +57,7 @@
 #include "core/display-private.h"
 #include "meta/meta-cursor-tracker.h"
 #include "meta/util.h"
+#include "mtk/mtk-x11-errors.h"
 
 struct _MetaBackendX11Private
 {
@@ -955,6 +954,7 @@ meta_backend_x11_dispose (GObject *object)
 
   G_OBJECT_CLASS (meta_backend_x11_parent_class)->dispose (object);
 
+  g_clear_pointer (&priv->barriers, meta_x11_barriers_free);
   g_clear_pointer (&priv->xdisplay, XCloseDisplay);
 }
 
@@ -965,6 +965,8 @@ meta_backend_x11_finalize (GObject *object)
   MetaBackendX11Private *priv = meta_backend_x11_get_instance_private (x11);
 
   g_clear_pointer (&priv->keymap, xkb_keymap_unref);
+
+  mtk_x11_errors_deinit ();
 
   G_OBJECT_CLASS (meta_backend_x11_parent_class)->finalize (object);
 }
@@ -993,6 +995,7 @@ static void
 meta_backend_x11_init (MetaBackendX11 *x11)
 {
   XInitThreads ();
+  mtk_x11_errors_init ();
 }
 
 Display *

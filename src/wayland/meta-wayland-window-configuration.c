@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -27,7 +25,7 @@ static uint32_t global_serial_counter = 0;
 
 MetaWaylandWindowConfiguration *
 meta_wayland_window_configuration_new (MetaWindow          *window,
-                                       MetaRectangle        rect,
+                                       MtkRectangle         rect,
                                        int                  bounds_width,
                                        int                  bounds_height,
                                        int                  scale,
@@ -49,6 +47,7 @@ meta_wayland_window_configuration_new (MetaWindow          *window,
     .flags = flags,
 
     .is_fullscreen = meta_window_is_fullscreen (window),
+    .is_suspended = meta_window_is_suspended (window),
   };
 
   if (flags & META_MOVE_RESIZE_MOVE_ACTION ||

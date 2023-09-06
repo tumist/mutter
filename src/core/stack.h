@@ -211,16 +211,6 @@ void        meta_stack_thaw (MetaStack *stack);
 MetaWindow * meta_stack_get_top (MetaStack  *stack);
 
 /**
- * meta_stack_get_bottom:
- * @stack: The stack to search
- *
- * Finds the window at the bottom of the stack.  Since that's pretty much
- * always the desktop, this isn't the most useful of functions, and nobody
- * actually calls it.  We should probably get rid of it.
- */
-MetaWindow * meta_stack_get_bottom (MetaStack  *stack);
-
-/**
  * meta_stack_get_above:
  * @stack: The stack to search.
  * @window: The window to look above.
@@ -308,32 +298,6 @@ int meta_stack_windows_cmp (MetaStack  *stack,
  */
 void meta_window_set_stack_position (MetaWindow *window,
                                      int         position);
-
-/**
- * meta_stack_get_positions:
- * @stack: The stack to examine.
- *
- * Returns the current stack state, allowing rudimentary transactions.
- *
- * Returns: (transfer container) (element-type Meta.Window):
- *          An opaque #GList representing the current stack sort order;
- *          it is the caller's responsibility to free it.
- *          Pass this to meta_stack_set_positions() later if you want to restore
- *          the state to where it was when you called this function.
- */
-GList * meta_stack_get_positions (MetaStack *stack);
-
-/**
- * meta_stack_set_positions:
- * @stack:  The stack to roll back.
- * @windows:  The list returned from meta_stack_get_positions().
- *
- * Rolls back a transaction, given the list returned from
- * meta_stack_get_positions().
- *
- */
-void meta_stack_set_positions (MetaStack *stack,
-                               GList     *windows);
 
 void meta_stack_update_window_tile_matches (MetaStack     *stack,
                                             MetaWorkspace *workspace);

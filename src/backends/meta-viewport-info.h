@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Carlos Garnacho <carlosg@gnome.org>
@@ -22,28 +20,28 @@
 
 #pragma once
 
-#include <cairo.h>
 #include <glib-object.h>
 
 #include "meta/display.h"
+#include "mtk/mtk.h"
 
 #define META_TYPE_VIEWPORT_INFO (meta_viewport_info_get_type ())
 G_DECLARE_FINAL_TYPE (MetaViewportInfo, meta_viewport_info,
                       META, VIEWPORT_INFO, GObject)
 
-MetaViewportInfo * meta_viewport_info_new (cairo_rectangle_int_t *views,
-                                           float                 *scales,
-                                           int                    n_views,
-                                           gboolean               is_views_scaled);
+MetaViewportInfo * meta_viewport_info_new (MtkRectangle *views,
+                                           float        *scales,
+                                           int           n_views,
+                                           gboolean      is_views_scaled);
 
 int meta_viewport_info_get_view_at (MetaViewportInfo *info,
                                     float             x,
                                     float             y);
 
-gboolean meta_viewport_info_get_view_info (MetaViewportInfo      *viewport_info,
-                                           int                    idx,
-                                           cairo_rectangle_int_t *rect,
-                                           float                 *scale);
+gboolean meta_viewport_info_get_view_info (MetaViewportInfo *viewport_info,
+                                           int               idx,
+                                           MtkRectangle     *rect,
+                                           float            *scale);
 
 int meta_viewport_info_get_neighbor (MetaViewportInfo     *info,
                                      int                   idx,

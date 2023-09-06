@@ -116,7 +116,6 @@ G_DEFINE_TYPE_WITH_CODE (MetaRendererNative,
                                                 initable_iface_init))
 
 static const CoglWinsysEGLVtable _cogl_winsys_egl_vtable;
-static const CoglWinsysVtable *parent_vtable;
 
 static gboolean
 meta_renderer_native_ensure_gpu_data (MetaRendererNative  *renderer_native,
@@ -125,12 +124,6 @@ meta_renderer_native_ensure_gpu_data (MetaRendererNative  *renderer_native,
 
 static void
 meta_renderer_native_queue_modes_reset (MetaRendererNative *renderer_native);
-
-const CoglWinsysVtable *
-meta_get_renderer_native_parent_vtable (void)
-{
-  return parent_vtable;
-}
 
 static void
 meta_renderer_native_gpu_data_free (MetaRendererNativeGpuData *renderer_gpu_data)
@@ -294,6 +287,8 @@ ensure_mode_set_update (MetaRendererNative *renderer_native,
     return kms_update;
 
   kms_update = meta_kms_update_new (kms_device);
+  g_hash_table_insert (renderer_native->mode_set_updates,
+                       kms_device, kms_update);
 
   return kms_update;
 }
@@ -936,10 +931,11 @@ unset_disabled_crtcs (MetaRendererNative *renderer_native)
 }
 
 static CoglDmaBufHandle *
-meta_renderer_native_create_dma_buf (CoglRenderer  *cogl_renderer,
-                                     int            width,
-                                     int            height,
-                                     GError       **error)
+meta_renderer_native_create_dma_buf (CoglRenderer     *cogl_renderer,
+                                     CoglPixelFormat   format,
+                                     int               width,
+                                     int               height,
+                                     GError          **error)
 {
   CoglRendererEGL *cogl_renderer_egl = cogl_renderer->winsys;
   MetaRendererNativeGpuData *renderer_gpu_data = cogl_renderer_egl->platform;
@@ -957,16 +953,23 @@ meta_renderer_native_create_dma_buf (CoglRenderer  *cogl_renderer,
         uint32_t offset;
         uint32_t bpp;
         uint64_t modifier;
-        uint32_t format;
+        uint32_t drm_format;
         CoglFramebuffer *dmabuf_fb;
         CoglDmaBufHandle *dmabuf_handle;
 
+        if (!meta_drm_format_from_cogl_pixel_format (format, &drm_format))
+          {
+            g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                         "Native renderer doesn't support creating DMA buffer with format %s",
+                         cogl_pixel_format_to_string (format));
+            return NULL;
+          }
 
         render_device = renderer_gpu_data->render_device;
         flags = META_DRM_BUFFER_FLAG_NONE;
         buffer = meta_render_device_allocate_dma_buf (render_device,
                                                       width, height,
-                                                      DRM_FORMAT_XRGB8888,
+                                                      drm_format,
                                                       flags,
                                                       error);
         if (!buffer)
@@ -980,7 +983,6 @@ meta_renderer_native_create_dma_buf (CoglRenderer  *cogl_renderer,
         offset = meta_drm_buffer_get_offset (buffer, 0);
         bpp = meta_drm_buffer_get_bpp (buffer);
         modifier = meta_drm_buffer_get_modifier (buffer);
-        format = meta_drm_buffer_get_format (buffer);
 
         dmabuf_fb =
           meta_renderer_native_create_dma_buf_framebuffer (renderer_native,
@@ -989,7 +991,7 @@ meta_renderer_native_create_dma_buf (CoglRenderer  *cogl_renderer,
                                                            stride,
                                                            offset,
                                                            modifier,
-                                                           format,
+                                                           drm_format,
                                                            error);
 
         if (!dmabuf_fb)
@@ -1103,7 +1105,7 @@ meta_renderer_native_queue_modes_reset (MetaRendererNative *renderer_native)
             META_ONSCREEN_NATIVE (framebuffer);
           MetaCrtc *crtc;
           MetaKmsCrtc *kms_crtc;
-          MetaRectangle view_layout;
+          MtkRectangle view_layout;
           float view_scale;
           MetaKmsCrtcLayout crtc_layout;
 
@@ -1208,8 +1210,7 @@ get_native_cogl_winsys_vtable (CoglRenderer *cogl_renderer)
       /* The this winsys is a subclass of the EGL winsys so we
          start by copying its vtable */
 
-      parent_vtable = _cogl_winsys_egl_get_vtable ();
-      vtable = *parent_vtable;
+      vtable = *_cogl_winsys_egl_get_vtable ();
 
       vtable.id = COGL_WINSYS_ID_CUSTOM;
       vtable.name = "EGL_KMS";
@@ -1321,7 +1322,7 @@ meta_renderer_native_create_view (MetaRenderer       *renderer,
   float scale;
   int onscreen_width;
   int onscreen_height;
-  MetaRectangle view_layout;
+  MtkRectangle view_layout;
   MetaRendererViewNative *view_native;
   EGLSurface egl_surface;
   GError *error = NULL;
@@ -1432,9 +1433,9 @@ meta_renderer_native_create_view (MetaRenderer       *renderer,
   else
     scale = 1.0;
 
-  meta_rectangle_from_graphene_rect (&crtc_config->layout,
-                                     META_ROUNDING_STRATEGY_ROUND,
-                                     &view_layout);
+  mtk_rectangle_from_graphene_rect (&crtc_config->layout,
+                                    MTK_ROUNDING_STRATEGY_ROUND,
+                                    &view_layout);
   view_native = g_object_new (META_TYPE_RENDERER_VIEW_NATIVE,
                               "name", meta_output_get_name (output),
                               "stage", meta_backend_get_stage (backend),
@@ -2012,8 +2013,9 @@ on_gpu_added (MetaBackendNative  *backend_native,
 }
 
 static void
-on_power_save_mode_changed (MetaMonitorManager *monitor_manager,
-                            MetaRendererNative *renderer_native)
+on_power_save_mode_changed (MetaMonitorManager        *monitor_manager,
+                            MetaPowerSaveChangeReason  reason,
+                            MetaRendererNative        *renderer_native)
 {
   MetaRenderer *renderer = META_RENDERER (renderer_native);
   MetaBackend *backend = meta_renderer_get_backend (renderer);
@@ -2022,7 +2024,8 @@ on_power_save_mode_changed (MetaMonitorManager *monitor_manager,
   MetaPowerSave power_save_mode;
 
   power_save_mode = meta_monitor_manager_get_power_save_mode (monitor_manager);
-  if (power_save_mode == META_POWER_SAVE_ON)
+  if (power_save_mode == META_POWER_SAVE_ON &&
+      reason == META_POWER_SAVE_CHANGE_REASON_MODE_CHANGE)
     meta_renderer_native_queue_modes_reset (renderer_native);
   else
     meta_kms_discard_pending_page_flips (kms);

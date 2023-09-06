@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -22,6 +20,7 @@
 
 #include "backends/meta-screen-cast-area-stream.h"
 
+#include "backends/meta-eis.h"
 #include "backends/meta-screen-cast-area-stream-src.h"
 
 struct _MetaScreenCastAreaStream
@@ -30,13 +29,17 @@ struct _MetaScreenCastAreaStream
 
   ClutterStage *stage;
 
-  MetaRectangle area;
+  MtkRectangle area;
   float scale;
 };
 
-G_DEFINE_TYPE (MetaScreenCastAreaStream,
-               meta_screen_cast_area_stream,
-               META_TYPE_SCREEN_CAST_STREAM)
+static void meta_eis_viewport_iface_init (MetaEisViewportInterface *eis_viewport_iface);
+
+G_DEFINE_TYPE_WITH_CODE (MetaScreenCastAreaStream,
+                         meta_screen_cast_area_stream,
+                         META_TYPE_SCREEN_CAST_STREAM,
+                         G_IMPLEMENT_INTERFACE (META_TYPE_EIS_VIEWPORT,
+                                                meta_eis_viewport_iface_init))
 
 ClutterStage *
 meta_screen_cast_area_stream_get_stage (MetaScreenCastAreaStream *area_stream)
@@ -44,7 +47,7 @@ meta_screen_cast_area_stream_get_stage (MetaScreenCastAreaStream *area_stream)
   return area_stream->stage;
 }
 
-MetaRectangle *
+MtkRectangle *
 meta_screen_cast_area_stream_get_area (MetaScreenCastAreaStream *area_stream)
 {
   return &area_stream->area;
@@ -57,9 +60,9 @@ meta_screen_cast_area_stream_get_scale (MetaScreenCastAreaStream *area_stream)
 }
 
 static gboolean
-calculate_scale (ClutterStage  *stage,
-                 MetaRectangle *area,
-                 float         *out_scale)
+calculate_scale (ClutterStage *stage,
+                 MtkRectangle *area,
+                 float        *out_scale)
 {
   GList *l;
   float scale = 0.0;
@@ -67,10 +70,10 @@ calculate_scale (ClutterStage  *stage,
   for (l = clutter_stage_peek_stage_views (stage); l; l = l->next)
     {
       ClutterStageView *stage_view = l->data;
-      MetaRectangle view_layout;
+      MtkRectangle view_layout;
 
       clutter_stage_view_get_layout (stage_view, &view_layout);
-      if (meta_rectangle_overlap (area, &view_layout))
+      if (mtk_rectangle_overlap (area, &view_layout))
         scale = MAX (clutter_stage_view_get_scale (stage_view), scale);
     }
 
@@ -84,7 +87,7 @@ calculate_scale (ClutterStage  *stage,
 MetaScreenCastAreaStream *
 meta_screen_cast_area_stream_new (MetaScreenCastSession     *session,
                                   GDBusConnection           *connection,
-                                  MetaRectangle             *area,
+                                  MtkRectangle              *area,
                                   ClutterStage              *stage,
                                   MetaScreenCastCursorMode   cursor_mode,
                                   MetaScreenCastFlag         flags,
@@ -107,6 +110,7 @@ meta_screen_cast_area_stream_new (MetaScreenCastSession     *session,
                                 "connection", connection,
                                 "cursor-mode", cursor_mode,
                                 "flags", flags,
+                                "is-configured", TRUE,
                                 NULL);
   if (!area_stream)
     return NULL;
@@ -116,6 +120,85 @@ meta_screen_cast_area_stream_new (MetaScreenCastSession     *session,
   area_stream->stage = stage;
 
   return area_stream;
+}
+
+static gboolean
+meta_screen_cast_area_stream_is_standalone (MetaEisViewport *viewport)
+{
+  return TRUE;
+}
+
+static const char *
+meta_screen_cast_area_stream_get_mapping_id (MetaEisViewport *viewport)
+{
+  MetaScreenCastStream *stream = META_SCREEN_CAST_STREAM (viewport);
+
+  return meta_screen_cast_stream_get_mapping_id (stream);
+}
+
+static gboolean
+meta_screen_cast_area_stream_get_position (MetaEisViewport *viewport,
+                                           int             *out_x,
+                                           int             *out_y)
+{
+  return FALSE;
+}
+
+static void
+meta_screen_cast_area_stream_get_size (MetaEisViewport *viewport,
+                                       int             *out_width,
+                                       int             *out_height)
+{
+  MetaScreenCastAreaStream *area_stream =
+    META_SCREEN_CAST_AREA_STREAM (viewport);
+
+  *out_width = (int) roundf (area_stream->area.width * area_stream->scale);
+  *out_height = (int) roundf (area_stream->area.height * area_stream->scale);
+}
+
+static double
+meta_screen_cast_area_stream_get_physical_scale (MetaEisViewport *viewport)
+{
+  MetaScreenCastAreaStream *area_stream =
+    META_SCREEN_CAST_AREA_STREAM (viewport);
+
+  return area_stream->scale;
+}
+
+static void
+transform_position (MetaScreenCastAreaStream *area_stream,
+                    double                    x,
+                    double                    y,
+                    double                   *out_x,
+                    double                   *out_y)
+{
+  *out_x = area_stream->area.x + (int) roundf (x / area_stream->scale);
+  *out_y = area_stream->area.y + (int) roundf (y / area_stream->scale);
+}
+
+static gboolean
+meta_screen_cast_area_stream_transform_coordinate (MetaEisViewport *viewport,
+                                                   double           x,
+                                                   double           y,
+                                                   double          *out_x,
+                                                   double          *out_y)
+{
+  MetaScreenCastAreaStream *area_stream =
+    META_SCREEN_CAST_AREA_STREAM (viewport);
+
+  transform_position (area_stream, x, y, out_x, out_y);
+  return TRUE;
+}
+
+static void
+meta_eis_viewport_iface_init (MetaEisViewportInterface *eis_viewport_iface)
+{
+  eis_viewport_iface->is_standalone = meta_screen_cast_area_stream_is_standalone;
+  eis_viewport_iface->get_mapping_id = meta_screen_cast_area_stream_get_mapping_id;
+  eis_viewport_iface->get_position = meta_screen_cast_area_stream_get_position;
+  eis_viewport_iface->get_size = meta_screen_cast_area_stream_get_size;
+  eis_viewport_iface->get_physical_scale = meta_screen_cast_area_stream_get_physical_scale;
+  eis_viewport_iface->transform_coordinate = meta_screen_cast_area_stream_transform_coordinate;
 }
 
 static MetaScreenCastStreamSrc *
@@ -158,8 +241,7 @@ meta_screen_cast_area_stream_transform_position (MetaScreenCastStream *stream,
   MetaScreenCastAreaStream *area_stream =
     META_SCREEN_CAST_AREA_STREAM (stream);
 
-  *x = area_stream->area.x + (int) roundf (stream_x / area_stream->scale);
-  *y = area_stream->area.y + (int) roundf (stream_y / area_stream->scale);
+  transform_position (area_stream, stream_x, stream_y, x, y);
 
   return TRUE;
 }

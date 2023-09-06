@@ -82,8 +82,8 @@ variables:
   extends:
     - .skip-git-clone
   variables:
-    FDO_DISTRIBUTION_VERSION: 38
-    BASE_TAG: '2023-08-01.0'
+    FDO_DISTRIBUTION_VERSION: 39
+    BASE_TAG: '2023-08-31.0'
     MUTTER_USER: 'meta-user'
     FDO_DISTRIBUTION_PACKAGES:
       asciidoc
@@ -98,12 +98,10 @@ variables:
       xorg-x11-proto-devel
       qemu-system-x86-core
       busybox
+      zenity
       gi-docgen
-      python3-attrs
       python3-dbusmock
       pkgconfig(libgcrypt)
-      pkgconfig(libnma-gtk4)
-      pkgconfig(appstream)
 
     FDO_DISTRIBUTION_EXEC: |
       set -e
@@ -118,44 +116,24 @@ variables:
 
       dnf builddep -y mutter --setopt=install_weak_deps=False
       dnf builddep -y gnome-shell --setopt=install_weak_deps=False
-      dnf builddep -y wayland --setopt=install_weak_deps=False
-      dnf builddep -y wayland-protocols --setopt=install_weak_deps=False
       dnf builddep -y kernel --setopt=install_weak_deps=False
-      dnf builddep -y zenity --setopt=install_weak_deps=False
-      dnf builddep -y gtk4 --setopt=install_weak_deps=False
+      dnf builddep -y libei --setopt=install_weak_deps=False
 
       ./.gitlab-ci/install-meson-project.sh \
         https://gitlab.gnome.org/jadahl/catch.git \
         main . 29ad36e2b1d28ac9d8b2bc44af46296cb1db5d66
 
-      # Pull in fix for # https://gitlab.gnome.org/GNOME/zenity/-/issues/58
       ./.gitlab-ci/install-meson-project.sh \
-        https://gitlab.gnome.org/GNOME/zenity.git \
-        master . db1ad8ee7c3db36a7cca6e998e86719293d37838
+        https://gitlab.gnome.org/GNOME/glib.git \
+        main . a7c34b431bfaf3d56de64cb1cfea851ac11099d3
 
       ./.gitlab-ci/install-meson-project.sh \
-        https://gitlab.gnome.org/GNOME/gtk.git \
-        main . 55dd5f47808730ae4f1ffaa481ae37dd536b410a
-
-      ./.gitlab-ci/install-meson-project.sh \
-        https://gitlab.gnome.org/GNOME/libadwaita.git \
-        main . 72f512f01113a64cf332ae0f79becfc487d54b56
-
-      ./.gitlab-ci/install-meson-project.sh \
-        https://gitlab.gnome.org/GNOME/tecla.git \
-        main . 45.alpha
-
-      ./.gitlab-ci/install-meson-project.sh \
-        -Dtests=disabled \
         https://gitlab.freedesktop.org/libinput/libei.git \
-        main . 1.0.0
+        1.0.901 .
 
       rpm -e --nodeps gnome-bluetooth-libs-devel \
                       mutter mutter-devel \
                       gnome-shell
-
-      # Replace pkexec with sudo, to make meson use it if needed
-      ln -sfv /usr/bin/sudo /usr/bin/pkexec
 
       # Ensure that we mark the project clone dir as safe directory
       git config --system --add safe.directory "$CI_PROJECT_DIR"
@@ -349,7 +327,7 @@ check-code-style:
         $BASE_MESON_OPTIONS
         $EXTRA_MESON_OPTIONS
     - meson compile -C build
-    - meson install --dry-run -C build
+    - sudo meson install --dry-run -C build
   artifacts:
     expire_in: 1 day
     paths:
@@ -393,7 +371,7 @@ build-without-opengl-and-glx@x86_64:
         -Dwayland_eglstream=true
         -Dintrospection=false
     - meson compile -C build
-    - meson install --no-rebuild -C build
+    - sudo meson install --no-rebuild -C build
   artifacts:
     paths:
       - build/meson-logs
@@ -417,7 +395,7 @@ build-without-native-backend-and-wayland@x86_64:
         -Dnative_tests=false
         -Dintrospection=false
     - meson compile -C build
-    - meson install --no-rebuild -C build
+    - sudo meson install --no-rebuild -C build
   artifacts:
     paths:
       - build/meson-logs
@@ -439,7 +417,7 @@ build-wayland-only@x86_64:
         -Dnative_tests=false
         -Dintrospection=false
     - meson compile -C build
-    - meson install --no-rebuild -C build
+    - sudo meson install --no-rebuild -C build
   artifacts:
     paths:
       - build/meson-logs
@@ -578,11 +556,11 @@ can-build-gnome-shell@x86_64:
     - build-mutter@x86_64
   before_script:
     - !reference [.mutter.fedora@x86_64, before_script]
-    - meson install --no-rebuild -C build
+    - sudo meson install --no-rebuild -C build
   script:
     - .gitlab-ci/checkout-gnome-shell.sh
     - meson setup gnome-shell gnome-shell/build --prefix /usr -Dman=false
-    - meson install -C gnome-shell/build
+    - sudo meson install -C gnome-shell/build
 
 test-mutter-coverity:
   rules:
@@ -664,7 +642,7 @@ reference:
     - meson setup . build --werror -Ddocs=true -Dtests=false
     - ninja -C build
     - mkdir references
-    - mv build/doc/reference/{cally/cally,clutter/clutter,cogl/cogl,cogl-pango/cogl-pango,meta/meta} references/
+    - mv build/doc/reference/{cally/cally,clutter/clutter,cogl/cogl,cogl-pango/cogl-pango,meta/meta,mtk/mtk} references/
   artifacts:
     expire_in: 1 week
     expose_as: 'Documentation'

@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -72,18 +70,6 @@ calculate_view_transform (MetaMonitorManager *monitor_manager,
     return crtc_transform;
 }
 
-static MetaRendererView *
-get_legacy_view (MetaRenderer *renderer)
-{
-  GList *views;
-
-  views = meta_renderer_get_views (renderer);
-  if (views)
-    return META_RENDERER_VIEW (views->data);
-  else
-    return NULL;
-}
-
 static CoglOffscreen *
 create_offscreen (CoglContext *cogl_context,
                   int          width,
@@ -100,77 +86,6 @@ create_offscreen (CoglContext *cogl_context,
     meta_fatal ("Couldn't allocate framebuffer: %s", error->message);
 
   return offscreen;
-}
-
-static void
-meta_renderer_x11_nested_resize_legacy_view (MetaRendererX11Nested *renderer_x11_nested,
-                                             int                    width,
-                                             int                    height)
-{
-  MetaRenderer *renderer = META_RENDERER (renderer_x11_nested);
-  MetaBackend *backend = meta_renderer_get_backend (renderer);
-  ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
-  CoglContext *cogl_context = clutter_backend_get_cogl_context (clutter_backend);
-  MetaRendererView *legacy_view;
-  cairo_rectangle_int_t view_layout;
-  CoglOffscreen *fake_onscreen;
-
-  legacy_view = get_legacy_view (renderer);
-
-  clutter_stage_view_get_layout (CLUTTER_STAGE_VIEW (legacy_view),
-                                 &view_layout);
-  if (view_layout.width == width &&
-      view_layout.height == height)
-    return;
-
-  view_layout = (cairo_rectangle_int_t) {
-      .width = width,
-        .height = height
-  };
-
-  fake_onscreen = create_offscreen (cogl_context, width, height);
-
-  g_object_set (G_OBJECT (legacy_view),
-                "layout", &view_layout,
-                "framebuffer", COGL_FRAMEBUFFER (fake_onscreen),
-                NULL);
-}
-
-void
-meta_renderer_x11_nested_ensure_legacy_view (MetaRendererX11Nested *renderer_x11_nested,
-                                             int                    width,
-                                             int                    height)
-{
-  MetaRenderer *renderer = META_RENDERER (renderer_x11_nested);
-  MetaBackend *backend = meta_renderer_get_backend (renderer);
-  ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
-  CoglContext *cogl_context = clutter_backend_get_cogl_context (clutter_backend);
-  cairo_rectangle_int_t view_layout;
-  CoglOffscreen *fake_onscreen;
-  MetaRendererView *legacy_view;
-
-  if (get_legacy_view (renderer))
-    {
-      meta_renderer_x11_nested_resize_legacy_view (renderer_x11_nested,
-                                                   width, height);
-      return;
-    }
-
-  fake_onscreen = create_offscreen (cogl_context, width, height);
-
-  view_layout = (cairo_rectangle_int_t) {
-    .width = width,
-    .height = height
-  };
-  legacy_view = g_object_new (META_TYPE_RENDERER_VIEW,
-                              "name", "legacy nested",
-                              "stage", meta_backend_get_stage (backend),
-                              "layout", &view_layout,
-                              "framebuffer", COGL_FRAMEBUFFER (fake_onscreen),
-                              NULL);
-
-  g_assert (!meta_renderer_get_views (renderer));
-  meta_renderer_add_view (renderer, legacy_view);
 }
 
 static MetaRendererView *
@@ -190,7 +105,7 @@ meta_renderer_x11_nested_create_view (MetaRenderer       *renderer,
   int width, height;
   CoglOffscreen *fake_onscreen;
   CoglOffscreen *offscreen;
-  MetaRectangle view_layout;
+  MtkRectangle view_layout;
   const MetaCrtcModeInfo *mode_info;
   MetaRendererView *view;
 
@@ -212,9 +127,9 @@ meta_renderer_x11_nested_create_view (MetaRenderer       *renderer,
   else
     offscreen = NULL;
 
-  meta_rectangle_from_graphene_rect (&crtc_config->layout,
-                                     META_ROUNDING_STRATEGY_ROUND,
-                                     &view_layout);
+  mtk_rectangle_from_graphene_rect (&crtc_config->layout,
+                                    MTK_ROUNDING_STRATEGY_ROUND,
+                                    &view_layout);
 
   mode_info = meta_crtc_mode_get_info (crtc_config->mode);
 

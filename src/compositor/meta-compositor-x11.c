@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -244,7 +242,7 @@ shape_cow_for_window (MetaCompositorX11 *compositor_x11,
       XserverRegion output_region;
       XRectangle screen_rect, window_bounds;
       int width, height;
-      MetaRectangle rect;
+      MtkRectangle rect;
 
       meta_window_get_frame_rect (window, &rect);
 

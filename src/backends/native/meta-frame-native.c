@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -51,16 +49,6 @@ MetaFrameNative *
 meta_frame_native_from_frame (ClutterFrame *frame)
 {
   return META_CONTAINER_OF (frame, MetaFrameNative, base);
-}
-
-void
-meta_frame_native_set_kms_update (MetaFrameNative *frame_native,
-                                  MetaKmsUpdate   *kms_update)
-{
-  g_return_if_fail (!frame_native->kms_update);
-
-  frame_native->kms_update = kms_update;
-  frame_native->had_kms_update = TRUE;
 }
 
 MetaKmsUpdate *

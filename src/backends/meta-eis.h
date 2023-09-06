@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,13 +23,38 @@
 #include <glib-object.h>
 
 #include "backends/meta-backend-types.h"
-#include "backends/meta-viewport-info.h"
+#include "backends/meta-eis-viewport.h"
+
+typedef enum _MetaEisDeviceTypes
+{
+  META_EIS_DEVICE_TYPE_NONE = 0,
+  META_EIS_DEVICE_TYPE_KEYBOARD = 1 << 0,
+  META_EIS_DEVICE_TYPE_POINTER = 1 << 1,
+  META_EIS_DEVICE_TYPE_TOUCHSCREEN = 1 << 2,
+} MetaEisDeviceTypes;
 
 #define META_TYPE_EIS (meta_eis_get_type ())
 G_DECLARE_FINAL_TYPE (MetaEis, meta_eis,
                       META, EIS, GObject)
 
-MetaEis * meta_eis_new (MetaBackend *backend);
-MetaBackend * meta_eis_get_backend (MetaEis *meta_eis);
-int meta_eis_add_client_get_fd (MetaEis *meta_eis);
-void meta_eis_remove_all_clients (MetaEis *meta_eis);
+MetaEis * meta_eis_new (MetaBackend        *backend,
+                        MetaEisDeviceTypes  device_types);
+
+MetaBackend * meta_eis_get_backend (MetaEis *eis);
+
+int meta_eis_add_client_get_fd (MetaEis *eis);
+
+void meta_eis_add_viewport (MetaEis         *eis,
+                            MetaEisViewport *viewport);
+
+void meta_eis_remove_viewport (MetaEis         *eis,
+                               MetaEisViewport *viewport);
+
+void meta_eis_take_viewports (MetaEis *eis,
+                              GList   *viewports);
+
+void meta_eis_remove_all_viewports (MetaEis *eis);
+
+GList * meta_eis_peek_viewports (MetaEis *eis);
+
+MetaEisDeviceTypes meta_eis_get_device_types (MetaEis *eis);

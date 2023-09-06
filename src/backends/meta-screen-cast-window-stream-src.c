@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -111,7 +109,7 @@ get_stream_height (MetaScreenCastWindowStreamSrc *window_src)
 static void
 maybe_draw_cursor_sprite (MetaScreenCastWindowStreamSrc *window_src,
                           uint8_t                       *data,
-                          MetaRectangle                 *stream_rect)
+                          MtkRectangle                  *stream_rect)
 {
   MetaScreenCastStreamSrc *src = META_SCREEN_CAST_STREAM_SRC (window_src);
   MetaBackend *backend = get_backend (window_src);
@@ -194,7 +192,7 @@ maybe_draw_cursor_sprite (MetaScreenCastWindowStreamSrc *window_src,
 static void
 maybe_blit_cursor_sprite (MetaScreenCastWindowStreamSrc *window_src,
                           CoglFramebuffer               *framebuffer,
-                          MetaRectangle                 *stream_rect)
+                          MtkRectangle                  *stream_rect)
 {
   MetaBackend *backend = get_backend (window_src);
   CoglContext *cogl_context =
@@ -268,10 +266,10 @@ capture_into (MetaScreenCastWindowStreamSrc *window_src,
               uint8_t                       *data)
 {
   MetaScreenCastStreamSrc *src = META_SCREEN_CAST_STREAM_SRC (window_src);
-  MetaRectangle stream_rect;
+  MtkRectangle stream_rect;
   MetaScreenCastStream *stream;
 
-  stream_rect = (MetaRectangle) {
+  stream_rect = (MtkRectangle) {
     .width = width,
     .height = height,
   };
@@ -311,11 +309,11 @@ meta_screen_cast_window_stream_src_get_specs (MetaScreenCastStreamSrc *src,
 
 static gboolean
 meta_screen_cast_window_stream_src_get_videocrop (MetaScreenCastStreamSrc *src,
-                                                  MetaRectangle           *crop_rect)
+                                                  MtkRectangle            *crop_rect)
 {
   MetaScreenCastWindowStreamSrc *window_src =
     META_SCREEN_CAST_WINDOW_STREAM_SRC (src);
-  MetaRectangle stream_rect;
+  MtkRectangle stream_rect;
 
   meta_screen_cast_window_get_buffer_bounds (window_src->screen_cast_window,
                                              crop_rect);
@@ -325,7 +323,7 @@ meta_screen_cast_window_stream_src_get_videocrop (MetaScreenCastStreamSrc *src,
   stream_rect.width = get_stream_width (window_src);
   stream_rect.height = get_stream_height (window_src);
 
-  meta_rectangle_intersect (crop_rect, &stream_rect, crop_rect);
+  mtk_rectangle_intersect (crop_rect, &stream_rect, crop_rect);
 
   return TRUE;
 }
@@ -513,7 +511,7 @@ meta_screen_cast_window_stream_src_record_to_framebuffer (MetaScreenCastStreamSr
   MetaScreenCastWindowStreamSrc *window_src =
     META_SCREEN_CAST_WINDOW_STREAM_SRC (src);
   MetaScreenCastStream *stream;
-  MetaRectangle stream_rect;
+  MtkRectangle stream_rect;
 
   stream_rect.x = 0;
   stream_rect.y = 0;
@@ -619,6 +617,12 @@ meta_screen_cast_window_stream_src_set_cursor_metadata (MetaScreenCastStreamSrc 
     }
 }
 
+static CoglPixelFormat
+meta_screen_cast_window_stream_src_get_preferred_format (MetaScreenCastStreamSrc *src)
+{
+  return COGL_PIXEL_FORMAT_BGRA_8888_PRE;
+}
+
 MetaScreenCastWindowStreamSrc *
 meta_screen_cast_window_stream_src_new (MetaScreenCastWindowStream  *window_stream,
                                         GError                     **error)
@@ -651,4 +655,6 @@ meta_screen_cast_window_stream_src_class_init (MetaScreenCastWindowStreamSrcClas
     meta_screen_cast_window_stream_record_follow_up;
   src_class->get_videocrop = meta_screen_cast_window_stream_src_get_videocrop;
   src_class->set_cursor_metadata = meta_screen_cast_window_stream_src_set_cursor_metadata;
+  src_class->get_preferred_format =
+    meta_screen_cast_window_stream_src_get_preferred_format;
 }

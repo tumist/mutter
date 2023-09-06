@@ -25,11 +25,12 @@
 #include <string.h>
 
 #include "backends/meta-virtual-monitor.h"
+#include "compositor/meta-window-actor-private.h"
+#include "core/meta-workspace-manager-private.h"
 #include "core/window-private.h"
 #include "meta-test/meta-context-test.h"
 #include "meta/util.h"
 #include "meta/window.h"
-#include "core/meta-workspace-manager-private.h"
 #include "tests/meta-test-utils.h"
 #include "wayland/meta-wayland.h"
 #include "x11/meta-x11-display-private.h"
@@ -44,6 +45,7 @@ typedef struct {
   gulong x11_display_opened_handler_id;
   GHashTable *virtual_monitors;
   ClutterVirtualInputDevice *pointer;
+  GHashTable *cloned_windows;
 } TestCase;
 
 static gboolean
@@ -175,10 +177,11 @@ test_case_wait (TestCase *test,
 
 static gboolean
 test_case_sleep (TestCase  *test,
-                 guint32    interval,
+                 uint32_t   interval_ms,
                  GError   **error)
 {
-  g_timeout_add_full (G_PRIORITY_LOW, interval, test_case_loop_quit, test, NULL);
+  g_timeout_add_full (G_PRIORITY_LOW, interval_ms,
+                      test_case_loop_quit, test, NULL);
   g_main_loop_run (test->loop);
 
   return TRUE;
@@ -347,7 +350,7 @@ test_case_assert_size (TestCase    *test,
                        int          expected_height,
                        GError     **error)
 {
-  MetaRectangle frame_rect;
+  MtkRectangle frame_rect;
 
   meta_window_get_frame_rect (window, &frame_rect);
 
@@ -446,7 +449,7 @@ parse_window_size (MetaWindow *window,
                    const char *size_str)
 {
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle logical_monitor_layout;
+  MtkRectangle logical_monitor_layout;
   int value;
 
   logical_monitor = meta_window_find_monitor_from_frame_rect (window);
@@ -847,16 +850,18 @@ test_case_do (TestCase    *test,
     }
   else if (strcmp (argv[0], "sleep") == 0)
     {
-      guint64 interval;
+      uint64_t interval_ms;
 
       if (argc != 2)
-        BAD_COMMAND("usage: %s <milliseconds>", argv[0]);
+        BAD_COMMAND("usage: %s <milliseconds>|<known-time>", argv[0]);
 
-      if (!g_ascii_string_to_unsigned (argv[1], 10, 0, G_MAXUINT32,
-                                       &interval, error))
+      if (strcmp (argv[1], "suspend_timeout") == 0)
+        interval_ms = s2ms (meta_get_window_suspend_timeout_s ());
+      else if (!g_ascii_string_to_unsigned (argv[1], 10, 0, G_MAXUINT32,
+                                            &interval_ms, error))
         return FALSE;
 
-      if (!test_case_sleep (test, (guint32) interval, error))
+      if (!test_case_sleep (test, (uint32_t) interval_ms, error))
         return FALSE;
     }
   else if (strcmp (argv[0], "set_strut") == 0)
@@ -884,7 +889,7 @@ test_case_do (TestCase    *test,
       MetaDisplay *display = meta_context_get_display (test->context);
       MetaWorkspaceManager *workspace_manager =
         meta_display_get_workspace_manager (display);
-      MetaRectangle rect = { x, y, width, height };
+      MtkRectangle rect = { x, y, width, height };
       MetaStrut strut = { rect, side };
       GSList *struts = g_slist_append (NULL, &strut);
       GList *workspaces =
@@ -994,7 +999,7 @@ test_case_do (TestCase    *test,
       if (!window)
         return FALSE;
 
-      MetaRectangle frame_rect;
+      MtkRectangle frame_rect;
       meta_window_get_frame_rect (window, &frame_rect);
       int x = atoi (argv[2]);
       int y = atoi (argv[3]);
@@ -1308,6 +1313,117 @@ test_case_do (TestCase    *test,
         BAD_COMMAND("Unknown preference %s", argv[1]);
       }
     }
+  else if (strcmp (argv[0], "toggle_overview") == 0)
+    {
+      MetaDisplay *display = meta_context_get_display (test->context);
+
+      if (argc != 1)
+        BAD_COMMAND ("usage: %s", argv[0]);
+
+      g_signal_emit_by_name (display, "overlay-key", 0);
+    }
+  else if (strcmp (argv[0], "clone") == 0)
+    {
+      MetaBackend *backend = meta_context_get_backend (test->context);
+      ClutterActor *stage = meta_backend_get_stage (backend);
+      MetaTestClient *client;
+      const char *window_id;
+      MetaWindow *window;
+      MetaWindowActor *window_actor;
+      ClutterActor *clone;
+
+      if (argc != 2)
+        BAD_COMMAND("usage: %s <client-id>/<window-id>", argv[0]);
+
+      if (!test_case_parse_window_id (test, argv[1], &client, &window_id, error))
+        return FALSE;
+
+      window = meta_test_client_find_window (client, window_id, error);
+      if (!window)
+        return FALSE;
+
+      if (g_object_get_data (G_OBJECT (window), "test-clone"))
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Already cloned");
+          return FALSE;
+        }
+
+      window_actor = meta_window_actor_from_window (window);
+      clone = clutter_clone_new (CLUTTER_ACTOR (window_actor));
+      clutter_actor_show (clone);
+
+      clutter_actor_add_child (stage, clone);
+      g_object_set_data (G_OBJECT (window), "test-clone", clone);
+
+      if (!test->cloned_windows)
+        {
+          test->cloned_windows = g_hash_table_new_full (g_str_hash, g_str_equal,
+                                                        g_free, g_object_unref);
+        }
+
+      g_hash_table_insert (test->cloned_windows,
+                           g_strdup (argv[1]), g_object_ref (window));
+    }
+  else if (strcmp (argv[0], "declone") == 0)
+    {
+      MetaTestClient *client;
+      const char *window_id;
+      MetaWindow *live_window;
+      MetaWindow *window;
+      ClutterActor *clone;
+
+      if (argc != 2)
+        BAD_COMMAND("usage: %s <client-id>/<window-id>", argv[0]);
+
+      if (!test_case_parse_window_id (test, argv[1], &client, &window_id, error))
+        return FALSE;
+
+      window = g_hash_table_lookup (test->cloned_windows, argv[1]);
+      g_assert_nonnull (window);
+
+      live_window = meta_test_client_find_window (client, window_id, NULL);
+      if (live_window)
+        g_assert_true (live_window == window);
+
+      if (!g_object_get_data (G_OBJECT (window), "test-clone"))
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Wasn't cloned");
+          return FALSE;
+        }
+
+      clone = g_object_get_data (G_OBJECT (window), "test-clone");
+      clutter_actor_destroy (clone);
+
+      g_hash_table_remove (test->cloned_windows, argv[1]);
+    }
+  else if (strcmp (argv[0], "wait_for_effects") == 0)
+    {
+      MetaTestClient *client;
+      const char *window_id;
+      MetaWindow *window;
+      MetaWindowActor *window_actor;
+
+      if (argc != 2)
+        BAD_COMMAND("usage: %s <client-id>/<window-id>", argv[0]);
+
+      if (!test_case_parse_window_id (test, argv[1], &client, &window_id, error))
+        return FALSE;
+
+      window = meta_test_client_find_window (client, window_id, error);
+      if (!window)
+        return FALSE;
+
+      window_actor = meta_window_actor_from_window (window);
+      g_object_add_weak_pointer (G_OBJECT (window_actor),
+                                 (gpointer *) &window_actor);
+      while (window_actor && meta_window_actor_effect_in_progress (window_actor))
+        g_main_context_iteration (NULL, TRUE);
+      if (window_actor)
+        {
+          g_object_remove_weak_pointer (G_OBJECT (window_actor),
+                                        (gpointer *) &window_actor);
+        }
+    }
   else
     {
       BAD_COMMAND("Unknown command %s", argv[0]);
@@ -1327,6 +1443,12 @@ test_case_destroy (TestCase *test,
   GHashTableIter iter;
   gpointer key, value;
   MetaDisplay *display;
+
+  if (test->cloned_windows)
+    {
+      g_assert_cmpuint (g_hash_table_size (test->cloned_windows), ==, 0);
+      g_hash_table_unref (test->cloned_windows);
+    }
 
   g_hash_table_iter_init (&iter, test->clients);
   while (g_hash_table_iter_next (&iter, &key, &value))

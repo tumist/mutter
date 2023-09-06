@@ -27,6 +27,17 @@
 #include "compositor/region-utils.h"
 #include "meta/meta-shaped-texture.h"
 
+enum
+{
+  PROP_0,
+
+  PROP_IS_OBSCURED,
+
+  N_PROPS
+};
+
+static GParamSpec *obj_props[N_PROPS];
+
 typedef struct _MetaSurfaceActorPrivate
 {
   MetaShapedTexture *texture;
@@ -35,6 +46,7 @@ typedef struct _MetaSurfaceActorPrivate
 
   /* MetaCullable regions, see that documentation for more details */
   cairo_region_t *unobscured_region;
+  gboolean is_obscured;
 
   /* Freeze/thaw accounting */
   cairo_region_t *pending_damage;
@@ -78,6 +90,29 @@ effective_unobscured_region (MetaSurfaceActor *surface_actor)
 }
 
 static void
+update_is_obscured (MetaSurfaceActor *surface_actor)
+{
+  MetaSurfaceActorPrivate *priv =
+    meta_surface_actor_get_instance_private (surface_actor);
+  cairo_region_t *unobscured_region;
+  gboolean is_obscured;
+
+  unobscured_region = priv->unobscured_region;
+
+  if (unobscured_region)
+    is_obscured = cairo_region_is_empty (unobscured_region);
+  else
+    is_obscured = FALSE;
+
+  if (priv->is_obscured == is_obscured)
+    return;
+
+  priv->is_obscured = is_obscured;
+  g_object_notify_by_pspec (G_OBJECT (surface_actor),
+                            obj_props[PROP_IS_OBSCURED]);
+}
+
+static void
 set_unobscured_region (MetaSurfaceActor *surface_actor,
                        cairo_region_t   *unobscured_region)
 {
@@ -93,13 +128,13 @@ set_unobscured_region (MetaSurfaceActor *surface_actor,
         }
       else
         {
-          cairo_rectangle_int_t bounds = { 0, };
+          MtkRectangle bounds = { 0, };
           float width, height;
 
           clutter_content_get_preferred_size (CLUTTER_CONTENT (priv->texture),
                                               &width,
                                               &height);
-          bounds = (cairo_rectangle_int_t) {
+          bounds = (MtkRectangle) {
             .width = width,
             .height = height,
           };
@@ -109,6 +144,8 @@ set_unobscured_region (MetaSurfaceActor *surface_actor,
           cairo_region_intersect_rectangle (priv->unobscured_region, &bounds);
         }
     }
+
+  update_is_obscured (surface_actor);
 }
 
 static void
@@ -164,7 +201,7 @@ meta_surface_actor_pick (ClutterActor       *actor,
 
       for (i = 0; i < n_rects; i++)
         {
-          cairo_rectangle_int_t rect;
+          MtkRectangle rect;
           ClutterActorBox box;
 
           cairo_region_get_rectangle (priv->input_region, i, &rect);
@@ -191,6 +228,27 @@ meta_surface_actor_get_paint_volume (ClutterActor       *actor,
 }
 
 static void
+meta_surface_actor_get_property (GObject      *object,
+                                 guint         prop_id,
+                                 GValue       *value,
+                                 GParamSpec   *pspec)
+{
+  MetaSurfaceActor *surface_actor = META_SURFACE_ACTOR (object);
+  MetaSurfaceActorPrivate *priv =
+    meta_surface_actor_get_instance_private (surface_actor);
+
+  switch (prop_id)
+    {
+    case PROP_IS_OBSCURED:
+      g_value_set_boolean (value, priv->is_obscured);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
+}
+
+static void
 meta_surface_actor_dispose (GObject *object)
 {
   MetaSurfaceActor *self = META_SURFACE_ACTOR (object);
@@ -212,8 +270,18 @@ meta_surface_actor_class_init (MetaSurfaceActorClass *klass)
   ClutterActorClass *actor_class = CLUTTER_ACTOR_CLASS (klass);
 
   object_class->dispose = meta_surface_actor_dispose;
+  object_class->get_property = meta_surface_actor_get_property;
+
   actor_class->pick = meta_surface_actor_pick;
   actor_class->get_paint_volume = meta_surface_actor_get_paint_volume;
+
+  obj_props[PROP_IS_OBSCURED] =
+    g_param_spec_boolean ("is-obscured",
+                          "is obscured",
+                          "If the surface actor is fully obscured",
+                          TRUE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_properties (object_class, N_PROPS, obj_props);
 
   signals[REPAINT_SCHEDULED] = g_signal_new ("repaint-scheduled",
                                              G_TYPE_FROM_CLASS (object_class),
@@ -237,17 +305,15 @@ meta_surface_actor_is_opaque (MetaSurfaceActor *self)
 }
 
 static void
-meta_surface_actor_cull_out (MetaCullable   *cullable,
-                             cairo_region_t *unobscured_region,
-                             cairo_region_t *clip_region)
+subtract_opaque_region (MetaSurfaceActor *surface_actor,
+                        cairo_region_t   *region)
 {
-  MetaSurfaceActor *surface_actor = META_SURFACE_ACTOR (cullable);
   MetaSurfaceActorPrivate *priv =
     meta_surface_actor_get_instance_private (surface_actor);
-  uint8_t opacity = clutter_actor_get_paint_opacity (CLUTTER_ACTOR (cullable));
+  uint8_t opacity = clutter_actor_get_paint_opacity (CLUTTER_ACTOR (surface_actor));
 
-  set_unobscured_region (surface_actor, unobscured_region);
-  set_clip_region (surface_actor, clip_region);
+  if (!region)
+    return;
 
   if (opacity == 0xff)
     {
@@ -258,26 +324,37 @@ meta_surface_actor_cull_out (MetaCullable   *cullable,
       if (!opaque_region)
         return;
 
-      if (unobscured_region)
-        cairo_region_subtract (unobscured_region, opaque_region);
-      if (clip_region)
-        cairo_region_subtract (clip_region, opaque_region);
+      cairo_region_subtract (region, opaque_region);
     }
 }
 
 static void
-meta_surface_actor_reset_culling (MetaCullable *cullable)
+meta_surface_actor_cull_redraw_clip (MetaCullable   *cullable,
+                                     cairo_region_t *clip_region)
 {
   MetaSurfaceActor *surface_actor = META_SURFACE_ACTOR (cullable);
 
-  set_clip_region (surface_actor, NULL);
+  set_clip_region (surface_actor, clip_region);
+
+  subtract_opaque_region (surface_actor, clip_region);
+}
+
+static void
+meta_surface_actor_cull_unobscured (MetaCullable   *cullable,
+                                    cairo_region_t *unobscured_region)
+{
+  MetaSurfaceActor *surface_actor = META_SURFACE_ACTOR (cullable);
+
+  set_unobscured_region (surface_actor, unobscured_region);
+
+  subtract_opaque_region (surface_actor, unobscured_region);
 }
 
 static void
 cullable_iface_init (MetaCullableInterface *iface)
 {
-  iface->cull_out = meta_surface_actor_cull_out;
-  iface->reset_culling = meta_surface_actor_reset_culling;
+  iface->cull_redraw_clip = meta_surface_actor_cull_redraw_clip;
+  iface->cull_unobscured = meta_surface_actor_cull_unobscured;
 }
 
 static void
@@ -294,6 +371,7 @@ meta_surface_actor_init (MetaSurfaceActor *self)
   MetaSurfaceActorPrivate *priv =
     meta_surface_actor_get_instance_private (self);
 
+  priv->is_obscured = TRUE;
   priv->texture = meta_shaped_texture_new ();
   g_signal_connect_object (priv->texture, "size-changed",
                            G_CALLBACK (texture_size_changed), self, 0);
@@ -322,7 +400,7 @@ meta_surface_actor_update_area (MetaSurfaceActor *self,
   MetaSurfaceActorPrivate *priv =
     meta_surface_actor_get_instance_private (self);
   gboolean repaint_scheduled = FALSE;
-  cairo_rectangle_int_t clip;
+  MtkRectangle clip;
 
   if (meta_shaped_texture_update_area (priv->texture, x, y, width, height, &clip))
     {
@@ -347,7 +425,7 @@ meta_surface_actor_update_area (MetaSurfaceActor *self,
               n_rectangles = cairo_region_num_rectangles (intersection);
               for (i = 0; i < n_rectangles; i++)
                 {
-                  cairo_rectangle_int_t rect;
+                  MtkRectangle rect;
 
                   cairo_region_get_rectangle (intersection, i, &rect);
                   clutter_actor_queue_redraw_with_clip (CLUTTER_ACTOR (self), &rect);
@@ -372,14 +450,22 @@ meta_surface_actor_update_area (MetaSurfaceActor *self,
 gboolean
 meta_surface_actor_is_obscured (MetaSurfaceActor *self)
 {
-  cairo_region_t *unobscured_region;
+  MetaSurfaceActorPrivate *priv =
+    meta_surface_actor_get_instance_private (self);
 
-  unobscured_region = effective_unobscured_region (self);
+  return priv->is_obscured;
+}
 
-  if (unobscured_region)
-    return cairo_region_is_empty (unobscured_region);
-  else
+gboolean
+meta_surface_actor_is_effectively_obscured (MetaSurfaceActor *surface_actor)
+{
+  MetaSurfaceActorPrivate *priv =
+    meta_surface_actor_get_instance_private (surface_actor);
+
+  if (clutter_actor_has_mapped_clones (CLUTTER_ACTOR (surface_actor)))
     return FALSE;
+  else
+    return priv->is_obscured;
 }
 
 gboolean
@@ -397,7 +483,7 @@ meta_surface_actor_is_obscured_on_stage_view (MetaSurfaceActor *self,
         meta_surface_actor_get_instance_private (self);
       ClutterActor *stage = clutter_actor_get_stage (CLUTTER_ACTOR (self));
       cairo_region_t *intersection_region;
-      cairo_rectangle_int_t stage_rect;
+      MtkRectangle stage_rect;
       graphene_matrix_t transform;
       graphene_rect_t actor_bounds;
       float bounds_width, bounds_height;
@@ -440,7 +526,7 @@ meta_surface_actor_is_obscured_on_stage_view (MetaSurfaceActor *self,
       n_rects = cairo_region_num_rectangles (intersection_region);
       for (i = 0; i < n_rects; i++)
         {
-          cairo_rectangle_int_t rect;
+          MtkRectangle rect;
 
           cairo_region_get_rectangle (intersection_region, i, &rect);
           intersection_size += rect.width * rect.height;
@@ -514,7 +600,7 @@ meta_surface_actor_process_damage (MetaSurfaceActor *self,
        * any drawing done to the window is always immediately reflected in the
        * texture regardless of damage event handling.
        */
-      cairo_rectangle_int_t rect = { .x = x, .y = y, .width = width, .height = height };
+      MtkRectangle rect = { .x = x, .y = y, .width = width, .height = height };
 
       if (!priv->pending_damage)
         priv->pending_damage = cairo_region_create_rectangle (&rect);
@@ -541,7 +627,7 @@ meta_surface_actor_set_frozen (MetaSurfaceActor *self,
   if (!frozen && priv->pending_damage)
     {
       int i, n_rects = cairo_region_num_rectangles (priv->pending_damage);
-      cairo_rectangle_int_t rect;
+      MtkRectangle rect;
 
       /* Since we ignore damage events while a window is frozen for certain effects
        * we need to apply the tracked damage now. */

@@ -19,9 +19,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -55,12 +53,12 @@ void meta_shaped_texture_set_buffer_scale (MetaShapedTexture *stex,
                                            int                buffer_scale);
 int meta_shaped_texture_get_buffer_scale (MetaShapedTexture *stex);
 
-gboolean meta_shaped_texture_update_area (MetaShapedTexture     *stex,
-                                          int                    x,
-                                          int                    y,
-                                          int                    width,
-                                          int                    height,
-                                          cairo_rectangle_int_t *clip);
+gboolean meta_shaped_texture_update_area (MetaShapedTexture *stex,
+                                          int                x,
+                                          int                y,
+                                          int                width,
+                                          int                height,
+                                          MtkRectangle      *clip);
 
 int meta_shaped_texture_get_width (MetaShapedTexture *stex);
 int meta_shaped_texture_get_height (MetaShapedTexture *stex);

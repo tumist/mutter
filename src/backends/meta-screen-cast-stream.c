@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +22,7 @@
 
 #include "backends/meta-screen-cast-stream.h"
 
+#include "backends/meta-remote-desktop-session.h"
 #include "backends/meta-screen-cast-session.h"
 
 #include "meta-private-enum-types.h"
@@ -39,7 +38,12 @@ enum
   PROP_CONNECTION,
   PROP_CURSOR_MODE,
   PROP_FLAGS,
+  PROP_IS_CONFIGURED,
+
+  N_PROPS
 };
+
+static GParamSpec *obj_props[N_PROPS];
 
 enum
 {
@@ -59,8 +63,11 @@ typedef struct _MetaScreenCastStreamPrivate
 
   MetaScreenCastCursorMode cursor_mode;
   MetaScreenCastFlag flags;
+  gboolean is_configured;
 
   MetaScreenCastStreamSrc *src;
+
+  char *mapping_id;
 } MetaScreenCastStreamPrivate;
 
 static void
@@ -219,6 +226,34 @@ meta_screen_cast_stream_get_flags (MetaScreenCastStream *stream)
   return priv->flags;
 }
 
+const char *
+meta_screen_cast_stream_get_mapping_id (MetaScreenCastStream *stream)
+{
+  MetaScreenCastStreamPrivate *priv =
+    meta_screen_cast_stream_get_instance_private (stream);
+
+  return priv->mapping_id;
+}
+
+gboolean
+meta_screen_cast_stream_is_configured (MetaScreenCastStream *stream)
+{
+  MetaScreenCastStreamPrivate *priv =
+    meta_screen_cast_stream_get_instance_private (stream);
+
+  return priv->is_configured;
+}
+
+void
+meta_screen_cast_stream_notify_is_configured (MetaScreenCastStream *stream)
+{
+  MetaScreenCastStreamPrivate *priv =
+    meta_screen_cast_stream_get_instance_private (stream);
+
+  priv->is_configured = TRUE;
+  g_object_notify_by_pspec (G_OBJECT (stream), obj_props[PROP_IS_CONFIGURED]);
+}
+
 static void
 meta_screen_cast_stream_set_property (GObject      *object,
                                       guint         prop_id,
@@ -242,6 +277,9 @@ meta_screen_cast_stream_set_property (GObject      *object,
       break;
     case PROP_FLAGS:
       priv->flags = g_value_get_flags (value);
+      break;
+    case PROP_IS_CONFIGURED:
+      priv->is_configured = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -272,6 +310,9 @@ meta_screen_cast_stream_get_property (GObject    *object,
     case PROP_FLAGS:
       g_value_set_flags (value, priv->flags);
       break;
+    case PROP_IS_CONFIGURED:
+      g_value_set_boolean (value, priv->is_configured);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -288,6 +329,7 @@ meta_screen_cast_stream_finalize (GObject *object)
     meta_screen_cast_stream_close (stream);
 
   g_clear_pointer (&priv->object_path, g_free);
+  g_clear_pointer (&priv->mapping_id, g_free);
 
   G_OBJECT_CLASS (meta_screen_cast_stream_parent_class)->finalize (object);
 }
@@ -360,12 +402,27 @@ meta_screen_cast_stream_initable_init (GInitable     *initable,
   MetaDBusScreenCastStream *skeleton = META_DBUS_SCREEN_CAST_STREAM (stream);
   MetaScreenCastStreamPrivate *priv =
     meta_screen_cast_stream_get_instance_private (stream);
+  MetaRemoteDesktopSession *remote_desktop_session;
   GVariantBuilder parameters_builder;
   GVariant *parameters_variant;
   static unsigned int global_stream_number = 0;
 
   g_variant_builder_init (&parameters_builder, G_VARIANT_TYPE_VARDICT);
   meta_screen_cast_stream_set_parameters (stream, &parameters_builder);
+
+  remote_desktop_session =
+    meta_screen_cast_session_get_remote_desktop_session (priv->session);
+  if (remote_desktop_session)
+    {
+      const char *mapping_id;
+
+      mapping_id =
+        meta_remote_desktop_session_acquire_mapping_id (remote_desktop_session);
+      priv->mapping_id = g_strdup (mapping_id);
+      g_variant_builder_add (&parameters_builder, "{sv}",
+                             "mapping-id",
+                             g_variant_new ("s", priv->mapping_id));
+    }
 
   parameters_variant = g_variant_builder_end (&parameters_builder);
   meta_dbus_screen_cast_stream_set_parameters (skeleton, parameters_variant);
@@ -402,40 +459,40 @@ meta_screen_cast_stream_class_init (MetaScreenCastStreamClass *klass)
   object_class->set_property = meta_screen_cast_stream_set_property;
   object_class->get_property = meta_screen_cast_stream_get_property;
 
-  g_object_class_install_property (object_class,
-                                   PROP_SESSION,
-                                   g_param_spec_object ("session", NULL, NULL,
-                                                        META_TYPE_SCREEN_CAST_SESSION,
-                                                        G_PARAM_READWRITE |
-                                                        G_PARAM_CONSTRUCT_ONLY |
-                                                        G_PARAM_STATIC_STRINGS));
-
-  g_object_class_install_property (object_class,
-                                   PROP_CONNECTION,
-                                   g_param_spec_object ("connection", NULL, NULL,
-                                                        G_TYPE_DBUS_CONNECTION,
-                                                        G_PARAM_READWRITE |
-                                                        G_PARAM_CONSTRUCT_ONLY |
-                                                        G_PARAM_STATIC_STRINGS));
-
-  g_object_class_install_property (object_class,
-                                   PROP_CURSOR_MODE,
-                                   g_param_spec_uint ("cursor-mode", NULL, NULL,
-                                                      META_SCREEN_CAST_CURSOR_MODE_HIDDEN,
-                                                      META_SCREEN_CAST_CURSOR_MODE_METADATA,
-                                                      META_SCREEN_CAST_CURSOR_MODE_HIDDEN,
-                                                      G_PARAM_READWRITE |
-                                                      G_PARAM_CONSTRUCT_ONLY |
-                                                      G_PARAM_STATIC_STRINGS));
-
-  g_object_class_install_property (object_class,
-                                   PROP_FLAGS,
-                                   g_param_spec_flags ("flags", NULL, NULL,
-                                                       META_TYPE_SCREEN_CAST_FLAG,
-                                                       META_SCREEN_CAST_FLAG_NONE,
-                                                       G_PARAM_READWRITE |
-                                                       G_PARAM_CONSTRUCT_ONLY |
-                                                       G_PARAM_STATIC_STRINGS));
+  obj_props[PROP_SESSION] =
+    g_param_spec_object ("session", NULL, NULL,
+                         META_TYPE_SCREEN_CAST_SESSION,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_CONNECTION] =
+    g_param_spec_object ("connection", NULL, NULL,
+                         G_TYPE_DBUS_CONNECTION,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_CURSOR_MODE] =
+    g_param_spec_uint ("cursor-mode", NULL, NULL,
+                       META_SCREEN_CAST_CURSOR_MODE_HIDDEN,
+                       META_SCREEN_CAST_CURSOR_MODE_METADATA,
+                       META_SCREEN_CAST_CURSOR_MODE_HIDDEN,
+                       G_PARAM_READWRITE |
+                       G_PARAM_CONSTRUCT_ONLY |
+                       G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_FLAGS] =
+    g_param_spec_flags ("flags", NULL, NULL,
+                        META_TYPE_SCREEN_CAST_FLAG,
+                        META_SCREEN_CAST_FLAG_NONE,
+                        G_PARAM_READWRITE |
+                        G_PARAM_CONSTRUCT_ONLY |
+                        G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_IS_CONFIGURED] =
+    g_param_spec_boolean ("is-configured", NULL, NULL,
+                          FALSE,
+                          G_PARAM_READWRITE |
+                          G_PARAM_CONSTRUCT |
+                          G_PARAM_STATIC_STRINGS);
+  g_object_class_install_properties (object_class, N_PROPS, obj_props);
 
   signals[CLOSED] = g_signal_new ("closed",
                                   G_TYPE_FROM_CLASS (klass),

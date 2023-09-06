@@ -24,52 +24,15 @@
 #include <glib-object.h>
 #include <meta/common.h>
 
-#define META_TYPE_RECTANGLE            (meta_rectangle_get_type ())
-
-/**
- * MetaRectangle:
- * @x: X coordinate of the top-left corner
- * @y: Y coordinate of the top-left corner
- * @width: Width of the rectangle
- * @height: Height of the rectangle
- */
-#ifdef __GI_SCANNER__
-/* The introspection scanner is currently unable to lookup how
- * cairo_rectangle_int_t is actually defined. This prevents
- * introspection data for the GdkRectangle type to include fields
- * descriptions. To workaround this issue, we define it with the same
- * content as cairo_rectangle_int_t, but only under the introspection
- * define.
- */
-struct _MetaRectangle
-{
-  int x;
-  int y;
-  int width;
-  int height;
-};
-typedef struct _MetaRectangle MetaRectangle;
-#else
-typedef cairo_rectangle_int_t MetaRectangle;
-#endif
-
-#define META_RECTANGLE_INIT(_x, _y, _width, _height) \
-  (MetaRectangle) { \
-    .x = (_x), \
-    .y = (_y), \
-    .width = (_width), \
-    .height = (_height) \
-  }
-
 /**
  * MetaStrut:
- * @rect: #MetaRectangle the #MetaStrut is on
+ * @rect: #MtkRectangle the #MetaStrut is on
  * @side: #MetaSide the #MetaStrut is on
  */
 typedef struct _MetaStrut MetaStrut;
 struct _MetaStrut
 {
-  MetaRectangle rect;
+  MtkRectangle rect;
   MetaSide side;
 };
 
@@ -88,77 +51,14 @@ typedef enum
 
 /**
  * MetaEdge:
- * @rect: #MetaRectangle with the bounds of the edge
+ * @rect: #MtkRectangle with the bounds of the edge
  * @side_type: Side
  * @edge_type: To what belongs the edge
  */
 typedef struct _MetaEdge MetaEdge;
 struct _MetaEdge
 {
-  MetaRectangle rect;      /* width or height should be 1 */
+  MtkRectangle rect;      /* width or height should be 1 */
   MetaSide side_type;
   MetaEdgeType  edge_type;
 };
-
-META_EXPORT
-GType meta_rectangle_get_type (void);
-
-META_EXPORT
-MetaRectangle *meta_rectangle_copy (const MetaRectangle *rect);
-
-META_EXPORT
-void           meta_rectangle_free (MetaRectangle       *rect);
-
-/* Function to make initializing a rect with a single line of code easy */
-META_EXPORT
-MetaRectangle                 meta_rect (int x, int y, int width, int height);
-
-/* Basic comparison functions */
-META_EXPORT
-int      meta_rectangle_area            (const MetaRectangle *rect);
-
-META_EXPORT
-gboolean meta_rectangle_intersect       (const MetaRectangle *src1,
-                                         const MetaRectangle *src2,
-                                         MetaRectangle       *dest);
-
-META_EXPORT
-gboolean meta_rectangle_equal           (const MetaRectangle *src1,
-                                         const MetaRectangle *src2);
-
-/* Find the bounding box of the union of two rectangles */
-META_EXPORT
-void     meta_rectangle_union           (const MetaRectangle *rect1,
-                                         const MetaRectangle *rect2,
-                                         MetaRectangle       *dest);
-
-/* overlap is similar to intersect but doesn't provide location of
- * intersection information.
- */
-META_EXPORT
-gboolean meta_rectangle_overlap         (const MetaRectangle *rect1,
-                                         const MetaRectangle *rect2);
-
-/* vert_overlap means ignore the horizontal location and ask if the
- * vertical parts overlap.  An alternate way to think of it is "Does there
- * exist a way to shift either rect horizontally so that the two rects
- * overlap?"  horiz_overlap is similar.
- */
-META_EXPORT
-gboolean meta_rectangle_vert_overlap    (const MetaRectangle *rect1,
-                                         const MetaRectangle *rect2);
-
-META_EXPORT
-gboolean meta_rectangle_horiz_overlap   (const MetaRectangle *rect1,
-                                         const MetaRectangle *rect2);
-
-/* could_fit_rect determines whether "outer_rect" is big enough to contain
- * inner_rect.  contains_rect checks whether it actually contains it.
- */
-META_EXPORT
-gboolean meta_rectangle_could_fit_rect  (const MetaRectangle *outer_rect,
-                                         const MetaRectangle *inner_rect);
-
-META_EXPORT
-gboolean meta_rectangle_contains_rect   (const MetaRectangle *outer_rect,
-                                         const MetaRectangle *inner_rect);

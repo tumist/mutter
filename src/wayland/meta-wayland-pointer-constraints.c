@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jonas Ådahl <jadahl@gmail.com>
@@ -608,12 +606,6 @@ meta_wayland_pointer_constraint_maybe_enable_for_window (MetaWindow *window)
     }
 }
 
-MetaWaylandSeat *
-meta_wayland_pointer_constraint_get_seat (MetaWaylandPointerConstraint *constraint)
-{
-  return constraint->seat;
-}
-
 cairo_region_t *
 meta_wayland_pointer_constraint_calculate_effective_region (MetaWaylandPointerConstraint *constraint)
 {
@@ -638,7 +630,7 @@ meta_wayland_pointer_constraint_calculate_effective_region (MetaWaylandPointerCo
                                                     frame->bottom_height);
       if (actual_width > 0 && actual_height > 0)
         {
-          cairo_region_intersect_rectangle (region, &(cairo_rectangle_int_t) {
+          cairo_region_intersect_rectangle (region, &(MtkRectangle) {
                                               .x = frame->child_x,
                                               .y = frame->child_y,
                                               .width = actual_width,

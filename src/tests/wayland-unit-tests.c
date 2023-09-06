@@ -148,7 +148,7 @@ on_effects_completed_idle (gpointer user_data)
   MetaBackend *backend = meta_context_get_backend (test_context);
   ClutterActor *stage = meta_backend_get_stage (backend);
   MetaWindow *window = meta_window_actor_get_meta_window (actor);
-  MetaRectangle buffer_rect;
+  MtkRectangle buffer_rect;
 
   /* Move the window to a known position and perform a mouse click, allowing a
    * popup to be mapped. */
@@ -244,7 +244,7 @@ on_unmap_sync_point (MetaWaylandTestDriver *test_driver,
       ClutterActor *actor = CLUTTER_ACTOR (meta_wayland_surface_get_actor (surface));
       MetaWindowActor *window_actor = meta_window_actor_from_actor (actor);
       MetaWindow *window = meta_window_actor_get_meta_window (window_actor);
-      MetaRectangle buffer_rect;
+      MtkRectangle buffer_rect;
 
       /* Click inside the window to allow mapping a popup. */
 
@@ -424,7 +424,7 @@ wait_until_after_paint (void)
 }
 
 static void
-set_struts (MetaRectangle rect,
+set_struts (MtkRectangle  rect,
             MetaSide      side)
 {
   MetaDisplay *display = meta_context_get_display (test_context);
@@ -465,7 +465,7 @@ clear_struts (void)
     }
 }
 
-static MetaRectangle
+static MtkRectangle
 get_primary_logical_monitor_layout (void)
 {
   MetaBackend *backend = meta_context_get_backend (test_context);
@@ -483,8 +483,8 @@ toplevel_bounds_struts (void)
 {
   MetaWaylandTestClient *wayland_test_client;
   MetaWindow *window;
-  MetaRectangle logical_monitor_layout;
-  MetaRectangle work_area;
+  MtkRectangle logical_monitor_layout;
+  MtkRectangle work_area;
 
   /*
    * This test case makes sure that setting and changing struts result in the
@@ -492,7 +492,7 @@ toplevel_bounds_struts (void)
    */
 
   logical_monitor_layout = get_primary_logical_monitor_layout ();
-  set_struts ((MetaRectangle) {
+  set_struts ((MtkRectangle) {
                 .x = 0,
                 .y = 0,
                 .width = logical_monitor_layout.width,
@@ -566,8 +566,8 @@ toplevel_bounds_monitors (void)
   ClutterSeat *seat;
   g_autoptr (MetaVirtualMonitor) second_virtual_monitor = NULL;
   MetaWaylandTestClient *wayland_test_client;
-  MetaRectangle logical_monitor_layout;
-  MetaRectangle work_area;
+  MtkRectangle logical_monitor_layout;
+  MtkRectangle work_area;
   MetaWindow *window;
 
   /*
@@ -584,7 +584,7 @@ toplevel_bounds_monitors (void)
                                                      300, 200, 60.0);
 
   logical_monitor_layout = get_primary_logical_monitor_layout ();
-  set_struts ((MetaRectangle) {
+  set_struts ((MtkRectangle) {
                 .x = 0,
                 .y = 0,
                 .width = logical_monitor_layout.width,
@@ -765,9 +765,9 @@ wayland_registry_filter (void)
   g_autoptr (MetaWaylandClient) client1 = NULL;
   g_autoptr (MetaWaylandClient) client2 = NULL;
   g_autoptr (MetaWaylandClient) client3 = NULL;
-  g_autoptr (GThread) thread1 = NULL;
-  g_autoptr (GThread) thread2 = NULL;
-  g_autoptr (GThread) thread3 = NULL;
+  GThread *thread1;
+  GThread *thread2;
+  GThread *thread3;
   gboolean client1_destroyed = FALSE;
   gboolean client2_destroyed = FALSE;
   gboolean client3_destroyed = FALSE;
@@ -839,6 +839,32 @@ wayland_registry_filter (void)
   g_assert_false (client3_saw_global);
 }
 
+static gboolean
+set_true (gpointer user_data)
+{
+  gboolean *done = user_data;
+
+  *done = TRUE;
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+wayland_idle_inhibit_instant_destroy (void)
+{
+  MetaWaylandTestClient *wayland_test_client;
+  gboolean done;
+
+  wayland_test_client =
+    meta_wayland_test_client_new (test_context, "idle-inhibit");
+  meta_wayland_test_client_finish (wayland_test_client);
+
+  done = FALSE;
+  g_timeout_add_seconds (1, set_true, &done);
+  while (!done)
+    g_main_context_iteration (NULL, TRUE);
+}
+
 static void
 on_before_tests (void)
 {
@@ -886,6 +912,8 @@ init_tests (void)
                    xdg_foreign_set_parent_of);
   g_test_add_func ("/wayland/registry/filter",
                    wayland_registry_filter);
+  g_test_add_func ("/wayland/idle-inhibit/instant-destroy",
+                   wayland_idle_inhibit_instant_destroy);
 }
 
 int

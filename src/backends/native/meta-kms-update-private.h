@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -62,7 +60,7 @@ typedef struct _MetaKmsPlaneAssignment
   MetaKmsPlane *plane;
   MetaDrmBuffer *buffer;
   MetaFixed16Rectangle src_rect;
-  MetaRectangle dst_rect;
+  MtkRectangle dst_rect;
   MetaKmsAssignPlaneFlag flags;
   MetaKmsFbDamage *fb_damage;
   MetaKmsPlaneRotation rotation;
@@ -183,9 +181,6 @@ META_EXPORT_TEST
 GList * meta_kms_update_get_crtc_color_updates (MetaKmsUpdate *update);
 
 MetaKmsCustomPageFlip * meta_kms_update_take_custom_page_flip_func (MetaKmsUpdate *update);
-
-void meta_kms_update_drop_plane_assignment (MetaKmsUpdate *update,
-                                            MetaKmsPlane  *plane);
 
 META_EXPORT_TEST
 GList * meta_kms_update_take_result_listeners (MetaKmsUpdate *update);

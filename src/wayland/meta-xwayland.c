@@ -16,9 +16,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -1228,7 +1226,7 @@ meta_xwayland_set_primary_output (MetaX11Display *x11_display)
       RROutput output_id = resources->outputs[i];
       XRROutputInfo *xrandr_output;
       XRRCrtcInfo *crtc_info = NULL;
-      MetaRectangle crtc_geometry;
+      MtkRectangle crtc_geometry;
 
       xrandr_output = XRRGetOutputInfo (xdisplay, resources, output_id);
       if (!xrandr_output)
@@ -1249,7 +1247,7 @@ meta_xwayland_set_primary_output (MetaX11Display *x11_display)
 
       XRRFreeCrtcInfo (crtc_info);
 
-      if (meta_rectangle_equal (&crtc_geometry, &primary_monitor->rect))
+      if (mtk_rectangle_equal (&crtc_geometry, &primary_monitor->rect))
         {
           XRRSetOutputPrimary (xdisplay, DefaultRootWindow (xdisplay),
                                output_id);

@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -202,7 +200,7 @@ meta_wayland_cursor_surface_is_on_logical_monitor (MetaWaylandSurfaceRole *role,
     return FALSE;
 
   logical_monitor_rect =
-    meta_rectangle_to_graphene_rect (&logical_monitor->rect);
+    mtk_rectangle_to_graphene_rect (&logical_monitor->rect);
 
   device = meta_cursor_renderer_get_input_device (priv->cursor_renderer);
   clutter_seat_query_state (clutter_input_device_get_seat (device),

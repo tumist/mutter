@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -294,8 +292,9 @@ meta_stage_deactivate (ClutterStage *actor)
 }
 
 static void
-on_power_save_changed (MetaMonitorManager *monitor_manager,
-                       MetaStage          *stage)
+on_power_save_changed (MetaMonitorManager        *monitor_manager,
+                       MetaPowerSaveChangeReason  reason,
+                       MetaStage                 *stage)
 {
   if (meta_monitor_manager_get_power_save_mode (monitor_manager) ==
       META_POWER_SAVE_ON)
@@ -373,7 +372,7 @@ queue_redraw_clutter_rect (MetaStage       *stage,
                            MetaOverlay     *overlay,
                            graphene_rect_t *rect)
 {
-  cairo_rectangle_int_t clip = {
+  MtkRectangle clip = {
     .x = floorf (rect->origin.x),
     .y = floorf (rect->origin.y),
     .width = ceilf (rect->size.width),
@@ -391,8 +390,8 @@ queue_redraw_clutter_rect (MetaStage       *stage,
        l = l->next)
     {
       ClutterStageView *view = l->data;
-      cairo_rectangle_int_t view_layout;
-      cairo_rectangle_int_t view_clip;
+      MtkRectangle view_layout;
+      MtkRectangle view_clip;
 
       if (clutter_stage_view_get_default_paint_flags (view) &
           CLUTTER_PAINT_FLAG_NO_CURSORS)
@@ -400,7 +399,7 @@ queue_redraw_clutter_rect (MetaStage       *stage,
 
       clutter_stage_view_get_layout (view, &view_layout);
 
-      if (meta_rectangle_intersect (&clip, &view_layout, &view_clip))
+      if (mtk_rectangle_intersect (&clip, &view_layout, &view_clip))
         {
           clutter_stage_view_add_redraw_clip (view, &view_clip);
           clutter_stage_view_schedule_update (view);

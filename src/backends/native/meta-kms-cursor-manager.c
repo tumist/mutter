@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -49,6 +47,7 @@ typedef struct _CrtcStateImpl
   MetaKmsCrtc *crtc;
   graphene_rect_t layout;
   float scale;
+  MetaMonitorTransform transform;
   MetaDrmBuffer *buffer;
   graphene_point_t hotspot;
 
@@ -262,12 +261,20 @@ calculate_cursor_rect (CrtcStateImpl          *crtc_state_impl,
                        float                   y,
                        graphene_rect_t        *out_cursor_rect)
 {
-  float crtc_x, crtc_y;
+  int crtc_x, crtc_y, crtc_width, crtc_height;
   int buffer_width, buffer_height;
   graphene_rect_t cursor_rect;
 
   crtc_x = (x - crtc_state_impl->layout.origin.x) * crtc_state_impl->scale;
   crtc_y = (y - crtc_state_impl->layout.origin.y) * crtc_state_impl->scale;
+  crtc_width = roundf (crtc_state_impl->layout.size.width *
+                       crtc_state_impl->scale);
+  crtc_height = roundf (crtc_state_impl->layout.size.height *
+                        crtc_state_impl->scale);
+
+  meta_monitor_transform_transform_point (crtc_state_impl->transform,
+                                          &crtc_width, &crtc_height,
+                                          &crtc_x, &crtc_y);
 
   buffer_width = meta_drm_buffer_get_width (buffer);
   buffer_height = meta_drm_buffer_get_height (buffer);
@@ -284,10 +291,8 @@ calculate_cursor_rect (CrtcStateImpl          *crtc_state_impl,
   };
   if (cursor_rect.origin.x + cursor_rect.size.width > 0.0 &&
       cursor_rect.origin.y + cursor_rect.size.height > 0.0 &&
-      cursor_rect.origin.x < (crtc_state_impl->layout.size.width *
-                              crtc_state_impl->scale) &&
-      cursor_rect.origin.y < (crtc_state_impl->layout.size.height *
-                              crtc_state_impl->scale))
+      cursor_rect.origin.x < crtc_width &&
+      cursor_rect.origin.y < crtc_height)
     {
       if (out_cursor_rect)
         *out_cursor_rect = cursor_rect;
@@ -366,7 +371,7 @@ maybe_update_cursor_plane (MetaKmsCursorManagerImpl  *cursor_manager_impl,
     {
       int width, height;
       MetaFixed16Rectangle src_rect;
-      MetaRectangle dst_rect;
+      MtkRectangle dst_rect;
       MetaKmsAssignPlaneFlag assign_plane_flags =
         META_KMS_ASSIGN_PLANE_FLAG_NONE;
       MetaKmsPlaneAssignment *plane_assignment;
@@ -390,7 +395,7 @@ maybe_update_cursor_plane (MetaKmsCursorManagerImpl  *cursor_manager_impl,
         .width = meta_fixed_16_from_int (width),
         .height = meta_fixed_16_from_int (height),
       };
-      dst_rect = (MetaRectangle) {
+      dst_rect = (MtkRectangle) {
         .x = round (cursor_rect.origin.x),
         .y = round (cursor_rect.origin.y),
         .width = round (cursor_rect.size.width),
@@ -507,6 +512,8 @@ static void
 meta_kms_cursor_manager_impl_free (MetaKmsCursorManagerImpl *cursor_manager_impl)
 {
   g_warn_if_fail (!cursor_manager_impl->crtc_states);
+
+  g_free (cursor_manager_impl);
 }
 
 static MetaKmsCursorManagerImpl *
@@ -717,6 +724,7 @@ typedef struct
 {
   MetaKmsCrtc *crtc;
   MetaDrmBuffer *buffer;
+  MetaMonitorTransform transform;
   graphene_point_t hotspot;
 } UpdateSpriteData;
 
@@ -740,6 +748,7 @@ update_sprite_in_impl (MetaThreadImpl  *thread_impl,
 
   old_buffer = g_steal_pointer (&crtc_state_impl->buffer);
   crtc_state_impl->buffer = g_steal_pointer (&data->buffer);
+  crtc_state_impl->transform = data->transform;
   crtc_state_impl->hotspot = data->hotspot;
   crtc_state_impl->cursor_invalidated = TRUE;
 
@@ -762,6 +771,7 @@ void
 meta_kms_cursor_manager_update_sprite (MetaKmsCursorManager   *cursor_manager,
                                        MetaKmsCrtc            *crtc,
                                        MetaDrmBuffer          *buffer,
+                                       MetaMonitorTransform    transform,
                                        const graphene_point_t *hotspot)
 {
   UpdateSpriteData *data;
@@ -769,6 +779,7 @@ meta_kms_cursor_manager_update_sprite (MetaKmsCursorManager   *cursor_manager,
   data = g_new0 (UpdateSpriteData, 1);
   data->crtc = crtc;
   data->buffer = buffer ? g_object_ref (buffer) : NULL;
+  data->transform = transform;
   if (hotspot)
     data->hotspot = *hotspot;
 

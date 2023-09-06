@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +22,7 @@
 #include "backends/meta-monitor-manager-private.h"
 #include "meta/meta-context.h"
 #include "meta/meta-backend.h"
+#include "tests/meta-test-shell.h"
 #include "tests/meta-test-utils.h"
 
 static MetaContext *test_context;
@@ -40,7 +39,7 @@ wait_for_paint (gpointer user_data)
   GList *monitors;
   GList *logical_monitors;
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle layout;
+  MtkRectangle layout;
 
   loop = g_main_loop_new (NULL, FALSE);
   g_signal_connect_swapped (stage, "presented",
@@ -90,7 +89,7 @@ main (int    argc,
 
   context = meta_create_context ("Persistent virtual monitor test");
   g_assert (meta_context_configure (context, &fake_argc, &fake_argv, &error));
-  meta_context_set_plugin_name (context, meta_test_get_plugin_name ());
+  meta_context_set_plugin_gtype (context, META_TYPE_TEST_SHELL);
   g_assert (meta_context_setup (context, &error));
   g_assert (meta_context_start (context, &error));
 

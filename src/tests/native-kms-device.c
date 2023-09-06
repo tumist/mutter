@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -102,7 +100,7 @@ assert_crtc_state_equals (const MetaKmsCrtcState *crtc_state1,
                           const MetaKmsCrtcState *crtc_state2)
 {
   g_assert_cmpint (crtc_state1->is_active, ==, crtc_state2->is_active);
-  g_assert (meta_rectangle_equal (&crtc_state1->rect, &crtc_state2->rect));
+  g_assert (mtk_rectangle_equal (&crtc_state1->rect, &crtc_state2->rect));
   g_assert_cmpint (crtc_state1->is_drm_mode_valid,
                    ==,
                    crtc_state2->is_drm_mode_valid);
@@ -266,7 +264,7 @@ meta_test_kms_device_mode_set (void)
   g_autoptr (MetaDrmBuffer) primary_buffer = NULL;
   MetaKmsCrtcState crtc_state;
   MetaKmsConnectorState connector_state;
-  MetaRectangle mode_rect;
+  MtkRectangle mode_rect;
   MetaKmsFeedback *feedback;
 
   device = meta_get_test_kms_device (test_context);
@@ -299,7 +297,7 @@ meta_test_kms_device_mode_set (void)
   g_assert_true (crtc_state.is_active);
   g_assert_true (crtc_state.is_drm_mode_valid);
   mode_rect = meta_get_mode_rect (mode);
-  g_assert (meta_rectangle_equal (&crtc_state.rect, &mode_rect));
+  g_assert (mtk_rectangle_equal (&crtc_state.rect, &mode_rect));
 
   g_assert_nonnull (meta_kms_connector_get_current_state (connector));
   connector_state =
@@ -538,9 +536,9 @@ meta_test_kms_device_discard_disabled (void)
                                 META_FIXED_16_RECTANGLE_INIT_INT (0, 0,
                                                                   cursor_width,
                                                                   cursor_width),
-                                META_RECTANGLE_INIT (10, 10,
-                                                     cursor_width,
-                                                     cursor_width),
+                                MTK_RECTANGLE_INIT (10, 10,
+                                                    cursor_width,
+                                                    cursor_width),
                                 META_KMS_ASSIGN_PLANE_FLAG_NONE);
 
   feedback = meta_kms_device_process_update_sync (device, update,

@@ -145,6 +145,7 @@ CLUTTER_EXPORT
 ClutterEvent * clutter_event_im_new (ClutterEventType         type,
                                      ClutterEventFlags        flags,
                                      int64_t                  timestamp_us,
+                                     ClutterSeat             *seat,
                                      const char              *text,
                                      int32_t                  offset,
                                      int32_t                  anchor,
@@ -162,9 +163,6 @@ gboolean        _clutter_event_process_filters          (ClutterEvent *event,
 
 /* clears the event queue inside the main context */
 void            _clutter_clear_events_queue             (void);
-
-CLUTTER_EXPORT
-gpointer        _clutter_event_get_platform_data        (const ClutterEvent *event);
 
 CLUTTER_EXPORT
 void            _clutter_event_push                     (const ClutterEvent *event,

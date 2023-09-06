@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -231,8 +229,8 @@ meta_test_kms_render_client_scanout (void)
   gulong paint_view_handler_id;
   gulong presented_handler_id;
   MetaWindow *window;
-  MetaRectangle view_rect;
-  MetaRectangle buffer_rect;
+  MtkRectangle view_rect;
+  MtkRectangle buffer_rect;
 
   test_driver = meta_wayland_test_driver_new (wayland_compositor);
   meta_wayland_test_driver_set_property (test_driver,

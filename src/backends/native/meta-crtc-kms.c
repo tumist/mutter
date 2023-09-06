@@ -15,9 +15,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -54,11 +52,6 @@ struct _MetaCrtcKms
   MetaKmsCrtc *kms_crtc;
 
   MetaKmsPlane *primary_plane;
-
-  gpointer cursor_renderer_private;
-  GDestroyNotify cursor_renderer_private_destroy_notify;
-
-  gboolean is_gamma_valid;
 };
 
 static GQuark kms_crtc_crtc_kms_quark;
@@ -74,24 +67,6 @@ monitor_manager_from_crtc (MetaCrtc *crtc)
     meta_backend_get_monitor_manager (backend);
 
   return META_MONITOR_MANAGER_NATIVE (monitor_manager);
-}
-
-gpointer
-meta_crtc_kms_get_cursor_renderer_private (MetaCrtcKms *crtc_kms)
-{
-  return crtc_kms->cursor_renderer_private;
-}
-
-void
-meta_crtc_kms_set_cursor_renderer_private (MetaCrtcKms    *crtc_kms,
-                                           gpointer        cursor_renderer_private,
-                                           GDestroyNotify  destroy_notify)
-{
-  g_clear_pointer (&crtc_kms->cursor_renderer_private,
-                   crtc_kms->cursor_renderer_private_destroy_notify);
-
-  crtc_kms->cursor_renderer_private = cursor_renderer_private;
-  crtc_kms->cursor_renderer_private_destroy_notify = destroy_notify;
 }
 
 static size_t
@@ -290,7 +265,7 @@ meta_crtc_kms_assign_primary_plane (MetaCrtcKms   *crtc_kms,
   const MetaCrtcConfig *crtc_config;
   const MetaCrtcModeInfo *crtc_mode_info;
   MetaFixed16Rectangle src_rect;
-  MetaRectangle dst_rect;
+  MtkRectangle dst_rect;
   MetaKmsAssignPlaneFlag flags;
   MetaKmsCrtc *kms_crtc;
   MetaKmsDevice *kms_device;
@@ -306,7 +281,7 @@ meta_crtc_kms_assign_primary_plane (MetaCrtcKms   *crtc_kms,
     .width = meta_fixed_16_from_int (crtc_mode_info->width),
     .height = meta_fixed_16_from_int (crtc_mode_info->height),
   };
-  dst_rect = (MetaRectangle) {
+  dst_rect = (MtkRectangle) {
     .x = 0,
     .y = 0,
     .width = crtc_mode_info->width,
@@ -354,12 +329,6 @@ generate_crtc_connector_list (MetaGpu  *gpu,
     }
 
   return connectors;
-}
-
-gboolean
-meta_crtc_kms_is_gamma_invalid (MetaCrtcKms *crtc_kms)
-{
-  return !crtc_kms->is_gamma_valid;
 }
 
 void
@@ -482,7 +451,6 @@ meta_crtc_kms_new (MetaGpuKms  *gpu_kms,
 
   crtc_kms->kms_crtc = kms_crtc;
   crtc_kms->primary_plane = primary_plane;
-  crtc_kms->is_gamma_valid = TRUE;
 
   if (!kms_crtc_crtc_kms_quark)
     {
@@ -496,17 +464,6 @@ meta_crtc_kms_new (MetaGpuKms  *gpu_kms,
 }
 
 static void
-meta_crtc_kms_dispose (GObject *object)
-{
-  MetaCrtcKms *crtc_kms = META_CRTC_KMS (object);
-
-  g_clear_pointer (&crtc_kms->cursor_renderer_private,
-                   crtc_kms->cursor_renderer_private_destroy_notify);
-
-  G_OBJECT_CLASS (meta_crtc_kms_parent_class)->dispose (object);
-}
-
-static void
 meta_crtc_kms_init (MetaCrtcKms *crtc_kms)
 {
 }
@@ -514,11 +471,8 @@ meta_crtc_kms_init (MetaCrtcKms *crtc_kms)
 static void
 meta_crtc_kms_class_init (MetaCrtcKmsClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   MetaCrtcClass *crtc_class = META_CRTC_CLASS (klass);
   MetaCrtcNativeClass *crtc_native_class = META_CRTC_NATIVE_CLASS (klass);
-
-  object_class->dispose = meta_crtc_kms_dispose;
 
   crtc_class->get_gamma_lut_size = meta_crtc_kms_get_gamma_lut_size;
   crtc_class->get_gamma_lut = meta_crtc_kms_get_gamma_lut;

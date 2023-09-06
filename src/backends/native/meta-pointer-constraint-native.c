@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jonas Ådahl <jadahl@gmail.com>
@@ -255,7 +253,7 @@ region_to_outline (cairo_region_t *region,
   boxes = g_new (MetaBox, num_boxes);
   for (i = 0; i < num_boxes; i++)
     {
-      cairo_rectangle_int_t rect;
+      MtkRectangle rect;
       cairo_region_get_rectangle (region, i, &rect);
       boxes[i] = (MetaBox) {
         .x1 = rect.x,

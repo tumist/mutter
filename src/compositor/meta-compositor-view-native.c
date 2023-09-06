@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Dor Askayo <dor.askayo@gmail.com>
@@ -83,7 +81,7 @@ find_scanout_candidate (MetaCompositorView  *compositor_view,
   CoglFramebuffer *framebuffer;
   MetaWindowActor *window_actor;
   MetaWindow *window;
-  MetaRectangle view_rect;
+  MtkRectangle view_rect;
   ClutterActorBox actor_box;
   MetaSurfaceActor *surface_actor;
   MetaSurfaceActorWayland *surface_actor_wayland;
@@ -161,7 +159,7 @@ find_scanout_candidate (MetaCompositorView  *compositor_view,
       return FALSE;
     }
 
-  if (meta_surface_actor_is_obscured (surface_actor))
+  if (meta_surface_actor_is_effectively_obscured (surface_actor))
     {
       meta_topic (META_DEBUG_RENDER,
                   "No direct scanout candidate: surface-actor is obscured");

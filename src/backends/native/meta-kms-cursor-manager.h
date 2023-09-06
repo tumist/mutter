@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -22,6 +20,7 @@
 #include <glib-object.h>
 #include <graphene.h>
 
+#include "backends/meta-monitor-transform.h"
 #include "backends/native/meta-backend-native-types.h"
 #include "backends/native/meta-kms-types.h"
 #include "core/util-private.h"
@@ -54,6 +53,7 @@ void meta_kms_cursor_manager_position_changed_in_input_impl (MetaKmsCursorManage
 void meta_kms_cursor_manager_update_sprite (MetaKmsCursorManager   *cursor_manager,
                                             MetaKmsCrtc            *crtc,
                                             MetaDrmBuffer          *buffer,
+                                            MetaMonitorTransform    transform,
                                             const graphene_point_t *hotspot);
 
 META_EXPORT_TEST
