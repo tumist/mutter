@@ -8,4 +8,4 @@ workarounds/tests-Disable-restore-size-test.patch
 workarounds/tests-Skip-thread-priority-test.patch
 ubuntu/x11-Add-support-for-fractional-scaling-using-Randr.patch
 ubuntu/window-Add-ability-to-override-the-edge-constraints.patch
-cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
+workarounds/cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
