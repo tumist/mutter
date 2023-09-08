@@ -1,3 +1,10 @@
+mutter (45~rc-0ubuntu2) mantic; urgency=medium
+
+  * Add cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
+    to work around https://launchpad.net/bugs/2034672
+
+ -- Daniel van Vugt <daniel.van.vugt@canonical.com>  Fri, 08 Sep 2023 10:40:24 -0400
+
 mutter (45~rc-0ubuntu1) mantic; urgency=medium
 
   * New upstream release
