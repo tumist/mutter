@@ -1,3 +1,9 @@
+mutter (45~rc-3) experimental; urgency=medium
+
+  * Fix sysprof Build-Depends for i386 again
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Sun, 10 Sep 2023 23:02:07 -0400
+
 mutter (45~rc-2) experimental; urgency=medium
 
   * Merge changes from 44.4-2
