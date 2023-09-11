@@ -1,3 +1,9 @@
+mutter (45~rc-4) experimental; urgency=medium
+
+  * Also skip the new "thread priority" test on i386
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 11 Sep 2023 10:31:41 -0400
+
 mutter (45~rc-3) experimental; urgency=medium
 
   * Fix sysprof Build-Depends for i386 again
