@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -54,7 +52,7 @@ meta_test_wayland_client_indirect_self_terminate (void)
 {
   g_autoptr (MetaWaylandClient) client = NULL;
   g_autoptr (GError) error = NULL;
-  g_autoptr (GThread) thread = NULL;
+  GThread *thread;
   int fd;
   gboolean client_destroyed = FALSE;
 
@@ -118,7 +116,7 @@ meta_test_wayland_client_indirect_destroy (void)
   DestroyTestData data;
   g_autoptr (MetaWaylandClient) client = NULL;
   g_autoptr (GError) error = NULL;
-  g_autoptr (GThread) thread = NULL;
+  GThread *thread;
   int fd;
   gboolean client_destroyed = FALSE;
 

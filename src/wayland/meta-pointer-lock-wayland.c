@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jonas Ådahl <jadahl@gmail.com>
@@ -63,7 +61,7 @@ meta_pointer_lock_wayland_create_constraint (MetaPointerConfinementWayland *conf
   ClutterInputDevice *pointer = clutter_seat_get_pointer (seat);
   MetaPointerConstraint *constraint;
   graphene_point_t point;
-  cairo_rectangle_int_t rect;
+  MtkRectangle rect;
   cairo_region_t *region;
   float sx, sy, x, y;
 
@@ -76,7 +74,7 @@ meta_pointer_lock_wayland_create_constraint (MetaPointerConfinementWayland *conf
                                                  &sx, &sy);
 
   meta_wayland_surface_get_absolute_coordinates (surface, sx, sy, &x, &y);
-  rect = (cairo_rectangle_int_t) { .x = x, .y = y, .width = 1, .height = 1 };
+  rect = (MtkRectangle) { .x = x, .y = y, .width = 1, .height = 1 };
   region = cairo_region_create_rectangle (&rect);
 
   constraint = meta_pointer_constraint_new (region, 0.0);

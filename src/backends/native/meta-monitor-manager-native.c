@@ -15,9 +15,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Giovanni Campagna <gcampagn@redhat.com>
  */
@@ -116,31 +114,16 @@ meta_monitor_manager_native_read_current_state (MetaMonitorManager *manager)
 
   power_save_mode = meta_monitor_manager_get_power_save_mode (manager);
   if (power_save_mode != META_POWER_SAVE_ON)
-    meta_monitor_manager_power_save_mode_changed (manager,
-                                                  META_POWER_SAVE_ON);
-
-  parent_class->read_current_state (manager);
-}
-
-uint64_t
-meta_power_save_to_dpms_state (MetaPowerSave power_save)
-{
-  switch (power_save)
     {
-    case META_POWER_SAVE_ON:
-      return DRM_MODE_DPMS_ON;
-    case META_POWER_SAVE_STANDBY:
-      return DRM_MODE_DPMS_STANDBY;
-    case META_POWER_SAVE_SUSPEND:
-      return DRM_MODE_DPMS_SUSPEND;
-    case META_POWER_SAVE_OFF:
-      return DRM_MODE_DPMS_OFF;
-    case META_POWER_SAVE_UNSUPPORTED:
-      return DRM_MODE_DPMS_ON;
+      MetaPowerSaveChangeReason reason;
+
+      reason = META_POWER_SAVE_CHANGE_REASON_HOTPLUG;
+      meta_monitor_manager_power_save_mode_changed (manager,
+                                                    META_POWER_SAVE_ON,
+                                                    reason);
     }
 
-  g_warn_if_reached ();
-  return DRM_MODE_DPMS_ON;
+  parent_class->read_current_state (manager);
 }
 
 static void

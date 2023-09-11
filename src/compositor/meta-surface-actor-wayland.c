@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -68,7 +66,7 @@ meta_surface_actor_wayland_is_opaque (MetaSurfaceActor *actor)
   return meta_shaped_texture_is_opaque (stex);
 }
 
-#define UNOBSCURED_TRESHOLD 0.1
+#define UNOBSCURED_THRESHOLD 0.1
 
 gboolean
 meta_surface_actor_wayland_is_view_primary (MetaSurfaceActor *actor,
@@ -149,10 +147,10 @@ meta_surface_actor_wayland_is_view_primary (MetaSurfaceActor *actor,
       refresh_rate = clutter_stage_view_get_refresh_rate (view);
 
       if ((refresh_rate > highest_refresh_rate &&
-           (biggest_unobscurred_fraction < UNOBSCURED_TRESHOLD ||
-            unobscurred_fraction > UNOBSCURED_TRESHOLD)) ||
-          (biggest_unobscurred_fraction < UNOBSCURED_TRESHOLD &&
-           unobscurred_fraction > UNOBSCURED_TRESHOLD))
+           (biggest_unobscurred_fraction < UNOBSCURED_THRESHOLD ||
+            unobscurred_fraction > UNOBSCURED_THRESHOLD)) ||
+          (biggest_unobscurred_fraction < UNOBSCURED_THRESHOLD &&
+           unobscurred_fraction > UNOBSCURED_THRESHOLD))
         {
           current_primary_view = view;
           highest_refresh_rate = refresh_rate;
@@ -174,7 +172,7 @@ meta_surface_actor_wayland_apply_transform (ClutterActor      *actor,
   MetaWaylandSurface *root_surface;
   MetaWindow *window;
   MetaLogicalMonitor *logical_monitor;
-  ClutterActorBox *allocation;
+  g_autoptr (ClutterActorBox) allocation = NULL;
   float scale;
   float actor_width, actor_height;
   float adj_actor_width, adj_actor_height;

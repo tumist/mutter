@@ -91,20 +91,18 @@ void     meta_window_x11_set_thaw_after_paint    (MetaWindow *window,
 gboolean meta_window_x11_should_thaw_after_paint (MetaWindow *window);
 gboolean meta_window_x11_always_update_shape     (MetaWindow *window);
 
-void meta_window_x11_surface_rect_to_frame_rect  (MetaWindow    *window,
-                                                  MetaRectangle *surface_rect,
-                                                  MetaRectangle *frame_rect);
-void meta_window_x11_surface_rect_to_client_rect (MetaWindow    *window,
-                                                  MetaRectangle *surface_rect,
-                                                  MetaRectangle *client_rect);
+void meta_window_x11_surface_rect_to_frame_rect  (MetaWindow   *window,
+                                                  MtkRectangle *surface_rect,
+                                                  MtkRectangle *frame_rect);
+void meta_window_x11_surface_rect_to_client_rect (MetaWindow   *window,
+                                                  MtkRectangle *surface_rect,
+                                                  MtkRectangle *client_rect);
 
-MetaRectangle meta_window_x11_get_client_rect    (MetaWindowX11 *window_x11);
+MtkRectangle meta_window_x11_get_client_rect    (MetaWindowX11 *window_x11);
 
 gboolean meta_window_x11_can_unredirect          (MetaWindowX11 *window_x11);
 
 MetaSyncCounter * meta_window_x11_get_sync_counter (MetaWindow *window);
-
-gboolean meta_window_x11_has_active_sync_alarms (MetaWindow *window);
 
 gboolean meta_window_x11_is_awaiting_sync_response (MetaWindow *window);
 

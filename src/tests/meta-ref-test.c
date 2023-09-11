@@ -50,7 +50,7 @@
  * To update or initialize reference images for tests, set the
  * MUTTER_REF_TEST_UPDATE environment variable.
  *
- * The MUTTER_REF_TEST_UPDATE is interpreted as a comma seperated list of
+ * The MUTTER_REF_TEST_UPDATE is interpreted as a comma separated list of
  * regular expressions. If the test path matches any of the regular
  * expressions, the test reference image will be updated, unless the
  * existing reference image is pixel identical to the newly created one.
@@ -221,7 +221,7 @@ assert_software_rendered (ClutterStageView *stage_view)
 
 static void
 capture_view_into (ClutterStageView *view,
-                   MetaRectangle    *rect,
+                   MtkRectangle     *rect,
                    uint8_t          *buffer,
                    int               stride)
 {
@@ -229,7 +229,7 @@ capture_view_into (ClutterStageView *view,
   ClutterBackend *backend;
   CoglContext *context;
   CoglBitmap *bitmap;
-  cairo_rectangle_int_t view_layout;
+  MtkRectangle view_layout;
   float view_scale;
   float texture_width;
   float texture_height;
@@ -277,7 +277,7 @@ on_after_paint (MetaStage           *stage,
                 gpointer             user_data)
 {
   CaptureViewData *data = user_data;
-  MetaRectangle rect;
+  MtkRectangle rect;
   float view_scale;
   int texture_width, texture_height;
   cairo_surface_t *image;

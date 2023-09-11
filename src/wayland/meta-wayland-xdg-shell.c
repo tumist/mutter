@@ -15,9 +15,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -61,7 +59,7 @@ typedef struct _MetaWaylandXdgShellClient
 
 struct _MetaWaylandXdgPositioner
 {
-  MetaRectangle anchor_rect;
+  MtkRectangle anchor_rect;
   int32_t width;
   int32_t height;
   uint32_t gravity;
@@ -91,7 +89,7 @@ typedef struct _MetaWaylandXdgSurfacePrivate
 {
   struct wl_resource *resource;
   MetaWaylandXdgShellClient *shell_client;
-  MetaRectangle geometry;
+  MtkRectangle geometry;
 
   guint configure_sent : 1;
   guint first_buffer_attached : 1;
@@ -155,7 +153,7 @@ meta_wayland_xdg_positioner_to_placement (MetaWaylandXdgPositioner *xdg_position
 static struct wl_resource *
 meta_wayland_xdg_surface_get_wm_base_resource (MetaWaylandXdgSurface *xdg_surface);
 
-static MetaRectangle
+static MtkRectangle
 meta_wayland_xdg_surface_get_window_geometry (MetaWaylandXdgSurface *xdg_surface);
 
 static void
@@ -695,8 +693,9 @@ add_state_value (struct wl_array         *states,
 }
 
 static void
-fill_states (MetaWaylandXdgToplevel *xdg_toplevel,
-             struct wl_array        *states)
+fill_states (MetaWaylandXdgToplevel         *xdg_toplevel,
+             MetaWaylandWindowConfiguration *configuration,
+             struct wl_array                *states)
 {
   MetaWaylandSurfaceRole *surface_role =
     META_WAYLAND_SURFACE_ROLE (xdg_toplevel);
@@ -717,6 +716,10 @@ fill_states (MetaWaylandXdgToplevel *xdg_toplevel,
     add_state_value (states, XDG_TOPLEVEL_STATE_RESIZING);
   if (meta_window_appears_focused (window))
     add_state_value (states, XDG_TOPLEVEL_STATE_ACTIVATED);
+  if (configuration->is_suspended &&
+      wl_resource_get_version (xdg_toplevel->resource) >=
+      XDG_TOPLEVEL_STATE_SUSPENDED_SINCE_VERSION)
+    add_state_value (states, XDG_TOPLEVEL_STATE_SUSPENDED);
 
   if (wl_resource_get_version (xdg_toplevel->resource) >=
       XDG_TOPLEVEL_STATE_TILED_LEFT_SINCE_VERSION)
@@ -733,14 +736,23 @@ fill_states (MetaWaylandXdgToplevel *xdg_toplevel,
 }
 
 static void
+add_wm_capability_value (struct wl_array                   *states,
+                         enum xdg_toplevel_wm_capabilities  wm_capability)
+{
+  *((uint32_t *) wl_array_add (states, sizeof (uint32_t))) = wm_capability;
+}
+
+static void
 meta_wayland_xdg_toplevel_send_configure (MetaWaylandXdgToplevel         *xdg_toplevel,
                                           MetaWaylandWindowConfiguration *configuration)
 {
   MetaWaylandXdgSurface *xdg_surface = META_WAYLAND_XDG_SURFACE (xdg_toplevel);
+  MetaWaylandXdgSurfacePrivate *xdg_surface_priv =
+    meta_wayland_xdg_surface_get_instance_private (xdg_surface);
   struct wl_array states;
 
   wl_array_init (&states);
-  fill_states (xdg_toplevel, &states);
+  fill_states (xdg_toplevel, configuration, &states);
 
   if (wl_resource_get_version (xdg_toplevel->resource) >=
       XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION &&
@@ -752,6 +764,25 @@ meta_wayland_xdg_toplevel_send_configure (MetaWaylandXdgToplevel         *xdg_to
                                            configuration->scale),
                                           (configuration->bounds_height /
                                            configuration->scale));
+    }
+
+  if (!xdg_surface_priv->configure_sent &&
+      wl_resource_get_version (xdg_toplevel->resource) >=
+      XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION)
+    {
+      struct wl_array wm_capabilities;
+
+      wl_array_init (&wm_capabilities);
+      add_wm_capability_value (&wm_capabilities,
+                               XDG_TOPLEVEL_WM_CAPABILITIES_WINDOW_MENU);
+      add_wm_capability_value (&wm_capabilities,
+                               XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE);
+      add_wm_capability_value (&wm_capabilities,
+                               XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
+      add_wm_capability_value (&wm_capabilities,
+                               XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE);
+      xdg_toplevel_send_wm_capabilities (xdg_toplevel->resource, &wm_capabilities);
+      wl_array_release (&wm_capabilities);
     }
 
   xdg_toplevel_send_configure (xdg_toplevel->resource,
@@ -860,8 +891,8 @@ meta_wayland_xdg_toplevel_post_apply_state (MetaWaylandSurfaceRole  *surface_rol
     meta_wayland_surface_role_get_surface (surface_role);
   MetaWaylandSurfaceRoleClass *surface_role_class;
   MetaWindow *window;
-  MetaRectangle old_geometry;
-  MetaRectangle window_geometry;
+  MtkRectangle old_geometry;
+  MtkRectangle window_geometry;
 
   gboolean geometry_changed;
 
@@ -876,7 +907,7 @@ meta_wayland_xdg_toplevel_post_apply_state (MetaWaylandSurfaceRole  *surface_rol
   surface_role_class->post_apply_state (surface_role, pending);
 
   window_geometry = meta_wayland_xdg_surface_get_window_geometry (xdg_surface);
-  geometry_changed = !meta_rectangle_equal (&old_geometry, &window_geometry);
+  geometry_changed = !mtk_rectangle_equal (&old_geometry, &window_geometry);
 
   if (geometry_changed ||
       pending->derived.surface_size_changed ||
@@ -1303,10 +1334,10 @@ meta_wayland_xdg_popup_post_apply_state (MetaWaylandSurfaceRole  *surface_role,
     META_WAYLAND_SURFACE_ROLE_CLASS (meta_wayland_xdg_popup_parent_class);
   MetaWindow *window;
   MetaWindow *parent_window;
-  MetaRectangle old_geometry;
-  MetaRectangle window_geometry;
-  MetaRectangle buffer_rect;
-  MetaRectangle parent_buffer_rect;
+  MtkRectangle old_geometry;
+  MtkRectangle window_geometry;
+  MtkRectangle buffer_rect;
+  MtkRectangle parent_buffer_rect;
 
   window = meta_wayland_surface_get_window (surface);
   if (!window)
@@ -1319,7 +1350,7 @@ meta_wayland_xdg_popup_post_apply_state (MetaWaylandSurfaceRole  *surface_role,
 
   window_geometry = meta_wayland_xdg_surface_get_window_geometry (xdg_surface);
   old_geometry = xdg_surface_priv->geometry;
-  if (!meta_rectangle_equal (&old_geometry, &window_geometry) ||
+  if (!mtk_rectangle_equal (&old_geometry, &window_geometry) ||
       pending->derived.surface_size_changed ||
       pending->has_acked_configure_serial)
     meta_window_wayland_finish_move_resize (window, window_geometry, pending);
@@ -1327,7 +1358,7 @@ meta_wayland_xdg_popup_post_apply_state (MetaWaylandSurfaceRole  *surface_role,
   parent_window = meta_wayland_surface_get_window (xdg_popup->parent_surface);
   meta_window_get_buffer_rect (window, &buffer_rect);
   meta_window_get_buffer_rect (parent_window, &parent_buffer_rect);
-  if (!meta_rectangle_overlap (&buffer_rect, &parent_buffer_rect) &&
+  if (!mtk_rectangle_overlap (&buffer_rect, &parent_buffer_rect) &&
       !meta_rectangle_is_adjacent_to (&buffer_rect, &parent_buffer_rect))
     {
       g_warning ("Buggy client caused popup to be placed outside of "
@@ -1539,7 +1570,7 @@ meta_wayland_xdg_surface_get_wm_base_resource (MetaWaylandXdgSurface *xdg_surfac
   return priv->shell_client->resource;
 }
 
-static MetaRectangle
+static MtkRectangle
 meta_wayland_xdg_surface_get_window_geometry (MetaWaylandXdgSurface *xdg_surface)
 {
   MetaWaylandXdgSurfacePrivate *priv =
@@ -1708,7 +1739,7 @@ meta_wayland_xdg_surface_real_reset (MetaWaylandXdgSurface *xdg_surface)
 
   priv->first_buffer_attached = FALSE;
   priv->configure_sent = FALSE;
-  priv->geometry = (MetaRectangle) { 0 };
+  priv->geometry = (MtkRectangle) { 0 };
   priv->has_set_geometry = FALSE;
 }
 
@@ -1767,14 +1798,14 @@ meta_wayland_xdg_surface_post_apply_state (MetaWaylandSurfaceRole  *surface_role
     }
   else if (!priv->has_set_geometry)
     {
-      MetaRectangle new_geometry = { 0 };
+      MtkRectangle new_geometry = { 0 };
 
       /* If the surface has never set any geometry, calculate
        * a default one unioning the surface and all subsurfaces together. */
 
       meta_wayland_shell_surface_calculate_geometry (shell_surface,
                                                      &new_geometry);
-      if (!meta_rectangle_equal (&new_geometry, &priv->geometry))
+      if (!mtk_rectangle_equal (&new_geometry, &priv->geometry))
         {
           pending->has_new_geometry = TRUE;
           priv->geometry = new_geometry;
@@ -2199,7 +2230,7 @@ static MetaPlacementRule
 meta_wayland_xdg_positioner_to_placement (MetaWaylandXdgPositioner *xdg_positioner,
                                           MetaWindow               *parent_window)
 {
-  MetaRectangle parent_rect;
+  MtkRectangle parent_rect;
 
   meta_window_get_frame_rect (parent_window, &parent_rect);
 
@@ -2308,7 +2339,7 @@ xdg_positioner_set_anchor_rect (struct wl_client   *client,
       return;
     }
 
-  positioner->anchor_rect = (MetaRectangle) {
+  positioner->anchor_rect = (MtkRectangle) {
     .x = x,
     .y = y,
     .width = width,

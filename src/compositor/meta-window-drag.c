@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
@@ -65,7 +63,7 @@ struct _MetaWindowDrag {
   int tile_monitor_number;
   int latest_motion_x;
   int latest_motion_y;
-  MetaRectangle initial_window_pos;
+  MtkRectangle initial_window_pos;
   int initial_x, initial_y;            /* These are only relevant for */
   gboolean threshold_movement_reached; /* raise_on_click == FALSE.    */
   unsigned int last_edge_resistance_flags;
@@ -114,7 +112,7 @@ update_tile_preview_timeout (MetaWindowDrag *window_drag)
 
   if (needs_preview)
     {
-      MetaRectangle tile_rect;
+      MtkRectangle tile_rect;
       int monitor;
 
       monitor = meta_window_get_current_tile_monitor_number (window);
@@ -430,8 +428,8 @@ warp_grab_pointer (MetaWindowDrag *window_drag,
                    int            *x,
                    int            *y)
 {
-  MetaRectangle rect;
-  MetaRectangle display_rect = { 0 };
+  MtkRectangle rect;
+  MtkRectangle display_rect = { 0 };
   MetaDisplay *display;
   ClutterSeat *seat;
 
@@ -591,7 +589,7 @@ process_keyboard_move_grab (MetaWindowDrag  *window_drag,
 {
   MetaEdgeResistanceFlags flags;
   gboolean handled;
-  MetaRectangle frame_rect;
+  MtkRectangle frame_rect;
   ClutterModifierType modifiers;
   uint32_t keyval;
   int x, y;
@@ -843,7 +841,7 @@ process_keyboard_resize_grab (MetaWindowDrag  *window_drag,
                               MetaWindow      *window,
                               ClutterKeyEvent *event)
 {
-  MetaRectangle frame_rect;
+  MtkRectangle frame_rect;
   gboolean handled;
   int height_inc;
   int width_inc;
@@ -1135,7 +1133,7 @@ update_move_maybe_tile (MetaWindowDrag *window_drag,
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
   MetaLogicalMonitor *logical_monitor;
-  MetaRectangle work_area;
+  MtkRectangle work_area;
 
   /* For side-by-side tiling we are interested in the inside vertical
    * edges of the work area of the monitor where the pointer is located,
@@ -1188,7 +1186,7 @@ update_move (MetaWindowDrag          *window_drag,
   MetaWindow *window;
   int dx, dy;
   int new_x, new_y;
-  MetaRectangle old, frame_rect;
+  MtkRectangle old, frame_rect;
   int shake_threshold;
 
   window = window_drag->effective_grab_window;
@@ -1273,7 +1271,7 @@ update_move (MetaWindowDrag          *window_drag,
        * instead, as the "correct" anchoring looks wrong. */
       if (window_drag->anchor_root_y < window_drag->initial_window_pos.y)
         {
-          MetaRectangle titlebar_rect;
+          MtkRectangle titlebar_rect;
           meta_window_get_titlebar_rect (window, &titlebar_rect);
           window_drag->anchor_root_y = window_drag->initial_window_pos.y + titlebar_rect.height / 2;
         }
@@ -1298,7 +1296,7 @@ update_move (MetaWindowDrag          *window_drag,
         meta_backend_get_monitor_manager (backend);
       int n_logical_monitors;
       const MetaLogicalMonitor *wmonitor;
-      MetaRectangle work_area;
+      MtkRectangle work_area;
       int monitor;
 
       window->tile_mode = META_TILE_NONE;
@@ -1426,8 +1424,8 @@ update_resize (MetaWindowDrag          *window_drag,
 {
   int dx, dy;
   MetaGravity gravity;
-  MetaRectangle new_rect;
-  MetaRectangle old_rect;
+  MtkRectangle new_rect;
+  MtkRectangle old_rect;
   MetaWindow *window;
 
   window = window_drag->effective_grab_window;
@@ -1583,7 +1581,7 @@ queue_update_resize (MetaWindowDrag          *window_drag,
 static void
 maybe_maximize_tiled_window (MetaWindow *window)
 {
-  MetaRectangle work_area;
+  MtkRectangle work_area;
   gint shake_threshold;
 
   if (!META_WINDOW_TILED_SIDE_BY_SIDE (window))

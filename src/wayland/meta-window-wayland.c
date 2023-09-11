@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -68,7 +66,7 @@ struct _MetaWindowWayland
   gboolean has_pending_state_change;
 
   gboolean has_last_sent_configuration;
-  MetaRectangle last_sent_rect;
+  MtkRectangle last_sent_rect;
   int last_sent_rel_x;
   int last_sent_rel_y;
   int last_sent_geometry_scale;
@@ -77,6 +75,8 @@ struct _MetaWindowWayland
   MetaWaylandWindowConfiguration *last_acked_configuration;
 
   gboolean has_been_shown;
+
+  gboolean is_suspended;
 };
 
 struct _MetaWindowWaylandClass
@@ -254,9 +254,9 @@ meta_window_wayland_grab_op_ended (MetaWindow *window,
 static void
 meta_window_wayland_move_resize_internal (MetaWindow                *window,
                                           MetaGravity                gravity,
-                                          MetaRectangle              unconstrained_rect,
-                                          MetaRectangle              constrained_rect,
-                                          MetaRectangle              temporary_rect,
+                                          MtkRectangle               unconstrained_rect,
+                                          MtkRectangle               constrained_rect,
+                                          MtkRectangle               temporary_rect,
                                           int                        rel_x,
                                           int                        rel_y,
                                           MetaMoveResizeFlags        flags,
@@ -264,7 +264,7 @@ meta_window_wayland_move_resize_internal (MetaWindow                *window,
 {
   MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
   gboolean can_move_now = FALSE;
-  MetaRectangle configured_rect;
+  MtkRectangle configured_rect;
   int geometry_scale;
   int new_x;
   int new_y;
@@ -498,7 +498,7 @@ scale_size (int  *width,
 }
 
 static void
-scale_rect_size (MetaRectangle *rect,
+scale_rect_size (MtkRectangle  *rect,
                  float          scale)
 {
   scale_size (&rect->width, &rect->height, scale);
@@ -520,7 +520,7 @@ meta_window_wayland_update_main_monitor (MetaWindow                   *window,
   MetaLogicalMonitor *scaled_new;
   float from_scale, to_scale;
   float scale;
-  MetaRectangle rect;
+  MtkRectangle rect;
 
   from = window->monitor;
 
@@ -693,6 +693,23 @@ appears_focused_changed (GObject    *object,
 }
 
 static void
+suspend_state_changed (GObject    *object,
+                       GParamSpec *pspec,
+                       gpointer    user_data)
+{
+  MetaWindow *window = META_WINDOW (object);
+  MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
+  gboolean is_suspended;
+
+  is_suspended = meta_window_is_suspended (window);
+  if (wl_window->is_suspended == is_suspended)
+    return;
+
+  wl_window->is_suspended = is_suspended;
+  surface_state_changed (window);
+}
+
+static void
 on_window_shown (MetaWindow *window)
 {
   MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
@@ -714,6 +731,8 @@ meta_window_wayland_init (MetaWindowWayland *wl_window)
 
   g_signal_connect (window, "notify::appears-focused",
                     G_CALLBACK (appears_focused_changed), NULL);
+  g_signal_connect (window, "notify::suspend-state",
+                    G_CALLBACK (suspend_state_changed), NULL);
   g_signal_connect (window, "shown",
                     G_CALLBACK (on_window_shown), NULL);
 }
@@ -1072,8 +1091,8 @@ meta_window_wayland_get_geometry_scale (MetaWindow *window)
 
 static void
 calculate_position (MetaWaylandWindowConfiguration *configuration,
-                    MetaRectangle                  *geometry,
-                    MetaRectangle                  *rect)
+                    MtkRectangle                   *geometry,
+                    MtkRectangle                   *rect)
 {
   int offset_x;
   int offset_y;
@@ -1109,7 +1128,7 @@ calculate_position (MetaWaylandWindowConfiguration *configuration,
  */
 void
 meta_window_wayland_finish_move_resize (MetaWindow              *window,
-                                        MetaRectangle            new_geom,
+                                        MtkRectangle             new_geom,
                                         MetaWaylandSurfaceState *pending)
 {
   MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
@@ -1118,7 +1137,7 @@ meta_window_wayland_finish_move_resize (MetaWindow              *window,
   int dx, dy;
   int geometry_scale;
   MetaGravity gravity;
-  MetaRectangle rect;
+  MtkRectangle rect;
   MetaMoveResizeFlags flags;
   MetaWaylandWindowConfiguration *acked_configuration;
   gboolean is_window_being_resized;
@@ -1175,7 +1194,7 @@ meta_window_wayland_finish_move_resize (MetaWindow              *window,
      meta_grab_op_is_resizing (meta_window_drag_get_grab_op (window_drag)) &&
      meta_window_drag_get_window (window_drag) == window);
 
-  rect = (MetaRectangle) {
+  rect = (MtkRectangle) {
     .x = window->rect.x,
     .y = window->rect.y,
     .width = new_geom.width,

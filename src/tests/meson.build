@@ -13,6 +13,8 @@ mutter_test_sources = [
   'meta-sensors-proxy-mock.c',
   'meta-sensors-proxy-mock.h',
   'meta-test-monitor.c',
+  'meta-test-shell.c',
+  'meta-test-shell.h',
   'meta-test-utils.c',
   'meta-test-utils.h',
 ]
@@ -84,6 +86,7 @@ if have_introspection
       'GDesktopEnums-3.0',
       'xlib-2.0',
       'xfixes-4.0',
+      libmutter_mtk_gir[0],
       libmutter_cogl_gir[0],
       libmutter_cogl_pango_gir[0],
       libmutter_clutter_gir[0],
@@ -220,6 +223,8 @@ wayland_test_utils = [
 
 test_cases = []
 privileged_test_cases = []
+
+subdir('mtk')
 
 test_cases += [
   {
@@ -558,6 +563,7 @@ if have_native_tests
       'depends': [
         test_client,
         test_client_executables.get('buffer-transform'),
+        test_client_executables.get('idle-inhibit'),
         test_client_executables.get('invalid-subsurfaces'),
         test_client_executables.get('invalid-xdg-shell-actions'),
         test_client_executables.get('single-pixel-buffer'),
@@ -694,6 +700,9 @@ stacking_tests = [
   'workspace-unmanaging-window',
   'click-to-focus-and-raise',
   'workspace-only-on-primary-focus',
+  'overview-focus',
+  'suspend-state-timeout',
+  'cloned-windows',
 ]
 
 foreach stacking_test: stacking_tests

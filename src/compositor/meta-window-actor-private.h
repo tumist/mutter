@@ -33,8 +33,8 @@ struct _MetaWindowActorClass
   void (*update_regions) (MetaWindowActor *actor);
   gboolean (*can_freeze_commits) (MetaWindowActor *actor);
 
-  void (*sync_geometry) (MetaWindowActor     *actor,
-                         const MetaRectangle *actor_rect);
+  void (*sync_geometry) (MetaWindowActor    *actor,
+                         const MtkRectangle *actor_rect);
   gboolean (*is_single_surface_actor) (MetaWindowActor *actor);
 };
 
@@ -53,8 +53,8 @@ void meta_window_actor_hide (MetaWindowActor *self,
 
 void meta_window_actor_size_change   (MetaWindowActor *self,
                                       MetaSizeChange   which_change,
-                                      MetaRectangle   *old_frame_rect,
-                                      MetaRectangle   *old_buffer_rect);
+                                      MtkRectangle    *old_frame_rect,
+                                      MtkRectangle    *old_buffer_rect);
 
 void meta_window_actor_before_paint   (MetaWindowActor    *self,
                                        ClutterStageView   *stage_view);
@@ -111,3 +111,9 @@ gboolean meta_window_actor_is_opaque (MetaWindowActor *self);
 void meta_window_actor_update_regions (MetaWindowActor *self);
 
 gboolean meta_window_actor_can_freeze_commits (MetaWindowActor *self);
+
+void meta_window_actor_add_surface_actor (MetaWindowActor  *window_actor,
+                                          MetaSurfaceActor *surface_actor);
+
+void meta_window_actor_remove_surface_actor (MetaWindowActor  *window_actor,
+                                             MetaSurfaceActor *surface_actor);

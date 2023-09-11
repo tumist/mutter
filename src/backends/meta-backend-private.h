@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -145,8 +143,6 @@ MetaDbusSessionWatcher * meta_backend_get_dbus_session_watcher (MetaBackend *bac
 MetaRemoteDesktop * meta_backend_get_remote_desktop (MetaBackend *backend);
 
 MetaScreenCast * meta_backend_get_screen_cast (MetaBackend *backend);
-
-MetaEis * meta_backend_get_eis (MetaBackend *backend);
 #endif
 
 MetaInputCapture * meta_backend_get_input_capture (MetaBackend *backend);

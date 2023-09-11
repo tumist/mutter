@@ -13,9 +13,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -46,16 +44,16 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (MetaWaylandShellSurface,
 
 void
 meta_wayland_shell_surface_calculate_geometry (MetaWaylandShellSurface *shell_surface,
-                                               MetaRectangle           *out_geometry)
+                                               MtkRectangle            *out_geometry)
 {
   MetaWaylandSurfaceRole *surface_role =
     META_WAYLAND_SURFACE_ROLE (shell_surface);
   MetaWaylandSurface *surface =
     meta_wayland_surface_role_get_surface (surface_role);
-  MetaRectangle geometry;
+  MtkRectangle geometry;
   MetaWaylandSurface *subsurface_surface;
 
-  geometry = (MetaRectangle) {
+  geometry = (MtkRectangle) {
     .width = meta_wayland_surface_get_width (surface),
     .height = meta_wayland_surface_get_height (surface),
   };
@@ -76,17 +74,17 @@ meta_wayland_shell_surface_calculate_geometry (MetaWaylandShellSurface *shell_su
 
 void
 meta_wayland_shell_surface_determine_geometry (MetaWaylandShellSurface *shell_surface,
-                                               MetaRectangle           *set_geometry,
-                                               MetaRectangle           *out_geometry)
+                                               MtkRectangle            *set_geometry,
+                                               MtkRectangle            *out_geometry)
 {
-  MetaRectangle bounding_geometry = { 0 };
-  MetaRectangle intersected_geometry = { 0 };
+  MtkRectangle bounding_geometry = { 0 };
+  MtkRectangle intersected_geometry = { 0 };
 
   meta_wayland_shell_surface_calculate_geometry (shell_surface,
                                                  &bounding_geometry);
 
-  meta_rectangle_intersect (set_geometry, &bounding_geometry,
-                            &intersected_geometry);
+  mtk_rectangle_intersect (set_geometry, &bounding_geometry,
+                           &intersected_geometry);
 
   *out_geometry = intersected_geometry;
 }

@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,6 +26,7 @@
 #include "backends/meta-dbus-session-manager.h"
 #include "backends/meta-dbus-session-watcher.h"
 #include "backends/meta-remote-access-controller-private.h"
+#include "backends/meta-remote-desktop-session.h"
 #include "backends/meta-screen-cast-area-stream.h"
 #include "backends/meta-screen-cast-monitor-stream.h"
 #include "backends/meta-screen-cast-stream.h"
@@ -41,9 +40,19 @@
 
 enum
 {
+  STREAM_ADDED,
+  STREAM_REMOVED,
+
+  N_SIGNALS,
+};
+
+static int signals[N_SIGNALS];
+
+enum
+{
   PROP_0,
 
-  PROP_SESSION_TYPE,
+  PROP_REMOTE_DESKTOP_SESSION,
 
   N_PROPS
 };
@@ -68,6 +77,8 @@ struct _MetaScreenCastSession
 
   gboolean is_active;
   gboolean disable_animations;
+
+  MetaRemoteDesktopSession *remote_desktop_session;
 };
 
 static void initable_init_iface (GInitableIface *iface);
@@ -183,6 +194,12 @@ meta_screen_cast_session_close (MetaDbusSession *dbus_session)
   g_object_unref (session);
 }
 
+GList *
+meta_screen_cast_session_peek_streams (MetaScreenCastSession *session)
+{
+  return session->streams;
+}
+
 MetaScreenCastStream *
 meta_screen_cast_session_get_stream (MetaScreenCastSession *session,
                                      const char            *path)
@@ -232,6 +249,12 @@ meta_screen_cast_session_get_session_type (MetaScreenCastSession *session)
   return session->session_type;
 }
 
+MetaRemoteDesktopSession *
+meta_screen_cast_session_get_remote_desktop_session (MetaScreenCastSession *session)
+{
+  return session->remote_desktop_session;
+}
+
 static gboolean
 check_permission (MetaScreenCastSession *session,
                   GDBusMethodInvocation *invocation)
@@ -249,6 +272,14 @@ meta_screen_cast_session_initable_init (GInitable     *initable,
   GDBusInterfaceSkeleton *interface_skeleton;
   GDBusConnection *connection;
   static unsigned int global_session_number = 0;
+
+  if (session->remote_desktop_session)
+    {
+      if (!meta_remote_desktop_session_register_screen_cast (session->remote_desktop_session,
+                                                             session,
+                                                             error))
+        return FALSE;
+    }
 
   session->object_path =
     g_strdup_printf (META_SCREEN_CAST_SESSION_DBUS_PATH "/u%u",
@@ -351,6 +382,7 @@ on_stream_closed (MetaScreenCastStream  *stream,
                   MetaScreenCastSession *session)
 {
   session->streams = g_list_remove (session->streams, stream);
+  g_signal_emit (session, signals[STREAM_REMOVED], 0, stream);
   g_object_unref (stream);
 
   switch (session->session_type)
@@ -375,6 +407,16 @@ is_valid_cursor_mode (MetaScreenCastCursorMode cursor_mode)
     }
 
   return FALSE;
+}
+
+static void
+add_stream (MetaScreenCastSession *session,
+            MetaScreenCastStream  *stream)
+{
+  session->streams = g_list_append (session->streams, stream);
+  g_signal_emit (session, signals[STREAM_ADDED], 0, stream);
+
+  g_signal_connect (stream, "closed", G_CALLBACK (on_stream_closed), session);
 }
 
 static gboolean
@@ -469,9 +511,7 @@ handle_record_monitor (MetaDBusScreenCastSession *skeleton,
   stream = META_SCREEN_CAST_STREAM (monitor_stream);
   stream_path = meta_screen_cast_stream_get_object_path (stream);
 
-  session->streams = g_list_append (session->streams, stream);
-
-  g_signal_connect (stream, "closed", G_CALLBACK (on_stream_closed), session);
+  add_stream (session, stream);
 
   meta_dbus_screen_cast_session_complete_record_monitor (skeleton,
                                                          invocation,
@@ -579,9 +619,7 @@ handle_record_window (MetaDBusScreenCastSession *skeleton,
   stream = META_SCREEN_CAST_STREAM (window_stream);
   stream_path = meta_screen_cast_stream_get_object_path (stream);
 
-  session->streams = g_list_append (session->streams, stream);
-
-  g_signal_connect (stream, "closed", G_CALLBACK (on_stream_closed), session);
+  add_stream (session, stream);
 
   meta_dbus_screen_cast_session_complete_record_window (skeleton,
                                                         invocation,
@@ -608,7 +646,7 @@ handle_record_area (MetaDBusScreenCastSession *skeleton,
   gboolean is_recording;
   MetaScreenCastFlag flags;
   g_autoptr (GError) error = NULL;
-  MetaRectangle rect;
+  MtkRectangle rect;
   MetaScreenCastAreaStream *area_stream;
   MetaScreenCastStream *stream;
   char *stream_path;
@@ -648,7 +686,7 @@ handle_record_area (MetaDBusScreenCastSession *skeleton,
   if (is_recording)
     flags |= META_SCREEN_CAST_FLAG_IS_RECORDING;
 
-  rect = (MetaRectangle) {
+  rect = (MtkRectangle) {
     .x = x,
     .y = y,
     .width = width,
@@ -673,9 +711,7 @@ handle_record_area (MetaDBusScreenCastSession *skeleton,
   stream = META_SCREEN_CAST_STREAM (area_stream);
   stream_path = meta_screen_cast_stream_get_object_path (stream);
 
-  session->streams = g_list_append (session->streams, stream);
-
-  g_signal_connect (stream, "closed", G_CALLBACK (on_stream_closed), session);
+  add_stream (session, stream);
 
   meta_dbus_screen_cast_session_complete_record_area (skeleton,
                                                       invocation,
@@ -750,9 +786,7 @@ handle_record_virtual (MetaDBusScreenCastSession *skeleton,
   stream = META_SCREEN_CAST_STREAM (virtual_stream);
   stream_path = meta_screen_cast_stream_get_object_path (stream);
 
-  session->streams = g_list_append (session->streams, stream);
-
-  g_signal_connect (stream, "closed", G_CALLBACK (on_stream_closed), session);
+  add_stream (session, stream);
 
   meta_dbus_screen_cast_session_complete_record_virtual (skeleton,
                                                          invocation,
@@ -801,8 +835,12 @@ meta_screen_cast_session_set_property (GObject      *object,
 
   switch (prop_id)
     {
-    case PROP_SESSION_TYPE:
-      session->session_type = g_value_get_enum (value);
+    case PROP_REMOTE_DESKTOP_SESSION:
+      session->remote_desktop_session = g_value_get_object (value);
+      if (session->remote_desktop_session)
+        session->session_type = META_SCREEN_CAST_SESSION_TYPE_REMOTE_DESKTOP;
+      else
+        session->session_type = META_SCREEN_CAST_SESSION_TYPE_NORMAL;
       break;
 
     case N_PROPS + META_DBUS_SESSION_PROP_SESSION_MANAGER:
@@ -830,8 +868,8 @@ meta_screen_cast_session_get_property (GObject    *object,
 
   switch (prop_id)
     {
-    case PROP_SESSION_TYPE:
-      g_value_set_enum (value, session->session_type);
+    case PROP_REMOTE_DESKTOP_SESSION:
+      g_value_set_object (value, session->remote_desktop_session);
       break;
 
     case N_PROPS + META_DBUS_SESSION_PROP_SESSION_MANAGER:
@@ -863,15 +901,31 @@ meta_screen_cast_session_class_init (MetaScreenCastSessionClass *klass)
   object_class->set_property = meta_screen_cast_session_set_property;
   object_class->get_property = meta_screen_cast_session_get_property;
 
-  obj_props[PROP_SESSION_TYPE] =
-    g_param_spec_enum ("session-type", NULL, NULL,
-                       META_TYPE_SCREEN_CAST_SESSION_TYPE,
-                       META_SCREEN_CAST_SESSION_TYPE_NORMAL,
-                       G_PARAM_READWRITE |
-                       G_PARAM_CONSTRUCT_ONLY |
-                       G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_REMOTE_DESKTOP_SESSION] =
+    g_param_spec_object ("remote-desktop-session", NULL, NULL,
+                         META_TYPE_REMOTE_DESKTOP_SESSION,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS);
   g_object_class_install_properties (object_class, N_PROPS, obj_props);
   meta_dbus_session_install_properties (object_class, N_PROPS);
+
+  signals[STREAM_ADDED] =
+    g_signal_new ("stream-added",
+                  G_TYPE_FROM_CLASS (klass),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 1,
+                  META_TYPE_SCREEN_CAST_STREAM);
+  signals[STREAM_REMOVED] =
+    g_signal_new ("stream-removed",
+                  G_TYPE_FROM_CLASS (klass),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 1,
+                  META_TYPE_SCREEN_CAST_STREAM);
 }
 
 static gboolean

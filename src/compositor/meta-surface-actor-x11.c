@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Owen Taylor <otaylor@redhat.com>
@@ -201,7 +199,7 @@ meta_surface_actor_x11_process_damage (MetaSurfaceActor *actor,
 
   if (meta_window_is_fullscreen (self->window) && !self->unredirected && !self->does_full_damage)
     {
-      MetaRectangle window_rect;
+      MtkRectangle window_rect;
       meta_window_get_frame_rect (self->window, &window_rect);
 
       if (x == 0 &&

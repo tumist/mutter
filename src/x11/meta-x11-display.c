@@ -265,8 +265,6 @@ meta_x11_display_dispose (GObject *object)
       x11_display->xroot = None;
     }
 
-  meta_x11_display_destroy_error_traps (x11_display);
-
   if (x11_display->xdisplay)
     {
       meta_x11_display_free_events (x11_display);
@@ -289,6 +287,16 @@ meta_x11_display_dispose (GObject *object)
 }
 
 static void
+meta_x11_display_finalize (GObject *object)
+{
+  MetaX11Display *x11_display = META_X11_DISPLAY (object);
+
+  meta_x11_display_destroy_error_traps (x11_display);
+
+  G_OBJECT_CLASS (meta_x11_display_parent_class)->finalize (object);
+}
+
+static void
 on_x11_display_opened (MetaX11Display *x11_display,
                        MetaDisplay    *display)
 {
@@ -302,6 +310,7 @@ meta_x11_display_class_init (MetaX11DisplayClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->dispose = meta_x11_display_dispose;
+  object_class->finalize = meta_x11_display_finalize;
 }
 
 static void
@@ -966,7 +975,7 @@ set_workspace_work_area_hint (MetaWorkspace  *workspace,
 
   for (l = logical_monitors; l; l = l->next)
     {
-      MetaRectangle area;
+      MtkRectangle area;
 
       meta_workspace_get_work_area_for_logical_monitor (workspace, l->data, &area);
 
@@ -1002,7 +1011,7 @@ set_work_area_hint (MetaDisplay    *display,
   int num_workspaces;
   GList *l;
   unsigned long *data, *tmp;
-  MetaRectangle area;
+  MtkRectangle area;
 
   num_workspaces = meta_workspace_manager_get_n_workspaces (workspace_manager);
   data = g_new (unsigned long, num_workspaces * 4);
@@ -1651,9 +1660,14 @@ meta_x11_display_remove_cursor_later (MetaX11Display *x11_display)
   if (x11_display->reload_x11_cursor_later)
     {
       MetaDisplay *display = x11_display->display;
-      MetaLaters *laters = meta_compositor_get_laters (display->compositor);
 
-      meta_laters_remove (laters, x11_display->reload_x11_cursor_later);
+      /* May happen during destruction */
+      if (display->compositor)
+        {
+          MetaLaters *laters = meta_compositor_get_laters (display->compositor);
+          meta_laters_remove (laters, x11_display->reload_x11_cursor_later);
+        }
+
       x11_display->reload_x11_cursor_later = 0;
     }
 }
@@ -1944,16 +1958,6 @@ meta_x11_display_xwindow_is_a_no_focus_window (MetaX11Display *x11_display,
                                                Window xwindow)
 {
   return xwindow == x11_display->no_focus_window;
-}
-
-void
-meta_x11_display_increment_event_serial (MetaX11Display *x11_display)
-
-{
-  /* We just make some random X request */
-  XDeleteProperty (x11_display->xdisplay,
-                   x11_display->leader_window,
-                   x11_display->atom__MOTIF_WM_HINTS);
 }
 
 static void

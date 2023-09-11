@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -189,7 +187,7 @@ ensure_eis_pointer_regions (MetaInputCaptureSession *session,
                             struct eis_device       *eis_pointer)
 {
   int idx = 0;
-  cairo_rectangle_int_t rect;
+  MtkRectangle rect;
   float scale;
 
   if (!session->viewports)
@@ -619,7 +617,7 @@ typedef enum
 } LineAdjacency;
 
 static LineAdjacency
-get_barrier_adjacency (MetaRectangle  *rect,
+get_barrier_adjacency (MtkRectangle   *rect,
                        int             x1,
                        int             y1,
                        int             x2,
@@ -698,7 +696,7 @@ check_barrier (MetaInputCaptureSession  *session,
     meta_dbus_session_manager_get_backend (session->session_manager);
   MetaMonitorManager *monitor_manager =
     meta_backend_get_monitor_manager (backend);
-  gboolean has_adjecent_monitor = FALSE;
+  gboolean has_adjacent_monitor = FALSE;
   GList *logical_monitors;
   GList *l;
 
@@ -721,7 +719,7 @@ check_barrier (MetaInputCaptureSession  *session,
   for (l = logical_monitors; l; l = l->next)
     {
       MetaLogicalMonitor *logical_monitor = l->data;
-      MetaRectangle layout;
+      MtkRectangle layout;
 
       layout = meta_logical_monitor_get_layout (logical_monitor);
       switch (get_barrier_adjacency (&layout, x1, y1, x2, y2, error))
@@ -731,13 +729,13 @@ check_barrier (MetaInputCaptureSession  *session,
         case LINE_ADJACENCY_NONE:
           break;
         case LINE_ADJACENCY_CONTAINED:
-          if (has_adjecent_monitor)
+          if (has_adjacent_monitor)
             {
               g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-                           "Adjecent to multiple monitor edges");
+                           "Adjacent to multiple monitor edges");
               return FALSE;
             }
-          has_adjecent_monitor = TRUE;
+          has_adjacent_monitor = TRUE;
           break;
         case LINE_ADJACENCY_OVERLAP:
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
@@ -750,7 +748,7 @@ check_barrier (MetaInputCaptureSession  *session,
         }
     }
 
-  return has_adjecent_monitor;
+  return has_adjacent_monitor;
 }
 
 static unsigned int
@@ -879,7 +877,7 @@ handle_get_zones (MetaDBusInputCaptureSession *object,
   for (l = logical_monitors; l; l = l->next)
     {
       MetaLogicalMonitor *logical_monitor = l->data;
-      MetaRectangle layout;
+      MtkRectangle layout;
 
       layout = meta_logical_monitor_get_layout (logical_monitor);
       g_variant_builder_add (&zones_builder, "(uuii)",

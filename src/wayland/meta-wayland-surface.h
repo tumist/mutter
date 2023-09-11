@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -102,7 +100,7 @@ struct _MetaWaylandSurfaceState
   /* wl_surface.frame */
   struct wl_list frame_callback_list;
 
-  MetaRectangle new_geometry;
+  MtkRectangle new_geometry;
   gboolean has_new_geometry;
 
   gboolean has_acked_configure_serial;
@@ -418,6 +416,8 @@ struct wl_resource * meta_wayland_surface_get_resource (MetaWaylandSurface *surf
 MetaWaylandCompositor * meta_wayland_surface_get_compositor (MetaWaylandSurface *surface);
 
 void meta_wayland_surface_notify_highest_scale_monitor (MetaWaylandSurface *surface);
+
+void meta_wayland_surface_notify_actor_changed (MetaWaylandSurface *surface);
 
 static inline MetaWaylandSurfaceState *
 meta_wayland_surface_state_new (void)

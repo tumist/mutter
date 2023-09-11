@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -795,7 +793,7 @@ meta_wayland_keyboard_set_focus (MetaWaylandKeyboard *keyboard,
                                  &keyboard->resource_list,
                                  wl_resource_get_client (focus_surface_resource));
 
-      /* Make sure a11y masks are applied before braodcasting modifiers */
+      /* Make sure a11y masks are applied before broadcasting modifiers */
       kbd_a11y_apply_mask (keyboard);
 
       if (!wl_list_empty (&keyboard->focus_resource_list))

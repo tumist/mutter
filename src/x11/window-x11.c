@@ -288,10 +288,10 @@ send_configure_notify (MetaWindow *window)
 }
 
 static void
-adjust_for_gravity (MetaWindow        *window,
-                    gboolean           coords_assume_border,
-                    MetaGravity        gravity,
-                    MetaRectangle     *rect)
+adjust_for_gravity (MetaWindow   *window,
+                    gboolean      coords_assume_border,
+                    MetaGravity   gravity,
+                    MtkRectangle *rect)
 {
   MetaWindowX11 *window_x11 = META_WINDOW_X11 (window);
   MetaWindowX11Private *priv = meta_window_x11_get_instance_private (window_x11);
@@ -512,7 +512,7 @@ meta_window_apply_session_info (MetaWindow *window,
 
   if (info->geometry_set)
     {
-      MetaRectangle rect;
+      MtkRectangle rect;
       MetaMoveResizeFlags flags;
       MetaGravity gravity;
 
@@ -599,7 +599,7 @@ meta_window_x11_initialize_state (MetaWindow *window)
 
   if (!window->override_redirect)
     {
-      MetaRectangle rect;
+      MtkRectangle rect;
       MetaMoveResizeFlags flags;
       MetaGravity gravity = window->size_hints.win_gravity;
 
@@ -1048,8 +1048,8 @@ meta_window_x11_focus (MetaWindow *window,
 }
 
 static void
-meta_window_get_client_root_coords (MetaWindow    *window,
-                                    MetaRectangle *rect)
+meta_window_get_client_root_coords (MetaWindow   *window,
+                                    MtkRectangle *rect)
 {
   MetaWindowX11 *window_x11 = META_WINDOW_X11 (window);
   MetaWindowX11Private *priv = meta_window_x11_get_instance_private (window_x11);
@@ -1071,7 +1071,7 @@ meta_window_refresh_resize_popup (MetaWindow *window)
 
   if (priv->showing_resize_popup)
     {
-      MetaRectangle rect;
+      MtkRectangle rect;
       int display_w, display_h;
 
       meta_window_get_client_root_coords (window, &rect);
@@ -1288,9 +1288,9 @@ meta_window_x11_can_freeze_commits (MetaWindow *window)
 static void
 meta_window_x11_move_resize_internal (MetaWindow                *window,
                                       MetaGravity                gravity,
-                                      MetaRectangle              unconstrained_rect,
-                                      MetaRectangle              constrained_rect,
-                                      MetaRectangle              intermediate_rect,
+                                      MtkRectangle               unconstrained_rect,
+                                      MtkRectangle               constrained_rect,
+                                      MtkRectangle               intermediate_rect,
                                       int                        rel_x,
                                       int                        rel_y,
                                       MetaMoveResizeFlags        flags,
@@ -1299,7 +1299,7 @@ meta_window_x11_move_resize_internal (MetaWindow                *window,
   MetaWindowX11 *window_x11 = META_WINDOW_X11 (window);
   MetaWindowX11Private *priv = meta_window_x11_get_instance_private (window_x11);
   MetaFrameBorders borders;
-  MetaRectangle client_rect;
+  MtkRectangle client_rect;
   int size_dx, size_dy;
   XWindowChanges values;
   unsigned int mask;
@@ -1694,7 +1694,7 @@ meta_window_x11_update_struts (MetaWindow *window)
       MetaStrut *new_strut = (MetaStrut*) new_iter->data;
 
       if (old_strut->side != new_strut->side ||
-          !meta_rectangle_equal (&old_strut->rect, &new_strut->rect))
+          !mtk_rectangle_equal (&old_strut->rect, &new_strut->rect))
         break;
 
       old_iter = old_iter->next;
@@ -2374,7 +2374,7 @@ region_create_from_x_rectangles (const XRectangle *rects,
                                  int n_rects)
 {
   int i;
-  cairo_rectangle_int_t *cairo_rects = g_newa (cairo_rectangle_int_t, n_rects);
+  MtkRectangle *cairo_rects = g_newa (MtkRectangle, n_rects);
 
   for (i = 0; i < n_rects; i ++)
     {
@@ -2414,7 +2414,7 @@ print_region (cairo_region_t *region)
   g_print ("[");
   for (i = 0; i < n_rects; i++)
     {
-      cairo_rectangle_int_t rect;
+      MtkRectangle rect;
       cairo_region_get_rectangle (region, i, &rect);
       g_print ("+%d+%dx%dx%d ",
                rect.x, rect.y, rect.width, rect.height);
@@ -2506,7 +2506,7 @@ meta_window_x11_update_input_region (MetaWindow *window)
 
   if (region != NULL)
     {
-      cairo_rectangle_int_t client_area;
+      MtkRectangle client_area;
 
       client_area.x = 0;
       client_area.y = 0;
@@ -2587,7 +2587,7 @@ meta_window_x11_update_shape_region (MetaWindow *window)
 
   if (region != NULL)
     {
-      cairo_rectangle_int_t client_area;
+      MtkRectangle client_area;
 
       client_area.x = 0;
       client_area.y = 0;
@@ -2644,7 +2644,7 @@ meta_window_move_resize_request (MetaWindow  *window,
   gboolean allow_position_change;
   gboolean in_grab_op;
   MetaMoveResizeFlags flags;
-  MetaRectangle buffer_rect;
+  MtkRectangle buffer_rect;
   MetaWindowDrag *window_drag;
 
   /* We ignore configure requests while the user is moving/resizing
@@ -2773,7 +2773,7 @@ meta_window_move_resize_request (MetaWindow  *window,
 
   if (flags & (META_MOVE_RESIZE_MOVE_ACTION | META_MOVE_RESIZE_RESIZE_ACTION))
     {
-      MetaRectangle rect;
+      MtkRectangle rect;
 
       rect.x = x;
       rect.y = y;
@@ -2782,7 +2782,7 @@ meta_window_move_resize_request (MetaWindow  *window,
 
       if (window->monitor)
         {
-          MetaRectangle monitor_rect;
+          MtkRectangle monitor_rect;
 
           meta_display_get_monitor_geometry (window->display,
                                              window->monitor->number,
@@ -2797,7 +2797,7 @@ meta_window_move_resize_request (MetaWindow  *window,
            */
           if (meta_prefs_get_force_fullscreen() &&
               (window->decorated || !meta_window_is_client_decorated (window)) &&
-              meta_rectangle_equal (&rect, &monitor_rect) &&
+              mtk_rectangle_equal (&rect, &monitor_rect) &&
               window->has_fullscreen_func &&
               !window->fullscreen)
             {
@@ -3021,6 +3021,96 @@ handle_net_restack_window (MetaDisplay *display,
       restack_window (window, sibling, event->xclient.data.l[2]);
     }
 }
+
+#ifdef HAVE_XWAYLAND
+typedef struct {
+  ClutterInputDevice *device;
+  ClutterEventSequence *sequence;
+  graphene_point_t device_point;
+  graphene_point_t coords;
+  int button;
+} NearestDeviceData;
+
+static gboolean
+nearest_device_func (ClutterStage         *stage,
+                     ClutterInputDevice   *device,
+                     ClutterEventSequence *sequence,
+                     gpointer              user_data)
+{
+  NearestDeviceData *data = user_data;
+  graphene_point_t point;
+  ClutterModifierType mods;
+  const int nearest_threshold = 64;
+
+  clutter_seat_query_state (clutter_input_device_get_seat (device),
+                            device,
+                            sequence,
+                            &point,
+                            &mods);
+
+  if (!sequence)
+    {
+      ClutterModifierType accepted_buttons = 0;
+      ClutterModifierType mask =
+        (CLUTTER_BUTTON1_MASK | CLUTTER_BUTTON2_MASK |
+         CLUTTER_BUTTON3_MASK | CLUTTER_BUTTON4_MASK |
+         CLUTTER_BUTTON5_MASK);
+
+      if (data->button != 0)
+        accepted_buttons = (CLUTTER_BUTTON1_MASK << (data->button - 1)) & mask;
+      else
+        accepted_buttons = mask;
+
+      /* Check that pointers have any of the relevant buttons pressed */
+      if (!(mods & accepted_buttons))
+        return TRUE;
+    }
+
+  if (ABS (point.x - data->coords.x) < nearest_threshold &&
+      ABS (point.y - data->coords.y) < nearest_threshold &&
+      (!data->device ||
+       (ABS (point.x - data->coords.x) < ABS (data->device_point.x - data->coords.x) &&
+        ABS (point.y - data->coords.y) < ABS (data->device_point.y - data->coords.y))))
+    {
+      data->device = device;
+      data->sequence = sequence;
+      data->device_point = point;
+    }
+
+  return TRUE;
+}
+
+static gboolean
+guess_nearest_device (MetaWindow            *window,
+                      int                    root_x,
+                      int                    root_y,
+                      int                    button,
+                      ClutterInputDevice   **device,
+                      ClutterEventSequence **sequence)
+{
+  MetaDisplay *display = meta_window_get_display (window);
+  MetaContext *context = meta_display_get_context (display);
+  MetaBackend *backend = meta_context_get_backend (context);
+  ClutterStage *stage = CLUTTER_STAGE (meta_backend_get_stage (backend));
+  NearestDeviceData data = { 0, };
+
+  data.button = button;
+  graphene_point_init (&data.coords, root_x, root_y);
+  clutter_stage_pointing_input_foreach (stage,
+                                        nearest_device_func,
+                                        &data);
+
+  if (!data.device)
+    return FALSE;
+
+  if (device && data.device)
+    *device = data.device;
+  if (sequence && data.sequence)
+    *sequence = data.sequence;
+
+  return TRUE;
+}
+#endif /* HAVE_XWAYLAND */
 
 gboolean
 meta_window_x11_client_message (MetaWindow *window,
@@ -3325,11 +3415,10 @@ meta_window_x11_client_message (MetaWindow *window,
           break;
         }
 
-      window_drag =
-        meta_compositor_get_current_window_drag (window->display->compositor);
-
       if (action == _NET_WM_MOVERESIZE_CANCEL)
         {
+          window_drag =
+            meta_compositor_get_current_window_drag (window->display->compositor);
           if (window_drag)
             meta_window_drag_end (window_drag);
         }
@@ -3357,49 +3446,73 @@ meta_window_x11_client_message (MetaWindow *window,
           MetaBackend *backend = meta_context_get_backend (context);
           ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
           ClutterSeat *seat = clutter_backend_get_default_seat (clutter_backend);
+          ClutterInputDevice *device = NULL;
+          ClutterEventSequence *sequence = NULL;
           int button_mask;
+
+#ifdef HAVE_XWAYLAND
+          if (meta_is_wayland_compositor ())
+            {
+              if (!guess_nearest_device (window, x_root, y_root, button,
+                                         &device, &sequence))
+                return FALSE;
+            }
+          else
+#endif
+            {
+              device = clutter_seat_get_pointer (seat);
+              sequence = NULL;
+            }
 
           meta_topic (META_DEBUG_WINDOW_OPS,
                       "Beginning move/resize with button = %d", button);
           meta_window_begin_grab_op (window, op,
-                                     clutter_seat_get_pointer (seat),
-                                     NULL,
+                                     device,
+                                     sequence,
                                      timestamp);
 
-          button_mask = query_pressed_buttons (window);
+          window_drag =
+            meta_compositor_get_current_window_drag (window->display->compositor);
 
-          if (button == 0)
+#ifdef HAVE_XWAYLAND
+          if (!meta_is_wayland_compositor ())
+#endif
             {
-              /*
-               * the button SHOULD already be included in the message
-               */
-              if ((button_mask & (1 << 1)) != 0)
-                button = 1;
-              else if ((button_mask & (1 << 2)) != 0)
-                button = 2;
-              else if ((button_mask & (1 << 3)) != 0)
-                button = 3;
+              button_mask = query_pressed_buttons (window);
 
-              if (button == 0 && window_drag)
-                meta_window_drag_end (window_drag);
-            }
-          else
-            {
-              /* There is a potential race here. If the user presses and
-               * releases their mouse button very fast, it's possible for
-               * both the ButtonPress and ButtonRelease to be sent to the
-               * client before it can get a chance to send _NET_WM_MOVERESIZE
-               * to us. When that happens, we'll become stuck in a grab
-               * state, as we haven't received a ButtonRelease to cancel the
-               * grab.
-               *
-               * We can solve this by querying after we take the explicit
-               * pointer grab -- if the button isn't pressed, we cancel the
-               * drag immediately.
-               */
+              if (button == 0)
+                {
+                  /*
+                   * the button SHOULD already be included in the message
+                   */
+                  if ((button_mask & (1 << 1)) != 0)
+                    button = 1;
+                  else if ((button_mask & (1 << 2)) != 0)
+                    button = 2;
+                  else if ((button_mask & (1 << 3)) != 0)
+                    button = 3;
 
-              if (window_drag && (button_mask & (1 << button)) == 0)
-                meta_window_drag_end (window_drag);
+                  if (button == 0 && window_drag)
+                    meta_window_drag_end (window_drag);
+                }
+              else
+                {
+                  /* There is a potential race here. If the user presses and
+                   * releases their mouse button very fast, it's possible for
+                   * both the ButtonPress and ButtonRelease to be sent to the
+                   * client before it can get a chance to send _NET_WM_MOVERESIZE
+                   * to us. When that happens, we'll become stuck in a grab
+                   * state, as we haven't received a ButtonRelease to cancel the
+                   * grab.
+                   *
+                   * We can solve this by querying after we take the explicit
+                   * pointer grab -- if the button isn't pressed, we cancel the
+                   * drag immediately.
+                   */
+
+                  if (window_drag && (button_mask & (1 << button)) == 0)
+                    meta_window_drag_end (window_drag);
+                }
             }
         }
 
@@ -4183,9 +4296,9 @@ meta_window_x11_always_update_shape (MetaWindow *window)
 }
 
 void
-meta_window_x11_surface_rect_to_frame_rect (MetaWindow    *window,
-                                            MetaRectangle *surface_rect,
-                                            MetaRectangle *frame_rect)
+meta_window_x11_surface_rect_to_frame_rect (MetaWindow   *window,
+                                            MtkRectangle *surface_rect,
+                                            MtkRectangle *frame_rect)
 
 {
   MetaFrameBorders borders;
@@ -4202,9 +4315,9 @@ meta_window_x11_surface_rect_to_frame_rect (MetaWindow    *window,
 }
 
 void
-meta_window_x11_surface_rect_to_client_rect (MetaWindow    *window,
-                                             MetaRectangle *surface_rect,
-                                             MetaRectangle *client_rect)
+meta_window_x11_surface_rect_to_client_rect (MetaWindow   *window,
+                                             MtkRectangle *surface_rect,
+                                             MtkRectangle *client_rect)
 {
   MetaFrameBorders borders;
 
@@ -4217,7 +4330,7 @@ meta_window_x11_surface_rect_to_client_rect (MetaWindow    *window,
   client_rect->height -= borders.total.top + borders.total.bottom;
 }
 
-MetaRectangle
+MtkRectangle
 meta_window_x11_get_client_rect (MetaWindowX11 *window_x11)
 {
   MetaWindowX11Private *priv = meta_window_x11_get_instance_private (window_x11);
@@ -4258,15 +4371,15 @@ meta_window_x11_can_unredirect (MetaWindowX11 *window_x11)
 
   if (window->override_redirect)
     {
-      MetaRectangle window_rect;
-      MetaRectangle logical_monitor_layout;
+      MtkRectangle window_rect;
+      MtkRectangle logical_monitor_layout;
       MetaLogicalMonitor *logical_monitor = window->monitor;
 
       meta_window_get_frame_rect (window, &window_rect);
       logical_monitor_layout =
         meta_logical_monitor_get_layout (logical_monitor);
 
-      if (meta_rectangle_equal (&window_rect, &logical_monitor_layout))
+      if (mtk_rectangle_equal (&window_rect, &logical_monitor_layout))
         return TRUE;
     }
 
@@ -4280,19 +4393,6 @@ meta_window_x11_get_sync_counter (MetaWindow *window)
   MetaWindowX11Private *priv = meta_window_x11_get_instance_private (window_x11);
 
   return &priv->sync_counter;
-}
-
-gboolean
-meta_window_x11_has_active_sync_alarms (MetaWindow *window)
-{
-  MetaWindowX11 *window_x11 = META_WINDOW_X11 (window);
-  MetaWindowX11Private *priv = meta_window_x11_get_instance_private (window_x11);
-
-  if (window->frame &&
-      meta_sync_counter_has_sync_alarm (meta_frame_get_sync_counter (window->frame)))
-    return TRUE;
-
-  return meta_sync_counter_has_sync_alarm (&priv->sync_counter);
 }
 
 gboolean

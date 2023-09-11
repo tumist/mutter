@@ -15,9 +15,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -109,6 +107,7 @@ enum
   SURFACE_SHORTCUTS_RESTORED,
   SURFACE_GEOMETRY_CHANGED,
   SURFACE_PRE_STATE_APPLIED,
+  SURFACE_ACTOR_CHANGED,
   N_SURFACE_SIGNALS
 };
 
@@ -267,7 +266,7 @@ surface_process_damage (MetaWaylandSurface *surface,
                         cairo_region_t     *buffer_region)
 {
   MetaWaylandBuffer *buffer = meta_wayland_surface_get_buffer (surface);
-  cairo_rectangle_int_t buffer_rect;
+  MtkRectangle buffer_rect;
   MetaSurfaceActor *actor;
 
   /* If the client destroyed the buffer it attached before committing, but
@@ -277,14 +276,14 @@ surface_process_damage (MetaWaylandSurface *surface,
   if (!buffer)
     return;
 
-  buffer_rect = (cairo_rectangle_int_t) {
+  buffer_rect = (MtkRectangle) {
     .width = meta_wayland_surface_get_buffer_width (surface),
     .height = meta_wayland_surface_get_buffer_height (surface),
   };
 
   if (!cairo_region_is_empty (surface_region))
     {
-      cairo_rectangle_int_t surface_rect;
+      MtkRectangle surface_rect;
       cairo_region_t *scaled_region;
       cairo_region_t *transformed_region;
       cairo_region_t *viewport_region;
@@ -293,7 +292,7 @@ surface_process_damage (MetaWaylandSurface *surface,
       /* Intersect the damage region with the surface region before scaling in
        * order to avoid integer overflow when scaling a damage region is too
        * large (for example INT32_MAX which mesa passes). */
-      surface_rect = (cairo_rectangle_int_t) {
+      surface_rect = (MtkRectangle) {
         .width = meta_wayland_surface_get_width (surface),
         .height = meta_wayland_surface_get_height (surface),
       };
@@ -363,7 +362,7 @@ surface_process_damage (MetaWaylandSurface *surface,
       n_rectangles = cairo_region_num_rectangles (buffer_region);
       for (i = 0; i < n_rectangles; i++)
         {
-          cairo_rectangle_int_t rect;
+          MtkRectangle rect;
           cairo_region_get_rectangle (buffer_region, i, &rect);
 
           meta_surface_actor_process_damage (actor,
@@ -1064,9 +1063,9 @@ wl_surface_damage (struct wl_client   *client,
 {
   MetaWaylandSurface *surface = wl_resource_get_user_data (surface_resource);
   MetaWaylandSurfaceState *pending = surface->pending_state;
-  cairo_rectangle_int_t rectangle;
+  MtkRectangle rectangle;
 
-  rectangle = (cairo_rectangle_int_t) {
+  rectangle = (MtkRectangle) {
     .x = x,
     .y = y,
     .width = width,
@@ -1233,9 +1232,9 @@ wl_surface_damage_buffer (struct wl_client   *client,
 {
   MetaWaylandSurface *surface = wl_resource_get_user_data (surface_resource);
   MetaWaylandSurfaceState *pending = surface->pending_state;
-  cairo_rectangle_int_t rectangle;
+  MtkRectangle rectangle;
 
-  rectangle = (cairo_rectangle_int_t) {
+  rectangle = (MtkRectangle) {
     .x = x,
     .y = y,
     .width = width,
@@ -1851,6 +1850,13 @@ meta_wayland_surface_class_init (MetaWaylandSurfaceClass *klass)
                   0, NULL, NULL,
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
+  surface_signals[SURFACE_ACTOR_CHANGED] =
+    g_signal_new ("actor-changed",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0, NULL, NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
 }
 
 static void
@@ -2064,12 +2070,12 @@ cairo_region_t *
 meta_wayland_surface_calculate_input_region (MetaWaylandSurface *surface)
 {
   cairo_region_t *region;
-  cairo_rectangle_int_t buffer_rect;
+  MtkRectangle buffer_rect;
 
   if (!surface->buffer)
     return NULL;
 
-  buffer_rect = (cairo_rectangle_int_t) {
+  buffer_rect = (MtkRectangle) {
     .width = meta_wayland_surface_get_width (surface),
     .height = meta_wayland_surface_get_height (surface),
   };
@@ -2266,7 +2272,7 @@ meta_wayland_surface_can_scanout_untransformed (MetaWaylandSurface *surface,
 
   if (surface->viewport.has_dst_size)
     {
-      MetaRectangle view_layout;
+      MtkRectangle view_layout;
       float view_scale;
       float untransformed_layout_width;
       float untransformed_layout_height;
@@ -2434,4 +2440,10 @@ meta_wayland_surface_notify_highest_scale_monitor (MetaWaylandSurface *surface)
 {
   output_state_handle_highest_scale_monitor (surface);
   protocol_state_handle_highest_scale_monitor (surface);
+}
+
+void
+meta_wayland_surface_notify_actor_changed (MetaWaylandSurface *surface)
+{
+  g_signal_emit (surface, surface_signals[SURFACE_ACTOR_CHANGED], 0);
 }

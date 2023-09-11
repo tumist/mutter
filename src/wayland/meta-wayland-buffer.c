@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -703,7 +701,7 @@ process_shm_buffer_damage (MetaWaylandBuffer *buffer,
     {
       const uint8_t *data = wl_shm_buffer_get_data (shm_buffer);
       int32_t stride = wl_shm_buffer_get_stride (shm_buffer);
-      cairo_rectangle_int_t rect;
+      MtkRectangle rect;
       int bpp;
 
       bpp = cogl_pixel_format_get_bytes_per_pixel (format, 0);

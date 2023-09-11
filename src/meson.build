@@ -544,6 +544,8 @@ if have_remote_desktop
     'backends/meta-eis.h',
     'backends/meta-eis-client.c',
     'backends/meta-eis-client.h',
+    'backends/meta-eis-viewport.c',
+    'backends/meta-eis-viewport.h',
     'backends/meta-remote-desktop.c',
     'backends/meta-remote-desktop.h',
     'backends/meta-remote-desktop-session.c',
@@ -627,6 +629,8 @@ if have_wayland
     'wayland/meta-wayland-gtk-shell.c',
     'wayland/meta-wayland-gtk-shell.h',
     'wayland/meta-wayland.h',
+    'wayland/meta-wayland-idle-inhibit.c',
+    'wayland/meta-wayland-idle-inhibit.h',
     'wayland/meta-wayland-inhibit-shortcuts.c',
     'wayland/meta-wayland-inhibit-shortcuts-dialog.c',
     'wayland/meta-wayland-inhibit-shortcuts-dialog.h',
@@ -881,7 +885,9 @@ if have_wayland_eglstream
   ]
 endif
 
-mutter_private_enum_sources = []
+mutter_private_enum_sources = [
+  'core/window-private.h',
+]
 
 if have_remote_desktop
   mutter_private_enum_sources += [
@@ -1056,6 +1062,7 @@ if have_wayland
   wayland_protocols = [
     ['fractional-scale', 'staging', 'v1', ],
     ['gtk-shell', 'private', ],
+    ['idle-inhibit', 'unstable', 'v1', ],
     ['keyboard-shortcuts-inhibit', 'unstable', 'v1', ],
     ['linux-dmabuf', 'unstable', 'v1', ],
     ['pointer-constraints', 'unstable', 'v1', ],
@@ -1263,11 +1270,13 @@ if have_introspection
       libmutter_cogl_gir[0],
       libmutter_cogl_pango_gir[0],
       libmutter_clutter_gir[0],
+      libmutter_mtk_gir[0],
     ],
     dependencies: [
       libmutter_dep,
       mutter_deps,
     ],
+    export_packages: 'libmutter-@0@'.format(libmutter_api_version),
     extra_args: mutter_c_args + introspection_args,
     install_dir_gir: pkglibdir,
     install_dir_typelib: pkglibdir,

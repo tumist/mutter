@@ -120,7 +120,6 @@ struct _MetaDisplay
 
   /* Opening the display */
   unsigned int display_opening : 1;
-  unsigned int grabbed_in_clutter : 1;
 
   /* Closing down the display */
   int closing;
@@ -285,17 +284,20 @@ gboolean meta_display_show_restart_message (MetaDisplay *display,
                                             const char  *message);
 gboolean meta_display_request_restart      (MetaDisplay *display);
 
-gboolean meta_display_show_resize_popup (MetaDisplay *display,
-                                         gboolean show,
-                                         MetaRectangle *rect,
-                                         int display_w,
-                                         int display_h);
+gboolean meta_display_show_resize_popup (MetaDisplay  *display,
+                                         gboolean      show,
+                                         MtkRectangle *rect,
+                                         int           display_w,
+                                         int           display_h);
 
 void meta_set_is_restart (gboolean whether);
 
 void meta_display_cancel_touch (MetaDisplay *display);
 
 gboolean meta_display_windows_are_interactable (MetaDisplay *display);
+
+void meta_display_queue_focus (MetaDisplay *display,
+                               MetaWindow  *window);
 
 void meta_display_show_tablet_mapping_notification (MetaDisplay        *display,
                                                     ClutterInputDevice *pad,

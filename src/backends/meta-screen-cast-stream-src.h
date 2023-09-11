@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -77,12 +75,14 @@ struct _MetaScreenCastStreamSrcClass
   void (* record_follow_up) (MetaScreenCastStreamSrc *src);
 
   gboolean (* get_videocrop) (MetaScreenCastStreamSrc *src,
-                              MetaRectangle           *crop_rect);
+                              MtkRectangle            *crop_rect);
   void (* set_cursor_metadata) (MetaScreenCastStreamSrc *src,
                                 struct spa_meta_cursor  *spa_meta_cursor);
 
   void (* notify_params_updated) (MetaScreenCastStreamSrc   *src,
                                   struct spa_video_info_raw *video_format);
+
+  CoglPixelFormat (* get_preferred_format) (MetaScreenCastStreamSrc *src);
 };
 
 void meta_screen_cast_stream_src_close (MetaScreenCastStreamSrc *src);
@@ -132,3 +132,5 @@ void meta_screen_cast_stream_src_set_cursor_sprite_metadata (MetaScreenCastStrea
 
 gboolean meta_screen_cast_stream_src_uses_dma_bufs (MetaScreenCastStreamSrc *src);
 
+CoglPixelFormat
+meta_screen_cast_stream_src_get_preferred_format (MetaScreenCastStreamSrc *src);

@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -40,7 +38,7 @@ MetaWindow * meta_window_wayland_new       (MetaDisplay        *display,
                                             MetaWaylandSurface *surface);
 
 void meta_window_wayland_finish_move_resize (MetaWindow              *window,
-                                             MetaRectangle            new_geom,
+                                             MtkRectangle             new_geom,
                                              MetaWaylandSurfaceState *pending);
 
 int meta_window_wayland_get_geometry_scale (MetaWindow *window);

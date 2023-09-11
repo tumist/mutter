@@ -525,11 +525,11 @@ get_blended_overlay_pipeline (CoglContext *ctx)
 }
 
 static void
-paint_clipped_rectangle_node (MetaShapedTexture     *stex,
-                              ClutterPaintNode      *root_node,
-                              CoglPipeline          *pipeline,
-                              cairo_rectangle_int_t *rect,
-                              ClutterActorBox       *alloc)
+paint_clipped_rectangle_node (MetaShapedTexture *stex,
+                              ClutterPaintNode  *root_node,
+                              CoglPipeline      *pipeline,
+                              MtkRectangle      *rect,
+                              ClutterActorBox   *alloc)
 {
   g_autoptr (ClutterPaintNode) node = NULL;
   float ratio_h, ratio_v;
@@ -625,7 +625,7 @@ do_paint_content (MetaShapedTexture   *stex,
                   uint8_t              opacity)
 {
   int dst_width, dst_height;
-  cairo_rectangle_int_t content_rect;
+  MtkRectangle content_rect;
   gboolean use_opaque_region;
   cairo_region_t *blended_tex_region;
   CoglContext *ctx;
@@ -645,7 +645,7 @@ do_paint_content (MetaShapedTexture   *stex,
   if (dst_width == 0 || dst_height == 0) /* no contents yet */
     return;
 
-  content_rect = (cairo_rectangle_int_t) {
+  content_rect = (MtkRectangle) {
     .x = 0,
     .y = 0,
     .width = dst_width,
@@ -777,7 +777,7 @@ do_paint_content (MetaShapedTexture   *stex,
           n_rects = cairo_region_num_rectangles (region);
           for (i = 0; i < n_rects; i++)
             {
-              cairo_rectangle_int_t rect;
+              MtkRectangle rect;
               cairo_region_get_rectangle (region, i, &rect);
               paint_clipped_rectangle_node (stex, root_node,
                                             opaque_pipeline,
@@ -844,10 +844,10 @@ do_paint_content (MetaShapedTexture   *stex,
 
           for (i = 0; i < n_rects; i++)
             {
-              cairo_rectangle_int_t rect;
+              MtkRectangle rect;
               cairo_region_get_rectangle (blended_tex_region, i, &rect);
 
-              if (!meta_rectangle_intersect (&content_rect, &rect, &rect))
+              if (!mtk_rectangle_intersect (&content_rect, &rect, &rect))
                 continue;
 
               paint_clipped_rectangle_node (stex, root_node,
@@ -1006,15 +1006,15 @@ meta_shaped_texture_set_mask_texture (MetaShapedTexture *stex,
  * Return value: Whether a redraw have been queued or not
  */
 gboolean
-meta_shaped_texture_update_area (MetaShapedTexture     *stex,
-                                 int                    x,
-                                 int                    y,
-                                 int                    width,
-                                 int                    height,
-                                 cairo_rectangle_int_t *clip)
+meta_shaped_texture_update_area (MetaShapedTexture *stex,
+                                 int                x,
+                                 int                y,
+                                 int                width,
+                                 int                height,
+                                 MtkRectangle      *clip)
 {
   MetaMonitorTransform inverted_transform;
-  cairo_rectangle_int_t buffer_rect;
+  MtkRectangle buffer_rect;
   int scaled_and_transformed_width;
   int scaled_and_transformed_height;
 
@@ -1022,25 +1022,25 @@ meta_shaped_texture_update_area (MetaShapedTexture     *stex,
     return FALSE;
 
   /* Pad the actor clip to ensure that pixels affected by linear scaling are accounted for */
-  *clip = (cairo_rectangle_int_t) {
+  *clip = (MtkRectangle) {
     .x = x - 1,
     .y = y - 1,
     .width = width + 2,
     .height = height + 2
   };
 
-  buffer_rect = (cairo_rectangle_int_t) {
+  buffer_rect = (MtkRectangle) {
     .x = 0,
     .y = 0,
     .width = stex->tex_width,
     .height = stex->tex_height,
   };
 
-  meta_rectangle_intersect (&buffer_rect, clip, clip);
+  mtk_rectangle_intersect (&buffer_rect, clip, clip);
 
   meta_rectangle_scale_double (clip,
                                1.0 / stex->buffer_scale,
-                               META_ROUNDING_STRATEGY_GROW,
+                               MTK_ROUNDING_STRATEGY_GROW,
                                clip);
 
   if (meta_monitor_transform_is_rotated (stex->transform))
@@ -1236,7 +1236,7 @@ gboolean
 meta_shaped_texture_is_opaque (MetaShapedTexture *stex)
 {
   MetaMultiTexture *multi_texture;
-  cairo_rectangle_int_t opaque_rect;
+  MtkRectangle opaque_rect;
 
   multi_texture = stex->texture;
   if (!multi_texture)
@@ -1255,11 +1255,11 @@ meta_shaped_texture_is_opaque (MetaShapedTexture *stex)
 
   meta_shaped_texture_ensure_size_valid (stex);
 
-  return meta_rectangle_equal (&opaque_rect,
-                               &(MetaRectangle) {
-                                .width = stex->dst_width,
-                                .height = stex->dst_height
-                               });
+  return mtk_rectangle_equal (&opaque_rect,
+                              &(MtkRectangle) {
+                               .width = stex->dst_width,
+                               .height = stex->dst_height
+                              });
 }
 
 void
@@ -1416,10 +1416,10 @@ meta_shaped_texture_should_get_via_offscreen (MetaShapedTexture *stex)
  * cairo_surface_destroy().
  */
 cairo_surface_t *
-meta_shaped_texture_get_image (MetaShapedTexture     *stex,
-                               cairo_rectangle_int_t *clip)
+meta_shaped_texture_get_image (MetaShapedTexture *stex,
+                               MtkRectangle      *clip)
 {
-  cairo_rectangle_int_t *image_clip = NULL;
+  MtkRectangle *image_clip = NULL;
   CoglTexture *texture;
   CoglContext *cogl_context =
     clutter_backend_get_cogl_context (clutter_get_default_backend ());
@@ -1440,19 +1440,19 @@ meta_shaped_texture_get_image (MetaShapedTexture     *stex,
 
   if (clip != NULL)
     {
-      cairo_rectangle_int_t dst_rect;
+      MtkRectangle dst_rect;
 
-      image_clip = alloca (sizeof (cairo_rectangle_int_t));
-      dst_rect = (cairo_rectangle_int_t) {
+      image_clip = alloca (sizeof (MtkRectangle));
+      dst_rect = (MtkRectangle) {
         .width = stex->dst_width,
         .height = stex->dst_height,
       };
 
-      if (!meta_rectangle_intersect (&dst_rect, clip,
-                                     image_clip))
+      if (!mtk_rectangle_intersect (&dst_rect, clip,
+                                    image_clip))
         return NULL;
 
-      *image_clip = (MetaRectangle) {
+      *image_clip = (MtkRectangle) {
         .x = image_clip->x * stex->buffer_scale,
         .y = image_clip->y * stex->buffer_scale,
         .width = image_clip->width * stex->buffer_scale,

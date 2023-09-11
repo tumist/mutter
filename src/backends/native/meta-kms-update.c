@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -244,13 +242,6 @@ drop_plane_assignment (MetaKmsUpdate          *update,
   return FALSE;
 }
 
-void
-meta_kms_update_drop_plane_assignment (MetaKmsUpdate *update,
-                                       MetaKmsPlane  *plane)
-{
-  drop_plane_assignment (update, plane, NULL);
-}
-
 static void
 update_latch_crtc (MetaKmsUpdate *update,
                    MetaKmsCrtc   *crtc)
@@ -278,7 +269,7 @@ meta_kms_update_assign_plane (MetaKmsUpdate          *update,
                               MetaKmsPlane           *plane,
                               MetaDrmBuffer          *buffer,
                               MetaFixed16Rectangle    src_rect,
-                              MetaRectangle           dst_rect,
+                              MtkRectangle            dst_rect,
                               MetaKmsAssignPlaneFlag  flags)
 {
   MetaKmsPlaneAssignment *plane_assignment;
@@ -527,6 +518,7 @@ meta_kms_crtc_color_updates_free (MetaKmsCrtcColorUpdate *color_update)
 {
   if (color_update->gamma.has_update)
     g_clear_pointer (&color_update->gamma.state, meta_gamma_lut_free);
+  g_free (color_update);
 }
 
 void

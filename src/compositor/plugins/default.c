@@ -99,10 +99,10 @@ static void kill_window_effects   (MetaPlugin      *plugin,
                                    MetaWindowActor *actor);
 static void kill_switch_workspace (MetaPlugin      *plugin);
 
-static void show_tile_preview (MetaPlugin      *plugin,
-                               MetaWindow      *window,
-                               MetaRectangle   *tile_rect,
-                               int              tile_monitor_number);
+static void show_tile_preview (MetaPlugin   *plugin,
+                               MetaWindow   *window,
+                               MtkRectangle *tile_rect,
+                               int           tile_monitor_number);
 static void hide_tile_preview (MetaPlugin      *plugin);
 
 static const MetaPluginInfo * plugin_info (MetaPlugin *plugin);
@@ -150,61 +150,13 @@ typedef struct _DisplayTilePreview
 {
   ClutterActor   *actor;
 
-  MetaRectangle   tile_rect;
+  MtkRectangle   tile_rect;
 } DisplayTilePreview;
-
-static void
-meta_default_plugin_dispose (GObject *object)
-{
-  /* MetaDefaultPluginPrivate *priv = META_DEFAULT_PLUGIN (object)->priv;
-  */
-  G_OBJECT_CLASS (meta_default_plugin_parent_class)->dispose (object);
-}
-
-static void
-meta_default_plugin_finalize (GObject *object)
-{
-  G_OBJECT_CLASS (meta_default_plugin_parent_class)->finalize (object);
-}
-
-static void
-meta_default_plugin_set_property (GObject      *object,
-			    guint         prop_id,
-			    const GValue *value,
-			    GParamSpec   *pspec)
-{
-  switch (prop_id)
-    {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-    }
-}
-
-static void
-meta_default_plugin_get_property (GObject    *object,
-			    guint       prop_id,
-			    GValue     *value,
-			    GParamSpec *pspec)
-{
-  switch (prop_id)
-    {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-    }
-}
 
 static void
 meta_default_plugin_class_init (MetaDefaultPluginClass *klass)
 {
-  GObjectClass      *gobject_class = G_OBJECT_CLASS (klass);
   MetaPluginClass *plugin_class  = META_PLUGIN_CLASS (klass);
-
-  gobject_class->finalize        = meta_default_plugin_finalize;
-  gobject_class->dispose         = meta_default_plugin_dispose;
-  gobject_class->set_property    = meta_default_plugin_set_property;
-  gobject_class->get_property    = meta_default_plugin_get_property;
 
   plugin_class->start            = start;
   plugin_class->map              = map;
@@ -371,7 +323,7 @@ on_monitors_changed (MetaMonitorManager *monitor_manager,
     {
       MetaBackgroundContent *background_content;
       ClutterContent *content;
-      MetaRectangle rect;
+      MtkRectangle rect;
       ClutterActor *background_actor;
       MetaBackground *background;
       uint8_t red;
@@ -659,7 +611,7 @@ static void
 minimize (MetaPlugin *plugin, MetaWindowActor *window_actor)
 {
   MetaWindowType type;
-  MetaRectangle icon_geometry;
+  MtkRectangle icon_geometry;
   MetaWindow *meta_window = meta_window_actor_get_meta_window (window_actor);
   ClutterTimeline *timeline = NULL;
   ClutterActor *actor  = CLUTTER_ACTOR (window_actor);
@@ -882,10 +834,10 @@ get_display_tile_preview (MetaDisplay *display)
 }
 
 static void
-show_tile_preview (MetaPlugin    *plugin,
-                   MetaWindow    *window,
-                   MetaRectangle *tile_rect,
-                   int            tile_monitor_number)
+show_tile_preview (MetaPlugin   *plugin,
+                   MetaWindow   *window,
+                   MtkRectangle *tile_rect,
+                   int           tile_monitor_number)
 {
   MetaDisplay *display = meta_plugin_get_display (plugin);
   DisplayTilePreview *preview = get_display_tile_preview (display);

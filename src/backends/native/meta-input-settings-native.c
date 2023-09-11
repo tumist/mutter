@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
@@ -136,11 +134,11 @@ set_matrix (GTask *task)
 {
   ClutterInputDevice *device = g_task_get_source_object (task);
   float *matrix = g_task_get_task_data (task);
-  cairo_matrix_t dev_matrix;
+  graphene_matrix_t dev_matrix;
 
-  cairo_matrix_init (&dev_matrix,
-                     matrix[0], matrix[3], matrix[1],
-                     matrix[4], matrix[2], matrix[5]);
+  graphene_matrix_init_from_2d (&dev_matrix,
+                                matrix[0], matrix[3], matrix[1],
+                                matrix[4], matrix[2], matrix[5]);
   g_object_set (device, "device-matrix", &dev_matrix, NULL);
 
   return G_SOURCE_REMOVE;

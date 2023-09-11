@@ -2,9 +2,9 @@
 
 /*
  * Copyright (C) 2005, 2006 Elijah Newren
- * [meta_rectangle_intersect() is copyright the GTK+ Team according to Havoc,
+ * [mtk_rectangle_intersect() is copyright the GTK+ Team according to Havoc,
  * see gdkrectangle.c.  As far as Havoc knows, he probably wrote
- * meta_rectangle_equal(), and I'm guessing it's (C) Red Hat.  So...]
+ * mtk_rectangle_equal(), and I'm guessing it's (C) Red Hat.  So...]
  * Copyright (C) 1995-2000  GTK+ Team
  * Copyright (C) 2002 Red Hat, Inc.
  *
@@ -31,29 +31,9 @@
 
 #include "meta/util.h"
 
-/* It would make sense to use GSlice here, but until we clean up the
- * rest of this file and the internal API to use these functions, we
- * leave it using g_malloc()/g_free() for consistency.
- */
-
-MetaRectangle *
-meta_rectangle_copy (const MetaRectangle *rect)
-{
-  return g_memdup2 (rect, sizeof (MetaRectangle));
-}
-
-void
-meta_rectangle_free (MetaRectangle *rect)
-{
-  g_free (rect);
-}
-
-G_DEFINE_BOXED_TYPE (MetaRectangle, meta_rectangle,
-                     meta_rectangle_copy, meta_rectangle_free);
-
 char*
-meta_rectangle_to_string (const MetaRectangle *rect,
-                          char                *output)
+meta_rectangle_to_string (const MtkRectangle *rect,
+                          char               *output)
 {
   /* 25 chars: 2 commas, space, plus, trailing \0 + 5 for each digit.
    * Should be more than enough space.  Note that of this space, the
@@ -85,7 +65,7 @@ meta_rectangle_region_to_string (GList      *region,
 
   while (tmp)
     {
-      MetaRectangle *rect = tmp->data;
+      MtkRectangle *rect = tmp->data;
       g_snprintf (rect_string, RECT_LENGTH, "[%d,%d +%d,%d]",
                   rect->x, rect->y, rect->width, rect->height);
       cur = g_stpcpy (cur, rect_string);
@@ -93,24 +73,6 @@ meta_rectangle_region_to_string (GList      *region,
       if (tmp)
         cur = g_stpcpy (cur, separator_string);
     }
-
-  return output;
-}
-
-char*
-meta_rectangle_edge_to_string (const MetaEdge *edge,
-                               char           *output)
-{
-  /* 25 chars: 2 commas, space, plus, trailing \0 + 5 for each digit.
-   * Should be more than enough space.  Note that of this space, the
-   * trailing \0 will be overwritten for all but the last rectangle.
-   *
-   * Plus 2 for parenthesis, 4 for 2 more numbers, 2 more commas, and
-   * 2 more spaces, for a total of 10 more.
-   */
-  g_snprintf (output, EDGE_LENGTH, "[%d,%d +%d,%d], %2d, %2d",
-              edge->rect.x, edge->rect.y, edge->rect.width, edge->rect.height,
-              edge->side_type, edge->edge_type);
 
   return output;
 }
@@ -139,7 +101,7 @@ meta_rectangle_edge_list_to_string (GList      *edge_list,
   while (tmp)
     {
       MetaEdge      *edge = tmp->data;
-      MetaRectangle *rect = &edge->rect;
+      MtkRectangle *rect = &edge->rect;
       g_snprintf (rect_string, EDGE_LENGTH, "([%d,%d +%d,%d], %2d, %2d)",
                   rect->x, rect->y, rect->width, rect->height,
                   edge->side_type, edge->edge_type);
@@ -149,180 +111,15 @@ meta_rectangle_edge_list_to_string (GList      *edge_list,
         cur = g_stpcpy (cur, separator_string);
     }
 
-  return output;
-}
-
-MetaRectangle
-meta_rect (int x, int y, int width, int height)
-{
-  MetaRectangle temporary;
-  temporary.x = x;
-  temporary.y = y;
-  temporary.width  = width;
-  temporary.height = height;
-
-  return temporary;
-}
-
-int
-meta_rectangle_area (const MetaRectangle *rect)
-{
-  g_return_val_if_fail (rect != NULL, 0);
-  return rect->width * rect->height;
-}
-
-/**
- * meta_rectangle_intersect:
- * @src1: a #MetaRectangle
- * @src2: another #MetaRectangle
- * @dest: (out caller-allocates): an empty #MetaRectangle, to be filled
- *   with the coordinates of the intersection.
- *
- * Returns: TRUE is some intersection exists and is not degenerate, FALSE
- *   otherwise.
- */
-gboolean
-meta_rectangle_intersect (const MetaRectangle *src1,
-			  const MetaRectangle *src2,
-			  MetaRectangle *dest)
-{
-  int dest_x, dest_y;
-  int dest_w, dest_h;
-  int return_val;
-
-  g_return_val_if_fail (src1 != NULL, FALSE);
-  g_return_val_if_fail (src2 != NULL, FALSE);
-  g_return_val_if_fail (dest != NULL, FALSE);
-
-  return_val = FALSE;
-
-  dest_x = MAX (src1->x, src2->x);
-  dest_y = MAX (src1->y, src2->y);
-  dest_w = MIN (src1->x + src1->width, src2->x + src2->width) - dest_x;
-  dest_h = MIN (src1->y + src1->height, src2->y + src2->height) - dest_y;
-
-  if (dest_w > 0 && dest_h > 0)
-    {
-      dest->x = dest_x;
-      dest->y = dest_y;
-      dest->width = dest_w;
-      dest->height = dest_h;
-      return_val = TRUE;
-    }
-  else
-    {
-      dest->width = 0;
-      dest->height = 0;
-    }
-
-  return return_val;
-}
-
-gboolean
-meta_rectangle_equal (const MetaRectangle *src1,
-                      const MetaRectangle *src2)
-{
-  return ((src1->x == src2->x) &&
-          (src1->y == src2->y) &&
-          (src1->width == src2->width) &&
-          (src1->height == src2->height));
-}
-
-/**
- * meta_rectangle_union:
- * @rect1: a #MetaRectangle
- * @rect2: another #MetaRectangle
- * @dest: (out caller-allocates): an empty #MetaRectangle, to be filled
- *   with the coordinates of the bounding box.
- */
-void
-meta_rectangle_union (const MetaRectangle *rect1,
-                      const MetaRectangle *rect2,
-                      MetaRectangle       *dest)
-{
-  int dest_x, dest_y;
-  int dest_w, dest_h;
-
-  dest_x = rect1->x;
-  dest_y = rect1->y;
-  dest_w = rect1->width;
-  dest_h = rect1->height;
-
-  if (rect2->x < dest_x)
-    {
-      dest_w += dest_x - rect2->x;
-      dest_x = rect2->x;
-    }
-  if (rect2->y < dest_y)
-    {
-      dest_h += dest_y - rect2->y;
-      dest_y = rect2->y;
-    }
-  if (rect2->x + rect2->width > dest_x + dest_w)
-    dest_w = rect2->x + rect2->width - dest_x;
-  if (rect2->y + rect2->height > dest_y + dest_h)
-    dest_h = rect2->y + rect2->height - dest_y;
-
-  dest->x = dest_x;
-  dest->y = dest_y;
-  dest->width = dest_w;
-  dest->height = dest_h;
-}
-
-gboolean
-meta_rectangle_overlap (const MetaRectangle *rect1,
-                        const MetaRectangle *rect2)
-{
-  g_return_val_if_fail (rect1 != NULL, FALSE);
-  g_return_val_if_fail (rect2 != NULL, FALSE);
-
-  return !((rect1->x + rect1->width  <= rect2->x) ||
-           (rect2->x + rect2->width  <= rect1->x) ||
-           (rect1->y + rect1->height <= rect2->y) ||
-           (rect2->y + rect2->height <= rect1->y));
-}
-
-gboolean
-meta_rectangle_vert_overlap (const MetaRectangle *rect1,
-                             const MetaRectangle *rect2)
-{
-  return (rect1->y < rect2->y + rect2->height &&
-          rect2->y < rect1->y + rect1->height);
-}
-
-gboolean
-meta_rectangle_horiz_overlap (const MetaRectangle *rect1,
-                              const MetaRectangle *rect2)
-{
-  return (rect1->x < rect2->x + rect2->width &&
-          rect2->x < rect1->x + rect1->width);
-}
-
-gboolean
-meta_rectangle_could_fit_rect (const MetaRectangle *outer_rect,
-                               const MetaRectangle *inner_rect)
-{
-  return (outer_rect->width  >= inner_rect->width &&
-          outer_rect->height >= inner_rect->height);
-}
-
-gboolean
-meta_rectangle_contains_rect  (const MetaRectangle *outer_rect,
-                               const MetaRectangle *inner_rect)
-{
-  return
-    inner_rect->x                      >= outer_rect->x &&
-    inner_rect->y                      >= outer_rect->y &&
-    inner_rect->x + inner_rect->width  <= outer_rect->x + outer_rect->width &&
-    inner_rect->y + inner_rect->height <= outer_rect->y + outer_rect->height;
+return output;
 }
 
 void
-meta_rectangle_resize_with_gravity (const MetaRectangle *old_rect,
-                                    MetaRectangle       *rect,
-                                    MetaGravity          gravity,
-                                    int                  new_width,
-                                    int                  new_height)
+meta_rectangle_resize_with_gravity (const MtkRectangle *old_rect,
+                                    MtkRectangle       *rect,
+                                    MetaGravity         gravity,
+                                    int                 new_width,
+                                    int                 new_height)
 {
   /* FIXME: I'm too deep into this to know whether the below comment is
    * still clear or not now that I've moved it out of constraints.c.
@@ -434,25 +231,25 @@ merge_spanning_rects_in_region (GList *region)
 
   while (compare && compare->next)
     {
-      MetaRectangle *a = compare->data;
+      MtkRectangle *a = compare->data;
       GList *other = compare->next;
 
       g_assert (a->width > 0 && a->height > 0);
 
       while (other)
         {
-          MetaRectangle *b = other->data;
+          MtkRectangle *b = other->data;
           GList *delete_me = NULL;
 
           g_assert (b->width > 0 && b->height > 0);
 
           /* If a contains b, just remove b */
-          if (meta_rectangle_contains_rect (a, b))
+          if (mtk_rectangle_contains_rect (a, b))
             {
               delete_me = other;
             }
           /* If b contains a, just remove a */
-          else if (meta_rectangle_contains_rect (b, a))
+          else if (mtk_rectangle_contains_rect (b, a))
             {
               delete_me = compare;
             }
@@ -460,7 +257,7 @@ merge_spanning_rects_in_region (GList *region)
           else if (a->y == b->y && a->height == b->height)
             {
               /* If a and b overlap */
-              if (meta_rectangle_overlap (a, b))
+              if (mtk_rectangle_overlap (a, b))
                 {
                   int new_x = MIN (a->x, b->x);
                   a->width = MAX (a->x + a->width, b->x + b->width) - new_x;
@@ -480,7 +277,7 @@ merge_spanning_rects_in_region (GList *region)
           else if (a->x == b->x && a->width == b->width)
             {
               /* If a and b overlap */
-              if (meta_rectangle_overlap (a, b))
+              if (mtk_rectangle_overlap (a, b))
                 {
                   int new_y = MIN (a->y, b->y);
                   a->height = MAX (a->y + a->height, b->y + b->height) - new_y;
@@ -527,18 +324,19 @@ merge_spanning_rects_in_region (GList *region)
 static gint
 compare_rect_areas (gconstpointer a, gconstpointer b)
 {
-  const MetaRectangle *a_rect = (gconstpointer) a;
-  const MetaRectangle *b_rect = (gconstpointer) b;
+  const MtkRectangle *a_rect = (gconstpointer) a;
+  const MtkRectangle *b_rect = (gconstpointer) b;
 
-  int a_area = meta_rectangle_area (a_rect);
-  int b_area = meta_rectangle_area (b_rect);
+  int a_area = mtk_rectangle_area (a_rect);
+  int b_area = mtk_rectangle_area (b_rect);
 
   return b_area - a_area; /* positive ret value denotes b > a, ... */
 }
 
 /* ... and another helper for get_minimal_spanning_set_for_region()... */
 static gboolean
-check_strut_align (MetaStrut *strut, const MetaRectangle *rect)
+check_strut_align (MetaStrut          *strut,
+                   const MtkRectangle *rect)
 {
   /* Check whether @strut actually aligns to the side of @rect it claims */
   switch (strut->side)
@@ -578,8 +376,8 @@ check_strut_align (MetaStrut *strut, const MetaRectangle *rect)
  */
 GList*
 meta_rectangle_get_minimal_spanning_set_for_region (
-  const MetaRectangle *basic_rect,
-  const GSList  *all_struts)
+  const MtkRectangle *basic_rect,
+  const GSList       *all_struts)
 {
   /* NOTE FOR OPTIMIZERS: This function *might* be somewhat slow,
    * especially due to the call to merge_spanning_rects_in_region() (which
@@ -620,7 +418,7 @@ meta_rectangle_get_minimal_spanning_set_for_region (
   GList         *ret;
   GList         *tmp_list;
   const GSList  *strut_iter;
-  MetaRectangle *temp_rect;
+  MtkRectangle *temp_rect;
 
   /* The algorithm is basically as follows:
    *   Initialize rectangle_set to basic_rect
@@ -633,7 +431,7 @@ meta_rectangle_get_minimal_spanning_set_for_region (
    *         splitting
    */
 
-  temp_rect = g_new (MetaRectangle, 1);
+  temp_rect = g_new (MtkRectangle, 1);
   *temp_rect = *basic_rect;
   ret = g_list_prepend (NULL, temp_rect);
 
@@ -641,16 +439,16 @@ meta_rectangle_get_minimal_spanning_set_for_region (
     {
       GList *rect_iter;
       MetaStrut *strut = (MetaStrut*)strut_iter->data;
-      MetaRectangle *strut_rect = &strut->rect;
+      MtkRectangle *strut_rect = &strut->rect;
 
       tmp_list = ret;
       ret = NULL;
       rect_iter = tmp_list;
       while (rect_iter)
         {
-          MetaRectangle *rect = (MetaRectangle*) rect_iter->data;
+          MtkRectangle *rect = (MtkRectangle*) rect_iter->data;
 
-          if (!meta_rectangle_overlap (strut_rect, rect) ||
+          if (!mtk_rectangle_overlap (strut_rect, rect) ||
               !check_strut_align (strut, basic_rect))
             ret = g_list_prepend (ret, rect);
           else
@@ -658,7 +456,7 @@ meta_rectangle_get_minimal_spanning_set_for_region (
               /* If there is area in rect left of strut */
               if (BOX_LEFT (*rect) < BOX_LEFT (*strut_rect))
                 {
-                  temp_rect = g_new (MetaRectangle, 1);
+                  temp_rect = g_new (MtkRectangle, 1);
                   *temp_rect = *rect;
                   temp_rect->width = BOX_LEFT (*strut_rect) - BOX_LEFT (*rect);
                   ret = g_list_prepend (ret, temp_rect);
@@ -667,17 +465,17 @@ meta_rectangle_get_minimal_spanning_set_for_region (
               if (BOX_RIGHT (*rect) > BOX_RIGHT (*strut_rect))
                 {
                   int new_x;
-                  temp_rect = g_new (MetaRectangle, 1);
+                  temp_rect = g_new (MtkRectangle, 1);
                   *temp_rect = *rect;
                   new_x = BOX_RIGHT (*strut_rect);
-                  temp_rect->width = BOX_RIGHT(*rect) - new_x;
+                  temp_rect->width = BOX_RIGHT (*rect) - new_x;
                   temp_rect->x = new_x;
                   ret = g_list_prepend (ret, temp_rect);
                 }
               /* If there is area in rect above strut */
               if (BOX_TOP (*rect) < BOX_TOP (*strut_rect))
                 {
-                  temp_rect = g_new (MetaRectangle, 1);
+                  temp_rect = g_new (MtkRectangle, 1);
                   *temp_rect = *rect;
                   temp_rect->height = BOX_TOP (*strut_rect) - BOX_TOP (*rect);
                   ret = g_list_prepend (ret, temp_rect);
@@ -686,7 +484,7 @@ meta_rectangle_get_minimal_spanning_set_for_region (
               if (BOX_BOTTOM (*rect) > BOX_BOTTOM (*strut_rect))
                 {
                   int new_y;
-                  temp_rect = g_new (MetaRectangle, 1);
+                  temp_rect = g_new (MtkRectangle, 1);
                   *temp_rect = *rect;
                   new_y = BOX_BOTTOM (*strut_rect);
                   temp_rect->height = BOX_BOTTOM (*rect) - new_y;
@@ -745,7 +543,7 @@ meta_rectangle_expand_region_conditionally (GList     *region,
   GList *tmp_list = region;
   while (tmp_list)
     {
-      MetaRectangle *rect = (MetaRectangle*) tmp_list->data;
+      MtkRectangle *rect = (MtkRectangle*) tmp_list->data;
       if (rect->width >= min_x)
         {
           rect->x      -= left_expand;
@@ -763,8 +561,8 @@ meta_rectangle_expand_region_conditionally (GList     *region,
 }
 
 void
-meta_rectangle_expand_to_avoiding_struts (MetaRectangle       *rect,
-                                          const MetaRectangle *expand_to,
+meta_rectangle_expand_to_avoiding_struts (MtkRectangle        *rect,
+                                          const MtkRectangle  *expand_to,
                                           const MetaDirection  direction,
                                           const GSList        *all_struts)
 {
@@ -780,12 +578,12 @@ meta_rectangle_expand_to_avoiding_struts (MetaRectangle       *rect,
 
   if (direction == META_DIRECTION_HORIZONTAL)
     {
-      rect->x      = expand_to->x;
-      rect->width  = expand_to->width;
+      rect->x = expand_to->x;
+      rect->width = expand_to->width;
     }
   else
     {
-      rect->y      = expand_to->y;
+      rect->y = expand_to->y;
       rect->height = expand_to->height;
     }
 
@@ -796,20 +594,20 @@ meta_rectangle_expand_to_avoiding_struts (MetaRectangle       *rect,
       MetaStrut *strut = (MetaStrut*) strut_iter->data;
 
       /* Skip struts that don't overlap */
-      if (!meta_rectangle_overlap (&strut->rect, rect))
+      if (!mtk_rectangle_overlap (&strut->rect, rect))
         continue;
 
       if (direction == META_DIRECTION_HORIZONTAL)
         {
           if (strut->side == META_SIDE_LEFT)
             {
-              int offset = BOX_RIGHT(strut->rect) - BOX_LEFT(*rect);
-              rect->x     += offset;
+              int offset = BOX_RIGHT (strut->rect) - BOX_LEFT (*rect);
+              rect->x += offset;
               rect->width -= offset;
             }
           else if (strut->side == META_SIDE_RIGHT)
             {
-              int offset = BOX_RIGHT (*rect) - BOX_LEFT(strut->rect);
+              int offset = BOX_RIGHT (*rect) - BOX_LEFT (strut->rect);
               rect->width -= offset;
             }
           /* else ignore the strut */
@@ -818,13 +616,13 @@ meta_rectangle_expand_to_avoiding_struts (MetaRectangle       *rect,
         {
           if (strut->side == META_SIDE_TOP)
             {
-              int offset = BOX_BOTTOM(strut->rect) - BOX_TOP(*rect);
-              rect->y      += offset;
+              int offset = BOX_BOTTOM (strut->rect) - BOX_TOP (*rect);
+              rect->y += offset;
               rect->height -= offset;
             }
           else if (strut->side == META_SIDE_BOTTOM)
             {
-              int offset = BOX_BOTTOM(*rect) - BOX_TOP(strut->rect);
+              int offset = BOX_BOTTOM (*rect) - BOX_TOP (strut->rect);
               rect->height -= offset;
             }
           /* else ignore the strut */
@@ -839,8 +637,8 @@ meta_rectangle_free_list_and_elements (GList *filled_list)
 }
 
 gboolean
-meta_rectangle_could_fit_in_region (const GList         *spanning_rects,
-                                    const MetaRectangle *rect)
+meta_rectangle_could_fit_in_region (const GList        *spanning_rects,
+                                    const MtkRectangle *rect)
 {
   const GList *temp;
   gboolean     could_fit;
@@ -849,7 +647,7 @@ meta_rectangle_could_fit_in_region (const GList         *spanning_rects,
   could_fit = FALSE;
   while (!could_fit && temp != NULL)
     {
-      could_fit = could_fit || meta_rectangle_could_fit_rect (temp->data, rect);
+      could_fit = could_fit || mtk_rectangle_could_fit_rect (temp->data, rect);
       temp = temp->next;
     }
 
@@ -857,17 +655,17 @@ meta_rectangle_could_fit_in_region (const GList         *spanning_rects,
 }
 
 gboolean
-meta_rectangle_contained_in_region (const GList         *spanning_rects,
-                                    const MetaRectangle *rect)
+meta_rectangle_contained_in_region (const GList * spanning_rects,
+                                    const MtkRectangle * rect)
 {
   const GList *temp;
-  gboolean     contained;
+  gboolean contained;
 
   temp = spanning_rects;
   contained = FALSE;
   while (!contained && temp != NULL)
     {
-      contained = contained || meta_rectangle_contains_rect (temp->data, rect);
+      contained = contained || mtk_rectangle_contains_rect (temp->data, rect);
       temp = temp->next;
     }
 
@@ -875,17 +673,17 @@ meta_rectangle_contained_in_region (const GList         *spanning_rects,
 }
 
 gboolean
-meta_rectangle_overlaps_with_region (const GList         *spanning_rects,
-                                     const MetaRectangle *rect)
+meta_rectangle_overlaps_with_region (const GList * spanning_rects,
+                                     const MtkRectangle * rect)
 {
   const GList *temp;
-  gboolean     overlaps;
+  gboolean overlaps;
 
   temp = spanning_rects;
   overlaps = FALSE;
   while (!overlaps && temp != NULL)
     {
-      overlaps = overlaps || meta_rectangle_overlap (temp->data, rect);
+      overlaps = overlaps || mtk_rectangle_overlap (temp->data, rect);
       temp = temp->next;
     }
 
@@ -893,16 +691,16 @@ meta_rectangle_overlaps_with_region (const GList         *spanning_rects,
 }
 
 gboolean
-meta_rectangle_is_adjacent_to_any_in_region (const GList   *spanning_rects,
-                                             MetaRectangle *rect)
+meta_rectangle_is_adjacent_to_any_in_region (const GList  *spanning_rects,
+                                             MtkRectangle *rect)
 {
   const GList *l;
 
   for (l = spanning_rects; l; l = l->next)
     {
-      MetaRectangle *other = (MetaRectangle *) l->data;
+      MtkRectangle *other = (MtkRectangle *) l->data;
 
-      if (rect == other || meta_rectangle_equal (rect, other))
+      if (rect == other || mtk_rectangle_equal (rect, other))
         continue;
 
       if (meta_rectangle_is_adjacent_to (rect, other))
@@ -913,13 +711,13 @@ meta_rectangle_is_adjacent_to_any_in_region (const GList   *spanning_rects,
 }
 
 void
-meta_rectangle_clamp_to_fit_into_region (const GList         *spanning_rects,
-                                         FixedDirections      fixed_directions,
-                                         MetaRectangle       *rect,
-                                         const MetaRectangle *min_size)
+meta_rectangle_clamp_to_fit_into_region (const GList        *spanning_rects,
+                                         FixedDirections     fixed_directions,
+                                         MtkRectangle       *rect,
+                                         const MtkRectangle *min_size)
 {
   const GList *temp;
-  const MetaRectangle *best_rect = NULL;
+  const MtkRectangle *best_rect = NULL;
   int                  best_overlap = 0;
 
   /* First, find best rectangle from spanning_rects to which we can clamp
@@ -927,7 +725,7 @@ meta_rectangle_clamp_to_fit_into_region (const GList         *spanning_rects,
    */
   for (temp = spanning_rects; temp; temp = temp->next)
     {
-      MetaRectangle *compare_rect = temp->data;
+      MtkRectangle *compare_rect = temp->data;
       int            maximal_overlap_amount_for_compare;
 
       /* If x is fixed and the entire width of rect doesn't fit in compare,
@@ -983,12 +781,12 @@ meta_rectangle_clamp_to_fit_into_region (const GList         *spanning_rects,
 }
 
 void
-meta_rectangle_clip_to_region (const GList         *spanning_rects,
-                               FixedDirections      fixed_directions,
-                               MetaRectangle       *rect)
+meta_rectangle_clip_to_region (const GList     *spanning_rects,
+                               FixedDirections  fixed_directions,
+                               MtkRectangle    *rect)
 {
   const GList *temp;
-  const MetaRectangle *best_rect = NULL;
+  const MtkRectangle *best_rect = NULL;
   int                  best_overlap = 0;
 
   /* First, find best rectangle from spanning_rects to which we will clip
@@ -996,8 +794,8 @@ meta_rectangle_clip_to_region (const GList         *spanning_rects,
    */
   for (temp = spanning_rects; temp; temp = temp->next)
     {
-      MetaRectangle *compare_rect = temp->data;
-      MetaRectangle  overlap;
+      MtkRectangle *compare_rect = temp->data;
+      MtkRectangle  overlap;
       int            maximal_overlap_amount_for_compare;
 
       /* If x is fixed and the entire width of rect doesn't fit in compare,
@@ -1017,8 +815,8 @@ meta_rectangle_clip_to_region (const GList         *spanning_rects,
         continue;
 
       /* Determine maximal overlap amount */
-      meta_rectangle_intersect (rect, compare_rect, &overlap);
-      maximal_overlap_amount_for_compare = meta_rectangle_area (&overlap);
+      mtk_rectangle_intersect (rect, compare_rect, &overlap);
+      maximal_overlap_amount_for_compare = mtk_rectangle_area (&overlap);
 
       /* See if this is the best rect so far */
       if (maximal_overlap_amount_for_compare > best_overlap)
@@ -1062,12 +860,12 @@ meta_rectangle_clip_to_region (const GList         *spanning_rects,
 }
 
 void
-meta_rectangle_shove_into_region (const GList         *spanning_rects,
-                                  FixedDirections      fixed_directions,
-                                  MetaRectangle       *rect)
+meta_rectangle_shove_into_region (const GList     *spanning_rects,
+                                  FixedDirections  fixed_directions,
+                                  MtkRectangle    *rect)
 {
   const GList *temp;
-  const MetaRectangle *best_rect = NULL;
+  const MtkRectangle *best_rect = NULL;
   int                  best_overlap = 0;
   int                  shortest_distance = G_MAXINT;
 
@@ -1077,7 +875,7 @@ meta_rectangle_shove_into_region (const GList         *spanning_rects,
 
   for (temp = spanning_rects; temp; temp = temp->next)
     {
-      MetaRectangle *compare_rect = temp->data;
+      MtkRectangle  *compare_rect = temp->data;
       int            maximal_overlap_amount_for_compare;
       int            dist_to_compare;
 
@@ -1227,7 +1025,8 @@ meta_rectangle_find_linepoint_closest_to_point (double x1,
 /***************************************************************************/
 
 gboolean
-meta_rectangle_edge_aligns (const MetaRectangle *rect, const MetaEdge *edge)
+meta_rectangle_edge_aligns (const MtkRectangle *rect,
+                            const MetaEdge     *edge)
 {
   /* The reason for the usage of <= below instead of < is because we are
    * interested in in-the-way-or-adject'ness.  So, a left (i.e. vertical
@@ -1252,23 +1051,23 @@ meta_rectangle_edge_aligns (const MetaRectangle *rect, const MetaEdge *edge)
 }
 
 static GList*
-get_rect_minus_overlap (const GList   *rect_in_list,
-                        MetaRectangle *overlap)
+get_rect_minus_overlap (const GList  *rect_in_list,
+                        MtkRectangle *overlap)
 {
-  MetaRectangle *temp;
-  MetaRectangle *rect = rect_in_list->data;
+  MtkRectangle *temp;
+  MtkRectangle *rect = rect_in_list->data;
   GList *ret = NULL;
 
   if (BOX_LEFT (*rect) < BOX_LEFT (*overlap))
     {
-      temp = g_new (MetaRectangle, 1);
+      temp = g_new (MtkRectangle, 1);
       *temp = *rect;
       temp->width = BOX_LEFT (*overlap) - BOX_LEFT (*rect);
       ret = g_list_prepend (ret, temp);
     }
   if (BOX_RIGHT (*rect) > BOX_RIGHT (*overlap))
     {
-      temp = g_new (MetaRectangle, 1);
+      temp = g_new (MtkRectangle, 1);
       *temp = *rect;
       temp->x = BOX_RIGHT (*overlap);
       temp->width = BOX_RIGHT (*rect) - BOX_RIGHT (*overlap);
@@ -1276,7 +1075,7 @@ get_rect_minus_overlap (const GList   *rect_in_list,
     }
   if (BOX_TOP (*rect) < BOX_TOP (*overlap))
     {
-      temp = g_new (MetaRectangle, 1);
+      temp = g_new (MtkRectangle, 1);
       temp->x      = overlap->x;
       temp->width  = overlap->width;
       temp->y      = BOX_TOP (*rect);
@@ -1285,7 +1084,7 @@ get_rect_minus_overlap (const GList   *rect_in_list,
     }
   if (BOX_BOTTOM (*rect) > BOX_BOTTOM (*overlap))
     {
-      temp = g_new (MetaRectangle, 1);
+      temp = g_new (MtkRectangle, 1);
       temp->x      = overlap->x;
       temp->width  = overlap->width;
       temp->y      = BOX_BOTTOM (*overlap);
@@ -1338,8 +1137,8 @@ replace_rect_with_list (GList *old_element,
  * once, so it's not really magic...).
  */
 static GList*
-get_disjoint_strut_rect_list_in_region (const GSList        *old_struts,
-                                        const MetaRectangle *region)
+get_disjoint_strut_rect_list_in_region (const GSList       *old_struts,
+                                        const MtkRectangle *region)
 {
   GList *strut_rects;
   GList *tmp;
@@ -1348,10 +1147,10 @@ get_disjoint_strut_rect_list_in_region (const GSList        *old_struts,
   strut_rects = NULL;
   while (old_struts)
     {
-      MetaRectangle *cur = &((MetaStrut*)old_struts->data)->rect;
-      MetaRectangle *copy = g_new (MetaRectangle, 1);
+      MtkRectangle *cur = &((MetaStrut*)old_struts->data)->rect;
+      MtkRectangle *copy = g_new (MtkRectangle, 1);
       *copy = *cur;
-      if (meta_rectangle_intersect (copy, region, copy))
+      if (mtk_rectangle_intersect (copy, region, copy))
         strut_rects = g_list_prepend (strut_rects, copy);
       else
         g_free (copy);
@@ -1367,15 +1166,15 @@ get_disjoint_strut_rect_list_in_region (const GSList        *old_struts,
     {
       GList *compare;
 
-      MetaRectangle *cur = tmp->data;
+      MtkRectangle *cur = tmp->data;
 
       compare = tmp->next;
       while (compare)
         {
-          MetaRectangle *comp = compare->data;
-          MetaRectangle overlap;
+          MtkRectangle *comp = compare->data;
+          MtkRectangle overlap;
 
-          if (meta_rectangle_intersect (cur, comp, &overlap))
+          if (mtk_rectangle_intersect (cur, comp, &overlap))
             {
               /* Get a list of rectangles for each strut that don't overlap
                * the intersection region.
@@ -1384,7 +1183,7 @@ get_disjoint_strut_rect_list_in_region (const GSList        *old_struts,
               GList *comp_leftover = get_rect_minus_overlap (compare, &overlap);
 
               /* Add the intersection region to cur_leftover */
-              MetaRectangle *overlap_allocated = g_new (MetaRectangle, 1);
+              MtkRectangle *overlap_allocated = g_new (MtkRectangle, 1);
               *overlap_allocated = overlap;
               cur_leftover = g_list_prepend (cur_leftover, overlap_allocated);
 
@@ -1481,12 +1280,12 @@ edges_overlap (const MetaEdge *edge1,
 {
   if (edge1->rect.width == 0 && edge2->rect.width == 0)
     {
-      return meta_rectangle_vert_overlap (&edge1->rect, &edge2->rect) &&
+      return mtk_rectangle_vert_overlap (&edge1->rect, &edge2->rect) &&
              edge1->rect.x == edge2->rect.x;
     }
   else if (edge1->rect.height == 0 && edge2->rect.height == 0)
     {
-      return meta_rectangle_horiz_overlap (&edge1->rect, &edge2->rect) &&
+      return mtk_rectangle_horiz_overlap (&edge1->rect, &edge2->rect) &&
              edge1->rect.y == edge2->rect.y;
     }
   else
@@ -1496,13 +1295,13 @@ edges_overlap (const MetaEdge *edge1,
 }
 
 static gboolean
-rectangle_and_edge_intersection (const MetaRectangle *rect,
-                                 const MetaEdge      *edge,
-                                 MetaEdge            *overlap,
-                                 int                 *handle_type)
+rectangle_and_edge_intersection (const MtkRectangle *rect,
+                                 const MetaEdge     *edge,
+                                 MetaEdge           *overlap,
+                                 int                *handle_type)
 {
-  const MetaRectangle *rect2  = &edge->rect;
-  MetaRectangle *result = &overlap->rect;
+  const MtkRectangle *rect2  = &edge->rect;
+  MtkRectangle *result = &overlap->rect;
   gboolean intersect = TRUE;
 
   /* We don't know how to set these, so set them to invalid values */
@@ -1580,9 +1379,9 @@ rectangle_and_edge_intersection (const MetaRectangle *rect,
  * TOP<->BOTTOM).
  */
 static GList*
-add_edges (GList               *cur_edges,
-           const MetaRectangle *rect,
-           gboolean             rect_is_internal)
+add_edges (GList              *cur_edges,
+           const MtkRectangle *rect,
+           gboolean            rect_is_internal)
 {
   MetaEdge *temp_edge;
   int i;
@@ -1627,7 +1426,7 @@ add_edges (GList               *cur_edges,
  * edges to cur_list.  Return cur_list when finished.
  */
 static GList*
-split_edge (GList *cur_list,
+split_edge (GList          *cur_list,
             const MetaEdge *old_edge,
             const MetaEdge *remove)
 {
@@ -1636,43 +1435,43 @@ split_edge (GList *cur_list,
     {
     case META_SIDE_LEFT:
     case META_SIDE_RIGHT:
-      g_assert (meta_rectangle_vert_overlap (&old_edge->rect, &remove->rect));
+      g_assert (mtk_rectangle_vert_overlap (&old_edge->rect, &remove->rect));
       if (BOX_TOP (old_edge->rect)  < BOX_TOP (remove->rect))
         {
           temp_edge = g_new (MetaEdge, 1);
           *temp_edge = *old_edge;
           temp_edge->rect.height = BOX_TOP (remove->rect)
-                                 - BOX_TOP (old_edge->rect);
+                                   - BOX_TOP (old_edge->rect);
           cur_list = g_list_prepend (cur_list, temp_edge);
         }
       if (BOX_BOTTOM (old_edge->rect) > BOX_BOTTOM (remove->rect))
         {
           temp_edge = g_new (MetaEdge, 1);
           *temp_edge = *old_edge;
-          temp_edge->rect.y      = BOX_BOTTOM (remove->rect);
+          temp_edge->rect.y = BOX_BOTTOM (remove->rect);
           temp_edge->rect.height = BOX_BOTTOM (old_edge->rect)
-                                 - BOX_BOTTOM (remove->rect);
+                                   - BOX_BOTTOM (remove->rect);
           cur_list = g_list_prepend (cur_list, temp_edge);
         }
       break;
     case META_SIDE_TOP:
     case META_SIDE_BOTTOM:
-      g_assert (meta_rectangle_horiz_overlap (&old_edge->rect, &remove->rect));
+      g_assert (mtk_rectangle_horiz_overlap (&old_edge->rect, &remove->rect));
       if (BOX_LEFT (old_edge->rect)  < BOX_LEFT (remove->rect))
         {
           temp_edge = g_new (MetaEdge, 1);
           *temp_edge = *old_edge;
           temp_edge->rect.width = BOX_LEFT (remove->rect)
-                                - BOX_LEFT (old_edge->rect);
+                                  - BOX_LEFT (old_edge->rect);
           cur_list = g_list_prepend (cur_list, temp_edge);
         }
       if (BOX_RIGHT (old_edge->rect) > BOX_RIGHT (remove->rect))
         {
           temp_edge = g_new (MetaEdge, 1);
           *temp_edge = *old_edge;
-          temp_edge->rect.x     = BOX_RIGHT (remove->rect);
+          temp_edge->rect.x = BOX_RIGHT (remove->rect);
           temp_edge->rect.width = BOX_RIGHT (old_edge->rect)
-                                - BOX_RIGHT (remove->rect);
+                                  - BOX_RIGHT (remove->rect);
           cur_list = g_list_prepend (cur_list, temp_edge);
         }
       break;
@@ -1687,9 +1486,11 @@ split_edge (GList *cur_list,
  * if and how rect and edge intersect.
  */
 static void
-fix_up_edges (MetaRectangle *rect,         MetaEdge *edge,
-              GList         **strut_edges, GList    **edge_splits,
-              gboolean      *edge_needs_removal)
+fix_up_edges (MtkRectangle *rect,
+              MetaEdge     *edge,
+              GList       **strut_edges,
+              GList       **edge_splits,
+              gboolean     *edge_needs_removal)
 {
   MetaEdge overlap;
   int      handle_type;
@@ -1749,7 +1550,7 @@ meta_rectangle_remove_intersections_with_boxes_from_edges (
   rect_iter = rectangles;
   while (rect_iter)
     {
-      MetaRectangle *rect = rect_iter->data;
+      MtkRectangle *rect = rect_iter->data;
       GList *edge_iter = edges;
       while (edge_iter)
         {
@@ -1806,8 +1607,8 @@ meta_rectangle_remove_intersections_with_boxes_from_edges (
  * This function is trying to find all the edges of an onscreen region.
  */
 GList*
-meta_rectangle_find_onscreen_edges (const MetaRectangle *basic_rect,
-                                    const GSList        *all_struts)
+meta_rectangle_find_onscreen_edges (const MtkRectangle *basic_rect,
+                                    const GSList       *all_struts)
 {
   GList        *ret;
   GList        *fixed_strut_rects;
@@ -1839,7 +1640,7 @@ meta_rectangle_find_onscreen_edges (const MetaRectangle *basic_rect,
   strut_rect_iter = fixed_strut_rects;
   while (strut_rect_iter)
     {
-      MetaRectangle *strut_rect = (MetaRectangle*) strut_rect_iter->data;
+      MtkRectangle *strut_rect = (MtkRectangle*) strut_rect_iter->data;
 
       /* Get the new possible edges we may need to add from the strut */
       GList *new_strut_edges = add_edges (NULL, strut_rect, FALSE);
@@ -1893,8 +1694,8 @@ meta_rectangle_find_onscreen_edges (const MetaRectangle *basic_rect,
  */
 GList*
 meta_rectangle_find_nonintersected_monitor_edges (
-                                    const GList         *monitor_rects,
-                                    const GSList        *all_struts)
+  const GList         *monitor_rects,
+  const GSList        *all_struts)
 {
   /* This function cannot easily be merged with
    * meta_rectangle_find_onscreen_edges() because real screen edges
@@ -1914,20 +1715,20 @@ meta_rectangle_find_nonintersected_monitor_edges (
   cur = monitor_rects;
   while (cur)
     {
-      MetaRectangle *cur_rect = cur->data;
+      MtkRectangle *cur_rect = cur->data;
       const GList *compare = monitor_rects;
       while (compare)
         {
-          MetaRectangle *compare_rect = compare->data;
+          MtkRectangle *compare_rect = compare->data;
 
           /* Check if cur might be horizontally adjacent to compare */
-          if (meta_rectangle_vert_overlap(cur_rect, compare_rect))
+          if (mtk_rectangle_vert_overlap (cur_rect, compare_rect))
             {
               MetaSide side_type;
-              int y      = MAX (cur_rect->y, compare_rect->y);
+              int y = MAX (cur_rect->y, compare_rect->y);
               int height = MIN (BOX_BOTTOM (*cur_rect) - y,
                                 BOX_BOTTOM (*compare_rect) - y);
-              int width  = 0;
+              int width = 0;
               int x;
 
               if (BOX_LEFT (*cur_rect)  == BOX_RIGHT (*compare_rect))
@@ -1953,9 +1754,9 @@ meta_rectangle_find_nonintersected_monitor_edges (
                    * a right edge for the monitor on the left.  Just fill
                    * up the edges and stick 'em on the list.
                    */
-                  MetaEdge *new_edge  = g_new (MetaEdge, 1);
+                  MetaEdge *new_edge = g_new (MetaEdge, 1);
 
-                  new_edge->rect = meta_rect (x, y, width, height);
+                  new_edge->rect = MTK_RECTANGLE_INIT (x, y, width, height);
                   new_edge->side_type = side_type;
                   new_edge->edge_type = META_EDGE_MONITOR;
 
@@ -1964,12 +1765,12 @@ meta_rectangle_find_nonintersected_monitor_edges (
             }
 
           /* Check if cur might be vertically adjacent to compare */
-          if (meta_rectangle_horiz_overlap(cur_rect, compare_rect))
+          if (mtk_rectangle_horiz_overlap (cur_rect, compare_rect))
             {
               MetaSide side_type;
-              int x      = MAX (cur_rect->x, compare_rect->x);
-              int width  = MIN (BOX_RIGHT (*cur_rect) - x,
-                                BOX_RIGHT (*compare_rect) - x);
+              int x = MAX (cur_rect->x, compare_rect->x);
+              int width = MIN (BOX_RIGHT (*cur_rect) - x,
+                               BOX_RIGHT (*compare_rect) - x);
               int height = 0;
               int y;
 
@@ -1998,7 +1799,7 @@ meta_rectangle_find_nonintersected_monitor_edges (
                    */
                   MetaEdge *new_edge = g_new (MetaEdge, 1);
 
-                  new_edge->rect = meta_rect (x, y, width, height);
+                  new_edge->rect = MTK_RECTANGLE_INIT (x, y, width, height);
                   new_edge->side_type = side_type;
                   new_edge->edge_type = META_EDGE_MONITOR;
 
@@ -2026,8 +1827,8 @@ meta_rectangle_find_nonintersected_monitor_edges (
 }
 
 gboolean
-meta_rectangle_is_adjacent_to (MetaRectangle *rect,
-                               MetaRectangle *other)
+meta_rectangle_is_adjacent_to (MtkRectangle *rect,
+                               MtkRectangle *other)
 {
   int rect_x1 = rect->x;
   int rect_y1 = rect->y;
@@ -2049,25 +1850,25 @@ meta_rectangle_is_adjacent_to (MetaRectangle *rect,
 }
 
 void
-meta_rectangle_scale_double (const MetaRectangle  *rect,
-                             double                scale,
-                             MetaRoundingStrategy  rounding_strategy,
-                             MetaRectangle        *dest)
+meta_rectangle_scale_double (const MtkRectangle  *rect,
+                             double               scale,
+                             MtkRoundingStrategy  rounding_strategy,
+                             MtkRectangle        *dest)
 {
   graphene_rect_t tmp = GRAPHENE_RECT_INIT (rect->x, rect->y,
                                             rect->width, rect->height);
 
   graphene_rect_scale (&tmp, scale, scale, &tmp);
-  meta_rectangle_from_graphene_rect (&tmp, rounding_strategy, dest);
+  mtk_rectangle_from_graphene_rect (&tmp, rounding_strategy, dest);
 }
 
 /**
  * meta_rectangle_transform:
- * @rect: the #MetaRectangle to be transformed
+ * @rect: the #MtkRectangle to be transformed
  * @transform: the #MetaMonitorTransform
  * @width: the width of the target space
  * @height: the height of the target space
- * @dest: the transformed #MetaRectangle
+ * @dest: the transformed #MtkRectangle
  *
  * This function transforms the values in @rect in order to compensate for
  * @transform applied to a #MetaMonitor, making them match the viewport. Note
@@ -2075,11 +1876,11 @@ meta_rectangle_scale_double (const MetaRectangle  *rect,
  * an anti-clockwise rotation has to be applied to @rect.
  */
 void
-meta_rectangle_transform (const MetaRectangle  *rect,
+meta_rectangle_transform (const MtkRectangle   *rect,
                           MetaMonitorTransform  transform,
                           int                   width,
                           int                   height,
-                          MetaRectangle        *dest)
+                          MtkRectangle         *dest)
 {
   switch (transform)
     {
@@ -2087,7 +1888,7 @@ meta_rectangle_transform (const MetaRectangle  *rect,
       *dest = *rect;
       break;
     case META_MONITOR_TRANSFORM_90:
-      *dest = (MetaRectangle) {
+      *dest = (MtkRectangle) {
         .x = rect->y,
         .y = height - (rect->x + rect->width),
         .width = rect->height,
@@ -2095,7 +1896,7 @@ meta_rectangle_transform (const MetaRectangle  *rect,
       };
       break;
     case META_MONITOR_TRANSFORM_180:
-      *dest = (MetaRectangle) {
+      *dest = (MtkRectangle) {
         .x = width - (rect->x + rect->width),
         .y = height - (rect->y + rect->height),
         .width = rect->width,
@@ -2103,7 +1904,7 @@ meta_rectangle_transform (const MetaRectangle  *rect,
       };
       break;
     case META_MONITOR_TRANSFORM_270:
-      *dest = (MetaRectangle) {
+      *dest = (MtkRectangle) {
         .x = width - (rect->y + rect->height),
         .y = rect->x,
         .width = rect->height,
@@ -2111,7 +1912,7 @@ meta_rectangle_transform (const MetaRectangle  *rect,
       };
       break;
     case META_MONITOR_TRANSFORM_FLIPPED:
-      *dest = (MetaRectangle) {
+      *dest = (MtkRectangle) {
         .x = width - (rect->x + rect->width),
         .y = rect->y,
         .width = rect->width,
@@ -2119,7 +1920,7 @@ meta_rectangle_transform (const MetaRectangle  *rect,
       };
       break;
     case META_MONITOR_TRANSFORM_FLIPPED_90:
-      *dest = (MetaRectangle) {
+      *dest = (MtkRectangle) {
         .x = rect->y,
         .y = rect->x,
         .width = rect->height,
@@ -2127,7 +1928,7 @@ meta_rectangle_transform (const MetaRectangle  *rect,
       };
       break;
     case META_MONITOR_TRANSFORM_FLIPPED_180:
-      *dest = (MetaRectangle) {
+      *dest = (MtkRectangle) {
         .x = rect->x,
         .y = height - (rect->y + rect->height),
         .width = rect->width,
@@ -2135,7 +1936,7 @@ meta_rectangle_transform (const MetaRectangle  *rect,
       };
       break;
     case META_MONITOR_TRANSFORM_FLIPPED_270:
-      *dest = (MetaRectangle) {
+      *dest = (MtkRectangle) {
         .x = width - (rect->y + rect->height),
         .y = height - (rect->x + rect->width),
         .width = rect->height,
@@ -2146,54 +1947,11 @@ meta_rectangle_transform (const MetaRectangle  *rect,
 }
 
 void
-meta_rectangle_from_graphene_rect (const graphene_rect_t *rect,
-                                   MetaRoundingStrategy   rounding_strategy,
-                                   MetaRectangle         *dest)
-{
-  switch (rounding_strategy)
-    {
-    case META_ROUNDING_STRATEGY_SHRINK:
-      {
-        *dest = (MetaRectangle) {
-          .x = ceilf (rect->origin.x),
-          .y = ceilf (rect->origin.y),
-          .width = floorf (rect->size.width),
-          .height = floorf (rect->size.height),
-        };
-      }
-      break;
-    case META_ROUNDING_STRATEGY_GROW:
-      {
-        graphene_rect_t clamped = *rect;
-
-        graphene_rect_round_extents (&clamped, &clamped);
-
-        *dest = (MetaRectangle) {
-          .x = clamped.origin.x,
-          .y = clamped.origin.y,
-          .width = clamped.size.width,
-          .height = clamped.size.height,
-        };
-      }
-      break;
-    case META_ROUNDING_STRATEGY_ROUND:
-      {
-        *dest = (MetaRectangle) {
-          .x = roundf (rect->origin.x),
-          .y = roundf (rect->origin.y),
-          .width = roundf (rect->size.width),
-          .height = roundf (rect->size.height),
-        };
-      }
-    }
-}
-
-void
-meta_rectangle_crop_and_scale (const MetaRectangle *rect,
-                               graphene_rect_t     *src_rect,
-                               int                  dst_width,
-                               int                  dst_height,
-                               MetaRectangle       *dest)
+meta_rectangle_crop_and_scale (const MtkRectangle *rect,
+                               graphene_rect_t    *src_rect,
+                               int                 dst_width,
+                               int                 dst_height,
+                               MtkRectangle       *dest)
 {
   graphene_rect_t tmp = GRAPHENE_RECT_INIT (rect->x, rect->y,
                                             rect->width, rect->height);
@@ -2204,5 +1962,5 @@ meta_rectangle_crop_and_scale (const MetaRectangle *rect,
                        &tmp);
   graphene_rect_offset (&tmp, src_rect->origin.x, src_rect->origin.y);
 
-  meta_rectangle_from_graphene_rect (&tmp, META_ROUNDING_STRATEGY_GROW, dest);
+  mtk_rectangle_from_graphene_rect (&tmp, MTK_ROUNDING_STRATEGY_GROW, dest);
 }

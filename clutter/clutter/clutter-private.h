@@ -201,30 +201,6 @@ void  _clutter_util_fully_transform_vertices (const graphene_matrix_t  *modelvie
                                               int                       n_vertices);
 
 CLUTTER_EXPORT
-void _clutter_util_rect_from_rectangle (const cairo_rectangle_int_t *src,
-                                        graphene_rect_t             *dest);
-
-CLUTTER_EXPORT
-void _clutter_util_rectangle_int_extents (const graphene_rect_t *src,
-                                          cairo_rectangle_int_t *dest);
-
-void _clutter_util_rectangle_offset (const cairo_rectangle_int_t *src,
-                                     int                          x,
-                                     int                          y,
-                                     cairo_rectangle_int_t       *dest);
-
-void _clutter_util_rectangle_union (const cairo_rectangle_int_t *src1,
-                                    const cairo_rectangle_int_t *src2,
-                                    cairo_rectangle_int_t       *dest);
-
-gboolean _clutter_util_rectangle_intersection (const cairo_rectangle_int_t *src1,
-                                               const cairo_rectangle_int_t *src2,
-                                               cairo_rectangle_int_t       *dest);
-
-gboolean clutter_util_rectangle_equal (const cairo_rectangle_int_t *src1,
-                                       const cairo_rectangle_int_t *src2);
-
-CLUTTER_EXPORT
 PangoDirection _clutter_pango_unichar_direction (gunichar ch);
 
 PangoDirection _clutter_pango_find_base_dir     (const gchar *text,

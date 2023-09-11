@@ -59,6 +59,7 @@
 #include "clutter/clutter.h"
 #include "core/util-private.h"
 #include "meta/main.h"
+#include "meta/meta-enum-types.h"
 #include "meta/meta-x11-errors.h"
 
 #include "meta-dbus-display-config.h"
@@ -169,7 +170,7 @@ is_main_tiled_monitor_output (MetaOutput *output)
 static MetaLogicalMonitor *
 logical_monitor_from_layout (MetaMonitorManager *manager,
                              GList              *logical_monitors,
-                             MetaRectangle      *layout)
+                             MtkRectangle       *layout)
 {
   GList *l;
 
@@ -177,7 +178,7 @@ logical_monitor_from_layout (MetaMonitorManager *manager,
     {
       MetaLogicalMonitor *logical_monitor = l->data;
 
-      if (meta_rectangle_equal (layout, &logical_monitor->rect))
+      if (mtk_rectangle_equal (layout, &logical_monitor->rect))
         return logical_monitor;
     }
 
@@ -318,7 +319,7 @@ derive_calculated_global_scale (MetaMonitorManager *manager)
 static float
 derive_scale_from_config (MetaMonitorManager *manager,
                           MetaMonitorsConfig *config,
-                          MetaRectangle      *layout)
+                          MtkRectangle       *layout)
 {
   GList *l;
 
@@ -326,7 +327,7 @@ derive_scale_from_config (MetaMonitorManager *manager,
     {
       MetaLogicalMonitorConfig *logical_monitor_config = l->data;
 
-      if (meta_rectangle_equal (layout, &logical_monitor_config->layout))
+      if (mtk_rectangle_equal (layout, &logical_monitor_config->layout))
         return logical_monitor_config->scale;
     }
 
@@ -364,7 +365,7 @@ meta_monitor_manager_rebuild_logical_monitors_derived (MetaMonitorManager *manag
     {
       MetaMonitor *monitor = l->data;
       MetaLogicalMonitor *logical_monitor;
-      MetaRectangle layout;
+      MtkRectangle layout;
 
       if (!meta_monitor_is_active (monitor))
         continue;
@@ -416,8 +417,9 @@ meta_monitor_manager_rebuild_logical_monitors_derived (MetaMonitorManager *manag
 }
 
 void
-meta_monitor_manager_power_save_mode_changed (MetaMonitorManager *manager,
-                                              MetaPowerSave       mode)
+meta_monitor_manager_power_save_mode_changed (MetaMonitorManager        *manager,
+                                              MetaPowerSave              mode,
+                                              MetaPowerSaveChangeReason  reason)
 {
   MetaMonitorManagerPrivate *priv =
     meta_monitor_manager_get_instance_private (manager);
@@ -426,7 +428,7 @@ meta_monitor_manager_power_save_mode_changed (MetaMonitorManager *manager,
     return;
 
   priv->power_save_mode = mode;
-  g_signal_emit (manager, signals[POWER_SAVE_MODE_CHANGED], 0);
+  g_signal_emit (manager, signals[POWER_SAVE_MODE_CHANGED], 0, reason);
 }
 
 static void
@@ -438,6 +440,7 @@ power_save_mode_changed (MetaMonitorManager *manager,
     meta_monitor_manager_get_instance_private (manager);
   MetaMonitorManagerClass *klass;
   int mode = meta_dbus_display_config_get_power_save_mode (manager->display_config);
+  MetaPowerSaveChangeReason reason;
 
   if (mode == META_POWER_SAVE_UNSUPPORTED)
     return;
@@ -453,7 +456,8 @@ power_save_mode_changed (MetaMonitorManager *manager,
   if (klass->set_power_save_mode)
     klass->set_power_save_mode (manager, mode);
 
-  meta_monitor_manager_power_save_mode_changed (manager, mode);
+  reason = META_POWER_SAVE_CHANGE_REASON_MODE_CHANGE;
+  meta_monitor_manager_power_save_mode_changed (manager, mode, reason);
 }
 
 void
@@ -1474,7 +1478,8 @@ meta_monitor_manager_class_init (MetaMonitorManagerClass *klass)
                   G_SIGNAL_RUN_LAST,
                   0,
                   NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
+                  G_TYPE_NONE, 1,
+                  META_TYPE_POWER_SAVE_CHANGE_REASON);
 
   signals[CONFIRM_DISPLAY_CHANGE] =
     g_signal_new ("confirm-display-change",
@@ -3349,7 +3354,7 @@ meta_monitor_manager_get_logical_monitor_at (MetaMonitorManager *manager,
  */
 MetaLogicalMonitor *
 meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
-                                                    MetaRectangle      *rect)
+                                                    MtkRectangle       *rect)
 {
   MetaLogicalMonitor *best_logical_monitor;
   int best_logical_monitor_area;
@@ -3363,18 +3368,18 @@ meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
   for (l = manager->logical_monitors; l; l = l->next)
     {
       MetaLogicalMonitor *logical_monitor = l->data;
-      MetaRectangle intersection;
+      MtkRectangle intersection;
       int intersection_area;
 
       if (META_POINT_IN_RECT (center_x, center_y, logical_monitor->rect))
         return logical_monitor;
 
-      if (!meta_rectangle_intersect (&logical_monitor->rect,
-                                     rect,
-                                     &intersection))
+      if (!mtk_rectangle_intersect (&logical_monitor->rect,
+                                    rect,
+                                    &intersection))
         continue;
 
-      intersection_area = meta_rectangle_area (&intersection);
+      intersection_area = mtk_rectangle_area (&intersection);
 
       if (intersection_area > best_logical_monitor_area)
         {
@@ -3401,7 +3406,7 @@ meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
  */
 MetaLogicalMonitor *
 meta_monitor_manager_get_highest_scale_monitor_from_rect (MetaMonitorManager *manager,
-                                                          MetaRectangle      *rect)
+                                                          MtkRectangle       *rect)
 {
   MetaLogicalMonitor *best_logical_monitor = NULL;
   GList *l;
@@ -3410,12 +3415,12 @@ meta_monitor_manager_get_highest_scale_monitor_from_rect (MetaMonitorManager *ma
   for (l = manager->logical_monitors; l; l = l->next)
     {
       MetaLogicalMonitor *logical_monitor = l->data;
-      MetaRectangle intersection;
+      MtkRectangle intersection;
       float scale;
 
-      if (!meta_rectangle_intersect (&logical_monitor->rect,
-                                     rect,
-                                     &intersection))
+      if (!mtk_rectangle_intersect (&logical_monitor->rect,
+                                    rect,
+                                    &intersection))
         continue;
 
       scale = meta_logical_monitor_get_scale (logical_monitor);
@@ -4019,7 +4024,7 @@ meta_monitor_manager_get_viewports (MetaMonitorManager *manager)
   GArray *views, *scales;
   GList *logical_monitors, *l;
 
-  views = g_array_new (FALSE, FALSE, sizeof (cairo_rectangle_int_t));
+  views = g_array_new (FALSE, FALSE, sizeof (MtkRectangle));
   scales = g_array_new (FALSE, FALSE, sizeof (float));
 
   logical_monitors = meta_monitor_manager_get_logical_monitors (manager);
@@ -4027,7 +4032,7 @@ meta_monitor_manager_get_viewports (MetaMonitorManager *manager)
   for (l = logical_monitors; l; l = l->next)
     {
       MetaLogicalMonitor *logical_monitor = l->data;
-      cairo_rectangle_int_t rect;
+      MtkRectangle rect;
       float scale;
 
       rect = logical_monitor->rect;
@@ -4037,7 +4042,7 @@ meta_monitor_manager_get_viewports (MetaMonitorManager *manager)
       g_array_append_val (scales, scale);
     }
 
-  info = meta_viewport_info_new ((cairo_rectangle_int_t *) views->data,
+  info = meta_viewport_info_new ((MtkRectangle *) views->data,
                                  (float *) scales->data,
                                  views->len,
                                  meta_backend_is_stage_views_scaled (backend));

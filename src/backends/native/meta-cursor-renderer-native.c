@@ -15,9 +15,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -370,7 +368,7 @@ meta_cursor_renderer_native_update_cursor (MetaCursorRenderer *cursor_renderer,
 
       if (cursor_stage_view->has_hw_cursor != has_hw_cursor)
         {
-          if (has_hw_cursor || !cursor_sprite)
+          if (has_hw_cursor)
             meta_stage_view_inhibit_cursor_overlay (view);
           else
             meta_stage_view_uninhibit_cursor_overlay (view);
@@ -384,7 +382,9 @@ meta_cursor_renderer_native_update_cursor (MetaCursorRenderer *cursor_renderer,
 
               meta_kms_cursor_manager_update_sprite (kms_cursor_manager,
                                                      kms_crtc,
-                                                     NULL, NULL);
+                                                     NULL,
+                                                     META_MONITOR_TRANSFORM_NORMAL,
+                                                     NULL);
             }
         }
     }
@@ -575,8 +575,7 @@ calculate_crtc_cursor_hotspot (MetaCursorSprite     *cursor_sprite,
   width = meta_cursor_sprite_get_width (cursor_sprite);
   height = meta_cursor_sprite_get_height (cursor_sprite);
   meta_monitor_transform_transform_point (transform,
-                                          width, height,
-                                          hot_x, hot_y,
+                                          &width, &height,
                                           &hot_x, &hot_y);
   *hotspot = GRAPHENE_POINT_INIT (hot_x * scale, hot_y * scale);
 }
@@ -658,6 +657,7 @@ load_cursor_sprite_gbm_buffer_for_crtc (MetaCursorRendererNative *native,
   meta_kms_cursor_manager_update_sprite (kms_cursor_manager,
                                          kms_crtc,
                                          buffer,
+                                         transform,
                                          &hotspot);
   return TRUE;
 }
@@ -983,6 +983,7 @@ realize_cursor_sprite_from_wl_buffer_for_crtc (MetaCursorRenderer      *renderer
       meta_kms_cursor_manager_update_sprite (kms_cursor_manager,
                                              kms_crtc,
                                              META_DRM_BUFFER (buffer_gbm),
+                                             META_MONITOR_TRANSFORM_NORMAL,
                                              &GRAPHENE_POINT_INIT (hot_x, hot_y));
 
       return TRUE;
@@ -1047,7 +1048,7 @@ realize_cursor_sprite_for_crtc (MetaCursorRenderer *renderer,
               meta_kms_crtc_get_id (kms_crtc),
               meta_kms_device_get_path (kms_device));
 
-  COGL_TRACE_BEGIN_SCOPED (CursorRendererNAtiveRealize,
+  COGL_TRACE_BEGIN_SCOPED (CursorRendererNativeRealize,
                            "Cursor Renderer Native (realize for crtc)");
   if (META_IS_CURSOR_SPRITE_XCURSOR (cursor_sprite))
     {

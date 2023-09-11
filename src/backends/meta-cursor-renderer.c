@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jasper St. Pierre <jstpierre@mecheye.net>
@@ -37,6 +35,7 @@
 #include "core/boxes-private.h"
 #include "meta/meta-backend.h"
 #include "meta/util.h"
+#include "mtk/mtk.h"
 
 G_DEFINE_INTERFACE (MetaHwCursorInhibitor, meta_hw_cursor_inhibitor,
                     G_TYPE_OBJECT)
@@ -111,7 +110,7 @@ align_cursor_position (MetaCursorRenderer *renderer,
     meta_cursor_renderer_get_instance_private (renderer);
   ClutterActor *stage = meta_backend_get_stage (priv->backend);
   ClutterStageView *view;
-  cairo_rectangle_int_t view_layout;
+  MtkRectangle view_layout;
   float view_scale;
 
   view = clutter_stage_get_view_at (CLUTTER_STAGE (stage),
@@ -174,13 +173,13 @@ meta_cursor_renderer_after_paint (ClutterStage       *stage,
   if (priv->displayed_cursor && priv->needs_overlay)
     {
       graphene_rect_t rect;
-      MetaRectangle view_layout;
+      MtkRectangle view_layout;
       graphene_rect_t view_rect;
 
       rect = meta_cursor_renderer_calculate_rect (renderer,
                                                   priv->displayed_cursor);
       clutter_stage_view_get_layout (stage_view, &view_layout);
-      view_rect = meta_rectangle_to_graphene_rect (&view_layout);
+      view_rect = mtk_rectangle_to_graphene_rect (&view_layout);
       if (graphene_rect_intersection (&rect, &view_rect, NULL))
         {
           meta_cursor_renderer_emit_painted (renderer,
@@ -197,7 +196,7 @@ meta_cursor_renderer_real_update_cursor (MetaCursorRenderer *renderer,
   if (cursor_sprite)
     meta_cursor_sprite_realize_texture (cursor_sprite);
 
-  return FALSE;
+  return TRUE;
 }
 
 static void
@@ -393,7 +392,7 @@ find_highest_logical_monitor_scale (MetaBackend      *backend,
     {
       MetaLogicalMonitor *logical_monitor = l->data;
       graphene_rect_t logical_monitor_rect =
-        meta_rectangle_to_graphene_rect (&logical_monitor->rect);
+        mtk_rectangle_to_graphene_rect (&logical_monitor->rect);
 
       if (!graphene_rect_intersection (&cursor_rect,
                                        &logical_monitor_rect,

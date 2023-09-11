@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,7 +29,7 @@
 #include "backends/x11/meta-clutter-backend-x11.h"
 #include "backends/x11/meta-seat-x11.h"
 #include "core/display-private.h"
-#include "meta/meta-x11-errors.h"
+#include "mtk/mtk-x11.h"
 
 #define DEFAULT_XKB_SET_CONTROLS_MASK XkbSlowKeysMask         | \
                                       XkbBounceKeysMask       | \
@@ -58,14 +56,14 @@ get_xkb_desc_rec (Display *xdisplay)
   XkbDescRec *desc;
   Status      status = Success;
 
-  meta_clutter_x11_trap_x_errors ();
+  mtk_x11_error_trap_push (xdisplay);
   desc = XkbGetMap (xdisplay, XkbAllMapComponentsMask, XkbUseCoreKbd);
   if (desc != NULL)
     {
       desc->ctrls = NULL;
       status = XkbGetControls (xdisplay, XkbAllControlsMask, desc);
     }
-  meta_clutter_x11_untrap_x_errors ();
+  mtk_x11_error_trap_pop (xdisplay);
 
   g_return_val_if_fail (desc != NULL, NULL);
   g_return_val_if_fail (desc->ctrls != NULL, NULL);
@@ -78,10 +76,10 @@ static void
 set_xkb_desc_rec (Display    *xdisplay,
                   XkbDescRec *desc)
 {
-  meta_clutter_x11_trap_x_errors ();
+  mtk_x11_error_trap_push (xdisplay);
   XkbSetControls (xdisplay, DEFAULT_XKB_SET_CONTROLS_MASK, desc);
   XSync (xdisplay, FALSE);
-  meta_clutter_x11_untrap_x_errors ();
+  mtk_x11_error_trap_pop (xdisplay);
 }
 
 void

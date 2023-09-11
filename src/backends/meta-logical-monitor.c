@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -134,7 +132,7 @@ derive_monitor_transform (MetaMonitor *monitor)
 MetaLogicalMonitor *
 meta_logical_monitor_new_derived (MetaMonitorManager *monitor_manager,
                                   MetaMonitor        *monitor,
-                                  MetaRectangle      *layout,
+                                  MtkRectangle       *layout,
                                   float               scale,
                                   int                 monitor_number)
 {
@@ -216,7 +214,7 @@ meta_logical_monitor_get_transform (MetaLogicalMonitor *logical_monitor)
   return logical_monitor->transform;
 }
 
-MetaRectangle
+MtkRectangle
 meta_logical_monitor_get_layout (MetaLogicalMonitor *logical_monitor)
 {
   return logical_monitor->rect;
@@ -312,29 +310,29 @@ meta_logical_monitor_has_neighbor (MetaLogicalMonitor   *logical_monitor,
     case META_DISPLAY_RIGHT:
       if (neighbor->rect.x == (logical_monitor->rect.x +
                                logical_monitor->rect.width) &&
-          meta_rectangle_vert_overlap (&neighbor->rect,
-                                       &logical_monitor->rect))
+          mtk_rectangle_vert_overlap (&neighbor->rect,
+                                      &logical_monitor->rect))
         return TRUE;
       break;
     case META_DISPLAY_LEFT:
       if (logical_monitor->rect.x == (neighbor->rect.x +
                                       neighbor->rect.width) &&
-          meta_rectangle_vert_overlap (&neighbor->rect,
-                                       &logical_monitor->rect))
+          mtk_rectangle_vert_overlap (&neighbor->rect,
+                                      &logical_monitor->rect))
         return TRUE;
       break;
     case META_DISPLAY_UP:
       if (logical_monitor->rect.y == (neighbor->rect.y +
                                       neighbor->rect.height) &&
-          meta_rectangle_horiz_overlap (&neighbor->rect,
-                                        &logical_monitor->rect))
+          mtk_rectangle_horiz_overlap (&neighbor->rect,
+                                       &logical_monitor->rect))
         return TRUE;
       break;
     case META_DISPLAY_DOWN:
       if (neighbor->rect.y == (logical_monitor->rect.y +
                                logical_monitor->rect.height) &&
-          meta_rectangle_horiz_overlap (&neighbor->rect,
-                                        &logical_monitor->rect))
+          mtk_rectangle_horiz_overlap (&neighbor->rect,
+                                       &logical_monitor->rect))
         return TRUE;
       break;
     }

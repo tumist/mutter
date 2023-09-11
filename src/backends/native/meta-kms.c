@@ -13,9 +13,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -506,11 +504,6 @@ meta_kms_finalize (GObject *object)
 }
 
 static void
-meta_kms_constructed (GObject *object)
-{
-}
-
-static void
 meta_kms_init (MetaKms *kms)
 {
   kms->cursor_manager = meta_kms_cursor_manager_new (kms);
@@ -523,7 +516,6 @@ meta_kms_class_init (MetaKmsClass *klass)
   MetaThreadClass *thread_class = META_THREAD_CLASS (klass);
 
   object_class->finalize = meta_kms_finalize;
-  object_class->constructed = meta_kms_constructed;
 
   signals[RESOURCES_CHANGED] =
     g_signal_new ("resources-changed",

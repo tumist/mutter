@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Dor Askayo <dor.askayo@gmail.com>
@@ -72,8 +70,8 @@ find_top_window_actor_on_view (ClutterStageView *stage_view,
       MetaWindowActor *window_actor = l->data;
       MetaWindow *window =
         meta_window_actor_get_meta_window (window_actor);
-      MetaRectangle buffer_rect;
-      MetaRectangle view_layout;
+      MtkRectangle buffer_rect;
+      MtkRectangle view_layout;
 
       if (!window->visible_to_compositor)
         continue;
@@ -82,7 +80,7 @@ find_top_window_actor_on_view (ClutterStageView *stage_view,
       clutter_stage_view_get_layout (stage_view,
                                      &view_layout);
 
-      if (meta_rectangle_overlap (&view_layout, &buffer_rect))
+      if (mtk_rectangle_overlap (&view_layout, &buffer_rect))
         return window_actor;
     }
 

@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -454,8 +452,8 @@ meta_monitor_get_current_resolution (MetaMonitor *monitor,
 }
 
 void
-meta_monitor_derive_layout (MetaMonitor   *monitor,
-                            MetaRectangle *layout)
+meta_monitor_derive_layout (MetaMonitor  *monitor,
+                            MtkRectangle *layout)
 {
   META_MONITOR_GET_CLASS (monitor)->derive_layout (monitor, layout);
 }
@@ -845,8 +843,8 @@ meta_monitor_normal_get_main_output (MetaMonitor *monitor)
 }
 
 static void
-meta_monitor_normal_derive_layout (MetaMonitor   *monitor,
-                                   MetaRectangle *layout)
+meta_monitor_normal_derive_layout (MetaMonitor  *monitor,
+                                   MtkRectangle *layout)
 {
   MetaOutput *output;
   MetaCrtc *crtc;
@@ -858,9 +856,9 @@ meta_monitor_normal_derive_layout (MetaMonitor   *monitor,
 
   g_return_if_fail (crtc_config);
 
-  meta_rectangle_from_graphene_rect (&crtc_config->layout,
-                                     META_ROUNDING_STRATEGY_ROUND,
-                                     layout);
+  mtk_rectangle_from_graphene_rect (&crtc_config->layout,
+                                    MTK_ROUNDING_STRATEGY_ROUND,
+                                    layout);
 }
 
 static gboolean
@@ -1542,8 +1540,8 @@ meta_monitor_tiled_get_main_output (MetaMonitor *monitor)
 }
 
 static void
-meta_monitor_tiled_derive_layout (MetaMonitor   *monitor,
-                                  MetaRectangle *layout)
+meta_monitor_tiled_derive_layout (MetaMonitor  *monitor,
+                                  MtkRectangle *layout)
 {
   MetaMonitorPrivate *monitor_priv =
     meta_monitor_get_instance_private (monitor);
@@ -1576,7 +1574,7 @@ meta_monitor_tiled_derive_layout (MetaMonitor   *monitor,
       max_y = MAX (crtc_layout->origin.y + crtc_layout->size.height, max_y);
     }
 
-  *layout = (MetaRectangle) {
+  *layout = (MtkRectangle) {
     .x = roundf (min_x),
     .y = roundf (min_y),
     .width = roundf (max_x - min_x),
@@ -2164,28 +2162,6 @@ meta_monitor_mode_foreach_output (MetaMonitor          *monitor,
     }
 
   return TRUE;
-}
-
-MetaMonitorCrtcMode *
-meta_monitor_get_crtc_mode_for_output (MetaMonitor     *monitor,
-                                       MetaMonitorMode *mode,
-                                       MetaOutput      *output)
-{
-  MetaMonitorPrivate *monitor_priv =
-    meta_monitor_get_instance_private (monitor);
-  GList *l;
-  int i;
-
-  for (l = monitor_priv->outputs, i = 0; l; l = l->next, i++)
-    {
-      MetaMonitorCrtcMode *monitor_crtc_mode = &mode->crtc_modes[i];
-
-      if (monitor_crtc_mode->output == output)
-        return monitor_crtc_mode;
-    }
-
-  g_warn_if_reached ();
-  return NULL;
 }
 
 const char *

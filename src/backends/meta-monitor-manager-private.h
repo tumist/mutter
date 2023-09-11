@@ -290,10 +290,10 @@ MetaLogicalMonitor *meta_monitor_manager_get_logical_monitor_at (MetaMonitorMana
                                                                  float               y);
 
 MetaLogicalMonitor *meta_monitor_manager_get_logical_monitor_from_rect (MetaMonitorManager *manager,
-                                                                        MetaRectangle      *rect);
+                                                                        MtkRectangle       *rect);
 
 MetaLogicalMonitor *meta_monitor_manager_get_highest_scale_monitor_from_rect (MetaMonitorManager *manager,
-                                                                              MetaRectangle      *rect);
+                                                                              MtkRectangle       *rect);
 
 MetaLogicalMonitor *meta_monitor_manager_get_logical_monitor_neighbor (MetaMonitorManager  *manager,
                                                                        MetaLogicalMonitor  *logical_monitor,
@@ -319,8 +319,9 @@ void                meta_monitor_manager_get_screen_size   (MetaMonitorManager *
 
 MetaPowerSave       meta_monitor_manager_get_power_save_mode (MetaMonitorManager *manager);
 
-void                meta_monitor_manager_power_save_mode_changed (MetaMonitorManager *manager,
-                                                                  MetaPowerSave       mode);
+void                meta_monitor_manager_power_save_mode_changed (MetaMonitorManager        *manager,
+                                                                  MetaPowerSave              mode,
+                                                                  MetaPowerSaveChangeReason  reason);
 
 void                meta_monitor_manager_confirm_configuration (MetaMonitorManager *manager,
                                                                 gboolean            ok);

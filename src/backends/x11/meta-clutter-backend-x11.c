@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jonas Ådahl <jadahl@gmail.com>
@@ -69,10 +67,6 @@ static const gchar *atom_names[] = {
 
 /* various flags corresponding to pre init setup calls */
 static gboolean clutter_enable_stereo = FALSE;
-
-/* X error trap */
-static int TrappedErrorCode = 0;
-static int (* old_error_handler) (Display *, XErrorEvent *);
 
 static gboolean
 meta_clutter_backend_x11_finish_init (ClutterBackend  *clutter_backend,
@@ -259,29 +253,6 @@ meta_clutter_backend_x11_new (MetaBackend *backend)
   priv->backend = backend;
 
   return clutter_backend_x11;
-}
-
-static int
-error_handler (Display     *xdisplay,
-               XErrorEvent *error)
-{
-  TrappedErrorCode = error->error_code;
-  return 0;
-}
-
-void
-meta_clutter_x11_trap_x_errors (void)
-{
-  TrappedErrorCode  = 0;
-  old_error_handler = XSetErrorHandler (error_handler);
-}
-
-gint
-meta_clutter_x11_untrap_x_errors (void)
-{
-  XSetErrorHandler (old_error_handler);
-
-  return TrappedErrorCode;
 }
 
 void

@@ -361,7 +361,6 @@ if have_x11_client
     'cogl-x11-onscreen.c',
     'cogl-x11-onscreen.h',
     'cogl-x11-renderer-private.h',
-    'cogl-xlib-private.h',
     'cogl-xlib-renderer-private.h',
     'cogl-xlib-renderer.c',
     'winsys/cogl-texture-pixmap-x11-private.h',
@@ -447,6 +446,7 @@ if have_introspection
     namespace: 'Cogl',
     includes: ['cairo-1.0', 'GL-1.0', 'GObject-2.0', 'Graphene-1.0'],
     dependencies: [cogl_deps],
+    export_packages: 'mutter-cogl-@0@'.format(libmutter_api_version),
     extra_args: introspection_args + [
       '-UCOGL_COMPILATION',
       '-D__COGL_H_INSIDE__',

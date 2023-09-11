@@ -1,6 +1,6 @@
 project('mutter', 'c',
-  version: '45.beta.1',
-  meson_version: '>= 0.58.0',
+  version: '45.rc',
+  meson_version: '>= 0.60.0',
   license: 'GPLv2+'
 )
 
@@ -39,7 +39,7 @@ libcanberra_req = '>= 0.26'
 libwacom_req = '>= 0.13'
 atk_req = '>= 2.5.3'
 harfbuzz_req = '>= 2.6'
-libei_req = '>= 1.0.0'
+libei_req = '>= 1.0.901'
 
 # optional version requirements
 udev_req = '>= 228'
@@ -47,7 +47,7 @@ gudev_req = '>= 232'
 
 # wayland version requirements
 wayland_server_req = '>= 1.21'
-wayland_protocols_req = '>= 1.31'
+wayland_protocols_req = '>= 1.32'
 
 # native backend version requirements
 libinput_req = '>= 1.19.0'
@@ -436,7 +436,7 @@ if have_profiler
   )
 
   if libsysprof_capture_dep.type_name() == 'pkgconfig'
-    sysprof_dep = dependency('sysprof-4')
+    sysprof_dep = dependency('sysprof-6', 'sysprof-4')
     sysprof_dbus_interfaces_dir = sysprof_dep.get_variable('datadir') / 'dbus-1' / 'interfaces'
   else
     sysprof_dbus_interfaces_dir = mutter_srcdir / 'subprojects' / 'sysprof' / 'src'
@@ -659,6 +659,7 @@ config_h = configure_file(
 
 top_includepath = include_directories('.')
 
+subdir('mtk')
 subdir('cogl')
 subdir('clutter')
 subdir('data')

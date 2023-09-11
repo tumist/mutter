@@ -23,7 +23,7 @@
 
 /**
  * ClutterStage:
- * 
+ *
  * Top level visual element to which actors are placed.
  *
  * #ClutterStage is a top level 'window' on which child actors are placed
@@ -164,6 +164,8 @@ enum
   PROP_PERSPECTIVE,
   PROP_TITLE,
   PROP_KEY_FOCUS,
+  PROP_IS_GRABBED,
+
   PROP_LAST
 };
 
@@ -206,7 +208,7 @@ clutter_stage_get_preferred_width (ClutterActor *self,
                                    gfloat       *natural_width_p)
 {
   ClutterStagePrivate *priv = CLUTTER_STAGE (self)->priv;
-  cairo_rectangle_int_t geom;
+  MtkRectangle geom;
 
   if (priv->impl == NULL)
     return;
@@ -227,7 +229,7 @@ clutter_stage_get_preferred_height (ClutterActor *self,
                                     gfloat       *natural_height_p)
 {
   ClutterStagePrivate *priv = CLUTTER_STAGE (self)->priv;
-  cairo_rectangle_int_t geom;
+  MtkRectangle geom;
 
   if (priv->impl == NULL)
     return;
@@ -242,8 +244,8 @@ clutter_stage_get_preferred_height (ClutterActor *self,
 }
 
 static void
-clutter_stage_add_redraw_clip (ClutterStage          *stage,
-                               cairo_rectangle_int_t *clip)
+clutter_stage_add_redraw_clip (ClutterStage *stage,
+                               MtkRectangle *clip)
 {
   GList *l;
 
@@ -257,12 +259,12 @@ clutter_stage_add_redraw_clip (ClutterStage          *stage,
         }
       else
         {
-          cairo_rectangle_int_t view_layout;
-          cairo_rectangle_int_t intersection;
+          MtkRectangle view_layout;
+          MtkRectangle intersection;
 
           clutter_stage_view_get_layout (view, &view_layout);
-          if (_clutter_util_rectangle_intersection (&view_layout, clip,
-                                                    &intersection))
+          if (mtk_rectangle_intersect (&view_layout, clip,
+                                       &intersection))
             clutter_stage_view_add_redraw_clip (view, &intersection);
         }
     }
@@ -297,7 +299,7 @@ clutter_stage_allocate (ClutterActor           *self,
   ClutterActorBox alloc = CLUTTER_ACTOR_BOX_INIT_ZERO;
   float new_width, new_height;
   float width, height;
-  cairo_rectangle_int_t window_size;
+  MtkRectangle window_size;
   ClutterActorBox children_box;
   ClutterLayoutManager *layout_manager = clutter_actor_get_layout_manager (self);
 
@@ -340,12 +342,12 @@ clutter_stage_allocate (ClutterActor           *self,
 }
 
 static void
-setup_clip_frustum (ClutterStage                *stage,
-                    const cairo_rectangle_int_t *clip,
-                    graphene_frustum_t          *frustum)
+setup_clip_frustum (ClutterStage       *stage,
+                    const MtkRectangle *clip,
+                    graphene_frustum_t *frustum)
 {
   ClutterStagePrivate *priv = stage->priv;
-  cairo_rectangle_int_t geom;
+  MtkRectangle geom;
   graphene_point3d_t camera_position;
   graphene_point3d_t p[4];
   graphene_plane_t planes[6];
@@ -405,7 +407,7 @@ clutter_stage_do_paint_view (ClutterStage         *stage,
                              const cairo_region_t *redraw_clip)
 {
   ClutterPaintContext *paint_context;
-  cairo_rectangle_int_t clip_rect;
+  MtkRectangle clip_rect;
   g_autoptr (GArray) clip_frusta = NULL;
   graphene_frustum_t clip_frustum;
   ClutterPaintNode *root_node;
@@ -1108,7 +1110,7 @@ clutter_stage_get_view_at (ClutterStage *stage,
   for (l = _clutter_stage_window_get_views (priv->impl); l; l = l->next)
     {
       ClutterStageView *view = l->data;
-      cairo_rectangle_int_t view_layout;
+      MtkRectangle view_layout;
 
       clutter_stage_view_get_layout (view, &view_layout);
       if (x >= view_layout.x &&
@@ -1226,6 +1228,10 @@ clutter_stage_get_property (GObject    *gobject,
       g_value_set_object (value, priv->key_focused_actor);
       break;
 
+    case PROP_IS_GRABBED:
+      g_value_set_boolean (value, !!priv->topmost_grab);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (gobject, prop_id, pspec);
       break;
@@ -1315,7 +1321,7 @@ clutter_stage_paint (ClutterActor        *actor,
   if (view &&
       G_UNLIKELY (clutter_paint_debug_flags & CLUTTER_DEBUG_PAINT_MAX_RENDER_TIME))
     {
-      cairo_rectangle_int_t view_layout;
+      MtkRectangle view_layout;
       ClutterFrameClock *frame_clock;
       g_autoptr (GString) string = NULL;
       PangoLayout *layout;
@@ -1412,6 +1418,17 @@ clutter_stage_class_init (ClutterStageClass *klass)
                            CLUTTER_PARAM_READWRITE |
                            G_PARAM_EXPLICIT_NOTIFY);
 
+  /**
+   * ClutterStage:is-grabbed:
+   *
+   * %TRUE if there is currently an active grab on the stage.
+   */
+  obj_props[PROP_IS_GRABBED] =
+      g_param_spec_boolean ("is-grabbed", NULL, NULL,
+                            FALSE,
+                            CLUTTER_PARAM_READABLE |
+                            G_PARAM_EXPLICIT_NOTIFY);
+
   g_object_class_install_properties (gobject_class, PROP_LAST, obj_props);
 
   /**
@@ -1454,10 +1471,15 @@ clutter_stage_class_init (ClutterStageClass *klass)
                   G_TYPE_FROM_CLASS (gobject_class),
                   G_SIGNAL_RUN_LAST,
                   0,
-                  NULL, NULL, NULL,
+                  NULL, NULL,
+                  _clutter_marshal_VOID__OBJECT_BOXED,
                   G_TYPE_NONE, 2,
                   CLUTTER_TYPE_STAGE_VIEW,
-                  CLUTTER_TYPE_FRAME);
+                  CLUTTER_TYPE_FRAME | G_SIGNAL_TYPE_STATIC_SCOPE);
+  g_signal_set_va_marshaller (stage_signals[BEFORE_UPDATE],
+                              G_TYPE_FROM_CLASS (gobject_class),
+                              _clutter_marshal_VOID__OBJECT_BOXEDv);
+
   /**
    * ClutterStage::prepare-frame:
    * @stage: the stage that received the event
@@ -1472,10 +1494,14 @@ clutter_stage_class_init (ClutterStageClass *klass)
                   G_TYPE_FROM_CLASS (gobject_class),
                   G_SIGNAL_RUN_LAST,
                   0,
-                  NULL, NULL, NULL,
+                  NULL, NULL,
+                  _clutter_marshal_VOID__OBJECT_BOXED,
                   G_TYPE_NONE, 2,
                   CLUTTER_TYPE_STAGE_VIEW,
-                  CLUTTER_TYPE_FRAME);
+                  CLUTTER_TYPE_FRAME | G_SIGNAL_TYPE_STATIC_SCOPE);
+  g_signal_set_va_marshaller (stage_signals[PREPARE_FRAME],
+                              G_TYPE_FROM_CLASS (gobject_class),
+                              _clutter_marshal_VOID__OBJECT_BOXEDv);
 
   /**
    * ClutterStage::before-paint:
@@ -1490,10 +1516,15 @@ clutter_stage_class_init (ClutterStageClass *klass)
                   G_TYPE_FROM_CLASS (gobject_class),
                   G_SIGNAL_RUN_LAST,
                   G_STRUCT_OFFSET (ClutterStageClass, before_paint),
-                  NULL, NULL, NULL,
+                  NULL, NULL,
+                  _clutter_marshal_VOID__OBJECT_BOXED,
                   G_TYPE_NONE, 2,
                   CLUTTER_TYPE_STAGE_VIEW,
-                  CLUTTER_TYPE_FRAME);
+                  CLUTTER_TYPE_FRAME | G_SIGNAL_TYPE_STATIC_SCOPE);
+  g_signal_set_va_marshaller (stage_signals[BEFORE_PAINT],
+                              G_TYPE_FROM_CLASS (gobject_class),
+                              _clutter_marshal_VOID__OBJECT_BOXEDv);
+
   /**
    * ClutterStage::after-paint:
    * @stage: the stage that received the event
@@ -1508,10 +1539,14 @@ clutter_stage_class_init (ClutterStageClass *klass)
                   G_TYPE_FROM_CLASS (gobject_class),
                   G_SIGNAL_RUN_LAST,
                   0, /* no corresponding vfunc */
-                  NULL, NULL, NULL,
+                  NULL, NULL,
+                  _clutter_marshal_VOID__OBJECT_BOXED,
                   G_TYPE_NONE, 2,
                   CLUTTER_TYPE_STAGE_VIEW,
-                  CLUTTER_TYPE_FRAME);
+                  CLUTTER_TYPE_FRAME | G_SIGNAL_TYPE_STATIC_SCOPE);
+  g_signal_set_va_marshaller (stage_signals[AFTER_PAINT],
+                              G_TYPE_FROM_CLASS (gobject_class),
+                              _clutter_marshal_VOID__OBJECT_BOXEDv);
 
   /**
    * ClutterStage::after-update:
@@ -1524,10 +1559,14 @@ clutter_stage_class_init (ClutterStageClass *klass)
                   G_TYPE_FROM_CLASS (gobject_class),
                   G_SIGNAL_RUN_LAST,
                   0,
-                  NULL, NULL, NULL,
+                  NULL, NULL,
+                  _clutter_marshal_VOID__OBJECT_BOXED,
                   G_TYPE_NONE, 2,
                   CLUTTER_TYPE_STAGE_VIEW,
-                  CLUTTER_TYPE_FRAME);
+                  CLUTTER_TYPE_FRAME | G_SIGNAL_TYPE_STATIC_SCOPE);
+  g_signal_set_va_marshaller (stage_signals[AFTER_UPDATE],
+                              G_TYPE_FROM_CLASS (gobject_class),
+                              _clutter_marshal_VOID__OBJECT_BOXEDv);
 
   /**
    * ClutterStage::paint-view:
@@ -1548,11 +1587,15 @@ clutter_stage_class_init (ClutterStageClass *klass)
                   G_TYPE_FROM_CLASS (gobject_class),
                   G_SIGNAL_RUN_LAST,
                   G_STRUCT_OFFSET (ClutterStageClass, paint_view),
-                  NULL, NULL, NULL,
+                  NULL, NULL,
+                  _clutter_marshal_VOID__OBJECT_BOXED_BOXED,
                   G_TYPE_NONE, 3,
                   CLUTTER_TYPE_STAGE_VIEW,
-                  CAIRO_GOBJECT_TYPE_REGION,
-                  CLUTTER_TYPE_FRAME);
+                  CAIRO_GOBJECT_TYPE_REGION | G_SIGNAL_TYPE_STATIC_SCOPE,
+                  CLUTTER_TYPE_FRAME | G_SIGNAL_TYPE_STATIC_SCOPE);
+  g_signal_set_va_marshaller (stage_signals[PAINT_VIEW],
+                              G_TYPE_FROM_CLASS (gobject_class),
+                              _clutter_marshal_VOID__OBJECT_BOXED_BOXEDv);
 
   /**
    * ClutterStage::presented: (skip)
@@ -1567,10 +1610,14 @@ clutter_stage_class_init (ClutterStageClass *klass)
                   G_TYPE_FROM_CLASS (gobject_class),
                   G_SIGNAL_RUN_LAST,
                   0,
-                  NULL, NULL, NULL,
+                  NULL, NULL,
+                  _clutter_marshal_VOID__OBJECT_POINTER,
                   G_TYPE_NONE, 2,
                   CLUTTER_TYPE_STAGE_VIEW,
                   G_TYPE_POINTER);
+  g_signal_set_va_marshaller (stage_signals[PRESENTED],
+                              G_TYPE_FROM_CLASS (gobject_class),
+                              _clutter_marshal_VOID__OBJECT_POINTERv);
 
  /**
    * ClutterStage::gl-video-memory-purged: (skip)
@@ -1595,7 +1642,7 @@ clutter_stage_class_init (ClutterStageClass *klass)
 static void
 clutter_stage_init (ClutterStage *self)
 {
-  cairo_rectangle_int_t geom = { 0, };
+  MtkRectangle geom = { 0, };
   ClutterStagePrivate *priv;
   ClutterStageWindow *impl;
   ClutterBackend *backend;
@@ -1900,7 +1947,7 @@ clutter_stage_read_pixels (ClutterStage *stage,
   GList *l;
   ClutterStageView *view;
   cairo_region_t *clip;
-  cairo_rectangle_int_t clip_rect;
+  MtkRectangle clip_rect;
   CoglFramebuffer *framebuffer;
   float view_scale;
   float pixel_width;
@@ -1933,7 +1980,7 @@ clutter_stage_read_pixels (ClutterStage *stage,
   clutter_stage_view_get_layout (view, &clip_rect);
   clip = cairo_region_create_rectangle (&clip_rect);
   cairo_region_intersect_rectangle (clip,
-                                    &(cairo_rectangle_int_t) {
+                                    &(MtkRectangle) {
                                       .x = x,
                                       .y = y,
                                       .width = width,
@@ -2393,7 +2440,7 @@ _clutter_stage_maybe_setup_viewport (ClutterStage     *stage,
 
   if (clutter_stage_view_is_dirty_viewport (view))
     {
-      cairo_rectangle_int_t view_layout;
+      MtkRectangle view_layout;
       float fb_scale;
       float viewport_offset_x;
       float viewport_offset_y;
@@ -2546,7 +2593,7 @@ clutter_stage_add_to_redraw_clip (ClutterStage       *stage,
   ClutterStageWindow *stage_window;
   ClutterActorBox bounding_box;
   ClutterActorBox intersection_box;
-  cairo_rectangle_int_t geom, stage_clip;
+  MtkRectangle geom, stage_clip;
 
   if (CLUTTER_ACTOR_IN_DESTRUCTION (CLUTTER_ACTOR (stage)))
     return;
@@ -2614,7 +2661,7 @@ clutter_stage_presented (ClutterStage     *stage,
 /**
  * clutter_stage_get_capture_final_size:
  * @stage: a #ClutterStage actor
- * @rect: a #cairo_rectangle_int_t
+ * @rect: a rectangle
  * @out_width: (out) (optional): the final width
  * @out_height: (out) (optional): the final height
  * @out_scale: (out) (optional): the final scale factor
@@ -2626,11 +2673,11 @@ clutter_stage_presented (ClutterStage     *stage,
  * Returns: %TRUE if the size has been retrieved, %FALSE otherwise.
  */
 gboolean
-clutter_stage_get_capture_final_size (ClutterStage          *stage,
-                                      cairo_rectangle_int_t *rect,
-                                      int                   *out_width,
-                                      int                   *out_height,
-                                      float                 *out_scale)
+clutter_stage_get_capture_final_size (ClutterStage *stage,
+                                      MtkRectangle *rect,
+                                      int          *out_width,
+                                      int          *out_height,
+                                      float        *out_scale)
 {
   float max_scale = 1.0;
 
@@ -2642,7 +2689,7 @@ clutter_stage_get_capture_final_size (ClutterStage          *stage,
       g_autoptr (GList) views = NULL;
       GList *l;
 
-      _clutter_util_rect_from_rectangle (rect, &capture_rect);
+      capture_rect = mtk_rectangle_to_graphene_rect (rect);
       views = clutter_stage_get_views_for_rect (stage, &capture_rect);
 
       if (!views)
@@ -2686,7 +2733,7 @@ clutter_stage_get_capture_final_size (ClutterStage          *stage,
 void
 clutter_stage_paint_to_framebuffer (ClutterStage                *stage,
                                     CoglFramebuffer             *framebuffer,
-                                    const cairo_rectangle_int_t *rect,
+                                    const MtkRectangle          *rect,
                                     float                        scale,
                                     ClutterPaintFlag             paint_flags)
 {
@@ -2725,7 +2772,7 @@ clutter_stage_paint_to_framebuffer (ClutterStage                *stage,
 /**
  * clutter_stage_paint_to_buffer:
  * @stage: a #ClutterStage actor
- * @rect: a #cairo_rectangle_int_t
+ * @rect: a rectangle
  * @scale: the scale
  * @data: (array) (element-type guint8): a pointer to the data
  * @stride: stride of the image surface
@@ -2738,14 +2785,14 @@ clutter_stage_paint_to_framebuffer (ClutterStage                *stage,
  * Returns: %TRUE is the buffer has been paint successfully, %FALSE otherwise.
  */
 gboolean
-clutter_stage_paint_to_buffer (ClutterStage                 *stage,
-                               const cairo_rectangle_int_t  *rect,
-                               float                         scale,
-                               uint8_t                      *data,
-                               int                           stride,
-                               CoglPixelFormat               format,
-                               ClutterPaintFlag              paint_flags,
-                               GError                      **error)
+clutter_stage_paint_to_buffer (ClutterStage        *stage,
+                               const MtkRectangle  *rect,
+                               float                scale,
+                               uint8_t             *data,
+                               int                  stride,
+                               CoglPixelFormat      format,
+                               ClutterPaintFlag     paint_flags,
+                               GError             **error)
 {
   ClutterBackend *clutter_backend = clutter_get_default_backend ();
   CoglContext *cogl_context =
@@ -2800,7 +2847,7 @@ clutter_stage_paint_to_buffer (ClutterStage                 *stage,
 /**
  * clutter_stage_paint_to_content:
  * @stage: a #ClutterStage actor
- * @rect: a #cairo_rectangle_int_t
+ * @rect: a rectangle
  * @scale: the scale
  * @paint_flags: the #ClutterPaintFlag
  * @error: the error
@@ -2810,11 +2857,11 @@ clutter_stage_paint_to_buffer (ClutterStage                 *stage,
  * Returns: (transfer full): the #ClutterContent or %NULL on error.
  */
 ClutterContent *
-clutter_stage_paint_to_content (ClutterStage                 *stage,
-                                const cairo_rectangle_int_t  *rect,
-                                float                         scale,
-                                ClutterPaintFlag              paint_flags,
-                                GError                      **error)
+clutter_stage_paint_to_content (ClutterStage        *stage,
+                                const MtkRectangle  *rect,
+                                float                scale,
+                                ClutterPaintFlag     paint_flags,
+                                GError             **error)
 {
   ClutterBackend *clutter_backend = clutter_get_default_backend ();
   CoglContext *cogl_context =
@@ -2853,17 +2900,17 @@ clutter_stage_paint_to_content (ClutterStage                 *stage,
 }
 
 void
-clutter_stage_capture_view_into (ClutterStage          *stage,
-                                 ClutterStageView      *view,
-                                 cairo_rectangle_int_t *rect,
-                                 uint8_t               *data,
-                                 int                    stride)
+clutter_stage_capture_view_into (ClutterStage     *stage,
+                                 ClutterStageView *view,
+                                 MtkRectangle     *rect,
+                                 uint8_t          *data,
+                                 int               stride)
 {
   CoglFramebuffer *framebuffer;
   ClutterBackend *backend;
   CoglContext *context;
   CoglBitmap *bitmap;
-  cairo_rectangle_int_t view_layout;
+  MtkRectangle view_layout;
   float view_scale;
   float texture_width;
   float texture_height;
@@ -2926,11 +2973,11 @@ clutter_stage_get_views_for_rect (ClutterStage          *stage,
   for (l = _clutter_stage_window_get_views (priv->impl); l; l = l->next)
     {
       ClutterStageView *view = l->data;
-      cairo_rectangle_int_t view_layout;
+      MtkRectangle view_layout;
       graphene_rect_t view_rect;
 
       clutter_stage_view_get_layout (view, &view_layout);
-      _clutter_util_rect_from_rectangle (&view_layout, &view_rect);
+      view_rect = mtk_rectangle_to_graphene_rect (&view_layout);
 
       if (graphene_rect_intersection (&view_rect, rect, NULL))
         views_for_rect = g_list_prepend (views_for_rect, view);
@@ -3134,7 +3181,7 @@ clutter_stage_get_device_actor (ClutterStage         *stage,
 /**
  * clutter_stage_get_device_coords: (skip):
  */
-void
+gboolean
 clutter_stage_get_device_coords (ClutterStage         *stage,
                                  ClutterInputDevice   *device,
                                  ClutterEventSequence *sequence,
@@ -3143,16 +3190,21 @@ clutter_stage_get_device_coords (ClutterStage         *stage,
   ClutterStagePrivate *priv = stage->priv;
   PointerDeviceEntry *entry = NULL;
 
-  g_return_if_fail (CLUTTER_IS_STAGE (stage));
-  g_return_if_fail (device != NULL);
+  g_return_val_if_fail (CLUTTER_IS_STAGE (stage), FALSE);
+  g_return_val_if_fail (device != NULL, FALSE);
 
   if (sequence != NULL)
     entry = g_hash_table_lookup (priv->touch_sequences, sequence);
   else
     entry = g_hash_table_lookup (priv->pointer_devices, device);
 
-  if (entry && coords)
+  if (!entry)
+    return FALSE;
+
+  if (coords)
     *coords = entry->coords;
+
+  return TRUE;
 }
 
 static void
@@ -3510,9 +3562,11 @@ void
 clutter_stage_repick_device (ClutterStage       *stage,
                              ClutterInputDevice *device)
 {
-  graphene_point_t point;
+  graphene_point_t point = GRAPHENE_POINT_INIT_ZERO;
 
-  clutter_stage_get_device_coords (stage, device, NULL, &point);
+  if (!clutter_stage_get_device_coords (stage, device, NULL, &point))
+    return;
+
   clutter_stage_pick_and_update_device (stage,
                                         device,
                                         NULL, NULL,
@@ -3614,6 +3668,7 @@ clutter_stage_notify_grab_on_pointer_entry (ClutterStage       *stage,
 {
   gboolean pointer_in_grab, pointer_in_old_grab;
   gboolean implicit_grab_cancelled = FALSE;
+  unsigned int implicit_grab_n_removed = 0, implicit_grab_n_remaining = 0;
   ClutterEventType event_type = CLUTTER_NOTHING;
   ClutterActor *topmost, *deepmost;
 
@@ -3634,9 +3689,6 @@ clutter_stage_notify_grab_on_pointer_entry (ClutterStage       *stage,
       ClutterInputDevice *device = entry->device;
       ClutterEventSequence *sequence = entry->sequence;
       unsigned int i;
-      unsigned int n_removed = 0;
-
-      implicit_grab_cancelled = TRUE;
 
       for (i = 0; i < entry->event_emission_chain->len; i++)
         {
@@ -3648,11 +3700,11 @@ clutter_stage_notify_grab_on_pointer_entry (ClutterStage       *stage,
               if (!clutter_actor_contains (grab_actor, receiver->actor))
                 {
                   g_clear_object (&receiver->actor);
-                  n_removed++;
+                  implicit_grab_n_removed++;
                 }
               else
                 {
-                  implicit_grab_cancelled = FALSE;
+                  implicit_grab_n_remaining++;
                 }
             }
           else if (receiver->action)
@@ -3666,23 +3718,27 @@ clutter_stage_notify_grab_on_pointer_entry (ClutterStage       *stage,
                                                      device,
                                                      sequence);
                   g_clear_object (&receiver->action);
-                  n_removed++;
+                  implicit_grab_n_removed++;
                 }
               else
                 {
-                  implicit_grab_cancelled = FALSE;
+                  implicit_grab_n_remaining++;
                 }
             }
         }
 
-      if (n_removed > 0)
-        {
-          CLUTTER_NOTE (GRABS,
-                        "[grab=%p device=%p sequence=%p implicit_grab_cancelled=%d] "
-                        "Cancelled %u actors and actions on implicit grab due to new seat grab",
-                        stage->priv->topmost_grab, device, sequence, implicit_grab_cancelled,
-                        n_removed);
-        }
+      /* Seat grabs win over implicit grabs, so we default to cancel the ongoing
+       * implicit grab. If the seat grab contains one or more actors from
+       * the implicit grab though, the implicit grab remains in effect.
+       */
+      implicit_grab_cancelled = implicit_grab_n_remaining == 0;
+
+      CLUTTER_NOTE (GRABS,
+                    "[grab=%p device=%p sequence=%p implicit_grab_cancelled=%d] "
+                    "Cancelled %u actors and actions (%u remaining) on implicit "
+                    "grab due to new seat grab",
+                    stage->priv->topmost_grab, device, sequence, implicit_grab_cancelled,
+                    implicit_grab_n_removed, implicit_grab_n_remaining);
     }
 
   /* Equate NULL actors to the stage here, to ease calculations further down. */
@@ -3693,7 +3749,8 @@ clutter_stage_notify_grab_on_pointer_entry (ClutterStage       *stage,
 
   if (grab_actor == old_grab_actor)
     {
-      g_assert (!implicit_grab_cancelled);
+      g_assert ((implicit_grab_n_removed == 0 && implicit_grab_n_remaining == 0) ||
+                !implicit_grab_cancelled);
       return;
     }
 
@@ -3772,9 +3829,9 @@ clutter_stage_notify_grab_on_pointer_entry (ClutterStage       *stage,
       clutter_event_free (event);
     }
 
-    if ((event_type == CLUTTER_NOTHING || event_type == CLUTTER_LEAVE) &&
-        implicit_grab_cancelled)
-      cleanup_implicit_grab (entry);
+  if ((event_type == CLUTTER_NOTHING || event_type == CLUTTER_LEAVE) &&
+      implicit_grab_cancelled)
+    cleanup_implicit_grab (entry);
 }
 
 static void
@@ -3891,6 +3948,7 @@ clutter_stage_grab_full (ClutterStage *stage,
 {
   ClutterStagePrivate *priv;
   ClutterGrab *grab;
+  gboolean was_grabbed;
 
   g_return_val_if_fail (CLUTTER_IS_STAGE (stage), NULL);
   g_return_val_if_fail (CLUTTER_IS_ACTOR (actor), NULL);
@@ -3917,6 +3975,8 @@ clutter_stage_grab_full (ClutterStage *stage,
   grab->prev = NULL;
   grab->next = priv->topmost_grab;
 
+  was_grabbed = !!priv->topmost_grab;
+
   if (priv->topmost_grab)
     priv->topmost_grab->prev = grab;
 
@@ -3937,6 +3997,9 @@ clutter_stage_grab_full (ClutterStage *stage,
 
   clutter_actor_attach_grab (actor, grab);
   clutter_stage_notify_grab (stage, grab, grab->next);
+
+  if (was_grabbed != !!priv->topmost_grab)
+    g_object_notify_by_pspec (G_OBJECT (stage), obj_props[PROP_IS_GRABBED]);
 
   return grab;
 }
@@ -3984,6 +4047,7 @@ clutter_stage_unlink_grab (ClutterStage *stage,
 {
   ClutterStagePrivate *priv = stage->priv;
   ClutterGrab *prev, *next;
+  gboolean was_grabbed;
 
   /* This grab is already detached */
   if (!grab->prev && !grab->next && priv->topmost_grab != grab)
@@ -3996,6 +4060,8 @@ clutter_stage_unlink_grab (ClutterStage *stage,
     prev->next = next;
   if (next)
     next->prev = prev;
+
+  was_grabbed = !!priv->topmost_grab;
 
   if (priv->topmost_grab == grab)
     {
@@ -4018,6 +4084,9 @@ clutter_stage_unlink_grab (ClutterStage *stage,
       clutter_seat_ungrab (seat, clutter_get_current_event_time ());
       priv->grab_state = CLUTTER_GRAB_STATE_NONE;
     }
+
+  if (was_grabbed != !!priv->topmost_grab)
+    g_object_notify_by_pspec (G_OBJECT (stage), obj_props[PROP_IS_GRABBED]);
 
   if (G_UNLIKELY (clutter_debug_flags & CLUTTER_DEBUG_GRABS))
     {
@@ -4215,7 +4284,7 @@ setup_implicit_grab (PointerDeviceEntry *entry)
     }
 
   CLUTTER_NOTE (GRABS,
-                "[device=%p sequence=%p] Aquiring implicit grab",
+                "[device=%p sequence=%p] Acquiring implicit grab",
                 entry->device, entry->sequence);
 
   g_assert (entry->press_count == 0);
@@ -4497,4 +4566,43 @@ clutter_stage_notify_action_implicit_grab (ClutterStage         *self,
   g_assert (entry->press_count > 0);
 
   remove_all_actors_from_chain (entry);
+}
+
+/**
+ * clutter_stage_pointing_input_foreach:
+ * @self: The stage
+ * @func: (scope call): Iterator function
+ * @user_data: user data
+ *
+ * Iterates over active input.
+ *
+ * Returns: %TRUE if the foreach function did not stop.
+ **/
+gboolean
+clutter_stage_pointing_input_foreach (ClutterStage                 *self,
+                                      ClutterStageInputForeachFunc  func,
+                                      gpointer                      user_data)
+{
+  ClutterStagePrivate *priv = self->priv;
+  GHashTableIter iter;
+  PointerDeviceEntry *entry;
+
+  g_return_val_if_fail (CLUTTER_IS_STAGE (self), FALSE);
+  g_return_val_if_fail (func != NULL, FALSE);
+
+  g_hash_table_iter_init (&iter, priv->pointer_devices);
+  while (g_hash_table_iter_next (&iter, NULL, (gpointer*) &entry))
+    {
+      if (!func (self, entry->device, entry->sequence, user_data))
+        return FALSE;
+    }
+
+  g_hash_table_iter_init (&iter, priv->touch_sequences);
+  while (g_hash_table_iter_next (&iter, NULL, (gpointer*) &entry))
+    {
+      if (!func (self, entry->device, entry->sequence, user_data))
+        return FALSE;
+    }
+
+  return TRUE;
 }

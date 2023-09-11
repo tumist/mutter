@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
@@ -98,12 +96,6 @@ meta_launch_context_get_property (GObject    *object,
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
-}
-
-static void
-meta_launch_context_finalize (GObject *object)
-{
-  G_OBJECT_CLASS (meta_launch_context_parent_class)->finalize (object);
 }
 
 static void
@@ -215,7 +207,6 @@ meta_launch_context_class_init (MetaLaunchContextClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GAppLaunchContextClass *ctx_class = G_APP_LAUNCH_CONTEXT_CLASS (klass);
 
-  object_class->finalize = meta_launch_context_finalize;
   object_class->constructed = meta_launch_context_constructed;
   object_class->set_property = meta_launch_context_set_property;
   object_class->get_property = meta_launch_context_get_property;

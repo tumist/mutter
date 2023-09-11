@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Written by:
  *     Jonas Ådahl <jadahl@gmail.com>
@@ -75,8 +73,8 @@ meta_stage_native_can_clip_redraws (ClutterStageWindow *stage_window)
 }
 
 static void
-meta_stage_native_get_geometry (ClutterStageWindow    *stage_window,
-                                cairo_rectangle_int_t *geometry)
+meta_stage_native_get_geometry (ClutterStageWindow *stage_window,
+                                MtkRectangle       *geometry)
 {
   MetaStageImpl *stage_impl = META_STAGE_IMPL (stage_window);
   MetaBackend *backend = meta_stage_impl_get_backend (stage_impl);
@@ -88,14 +86,14 @@ meta_stage_native_get_geometry (ClutterStageWindow    *stage_window,
       int width, height;
 
       meta_monitor_manager_get_screen_size (monitor_manager, &width, &height);
-      *geometry = (cairo_rectangle_int_t) {
+      *geometry = (MtkRectangle) {
         .width = width,
         .height = height,
       };
     }
   else
     {
-      *geometry = (cairo_rectangle_int_t) {
+      *geometry = (MtkRectangle) {
         .width = 1,
         .height = 1,
       };

@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
@@ -80,5 +78,8 @@ static const CoglDrmFormatMap meta_cogl_drm_format_map[] = {
 gboolean meta_cogl_pixel_format_from_drm_format (uint32_t                drm_format,
                                                  CoglPixelFormat        *out_format,
                                                  MetaMultiTextureFormat *out_multi_texture_format);
+
+gboolean meta_drm_format_from_cogl_pixel_format (CoglPixelFormat  cogl_format,
+                                                 uint32_t        *out_drm_format);
 
 G_END_DECLS

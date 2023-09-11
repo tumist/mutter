@@ -14,9 +14,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -43,6 +41,8 @@ char * meta_remote_desktop_session_get_object_path (MetaRemoteDesktopSession *se
 gboolean meta_remote_desktop_session_register_screen_cast (MetaRemoteDesktopSession  *session,
                                                            MetaScreenCastSession     *screen_cast_session,
                                                            GError                   **error);
+
+const char * meta_remote_desktop_session_acquire_mapping_id (MetaRemoteDesktopSession *session);
 
 void meta_remote_desktop_session_request_transfer (MetaRemoteDesktopSession  *session,
                                                    const char                *mime_type,

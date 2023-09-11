@@ -12,9 +12,7 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Carlos Garnacho <carlosg@gnome.org>
  */
@@ -281,11 +279,15 @@ clutter_input_method_put_im_event (ClutterInputMethod      *im,
                                    uint32_t                 len,
                                    ClutterPreeditResetMode  mode)
 {
+  ClutterSeat *seat;
   ClutterEvent *event;
+
+  seat = clutter_backend_get_default_seat (clutter_get_default_backend ());
 
   event = clutter_event_im_new (event_type,
                                 CLUTTER_EVENT_FLAG_INPUT_METHOD,
                                 CLUTTER_CURRENT_TIME,
+                                seat,
                                 text,
                                 offset,
                                 anchor,
@@ -366,7 +368,7 @@ clutter_input_method_notify_key_event (ClutterInputMethod *im,
       copy = clutter_event_key_new (clutter_event_type (event),
                                     clutter_event_get_flags (event) |
                                     CLUTTER_EVENT_FLAG_INPUT_METHOD,
-                                    ms2us (clutter_event_get_time (event)),
+                                    clutter_event_get_time_us (event),
                                     clutter_event_get_device (event),
                                     clutter_event_get_state (event),
                                     clutter_event_get_key_symbol (event),
