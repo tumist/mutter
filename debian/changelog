@@ -1,8 +1,19 @@
-mutter (45~rc-1) UNRELEASED; urgency=medium
+mutter (45~rc-1) experimental; urgency=medium
 
+  [ Jeremy Bícha ]
   * New upstream release
+  * debian/control.in: Build-Depend on libsysprof-6-dev
+  * debian/control.in: Bump minimum libei to 1.0.901
+  * debian/control.in: Bump minimum compatible GNOME Shell to 45~rc
+  * debian/libmutter-13-0.symbols: Update
+  * Add new Mtk sublibrary files to gir & dev install lists
+  * Drop "45" and sysprof patches: applied in new release
 
- -- Jeremy Bícha <jbicha@ubuntu.com>  Sun, 10 Sep 2023 20:59:47 -0400
+  [ Daniel van Vugt ]
+  * Add cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
+    to work around https://launchpad.net/bugs/2034672
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Sun, 10 Sep 2023 21:04:02 -0400
 
 mutter (45~beta.1-1) experimental; urgency=medium
 
