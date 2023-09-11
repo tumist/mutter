@@ -1,8 +1,13 @@
+mutter (45~rc-2) experimental; urgency=medium
+
+  * Merge changes from 44.4-2
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Sun, 10 Sep 2023 22:16:34 -0400
+
 mutter (45~rc-1) experimental; urgency=medium
 
   [ Jeremy Bícha ]
   * New upstream release
-  * debian/control.in: Build-Depend on libsysprof-6-dev
   * debian/control.in: Bump minimum libei to 1.0.901
   * debian/control.in: Bump minimum compatible GNOME Shell to 45~rc
   * debian/libmutter-13-0.symbols: Update
