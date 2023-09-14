@@ -1,0 +1,30 @@
+From: =?utf-8?q?Jonas_=C3=85dahl?= <jadahl@gmail.com>
+Date: Mon, 7 Aug 2023 22:42:18 +0200
+Subject: monitor-manager/xrandr: Trap DPMS changes
+
+Apparently DPMSForceLevel() can fail to force a valid level sometimes.
+
+Bug: https://gitlab.gnome.org/GNOME/mutter/-/issues/2857
+Bug: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/6883
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/3160
+Applied-upstream: 44.5, commit:da2d345d
+---
+ src/backends/x11/meta-monitor-manager-xrandr.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/backends/x11/meta-monitor-manager-xrandr.c b/src/backends/x11/meta-monitor-manager-xrandr.c
+index beb9fb8..0785dad 100644
+--- a/src/backends/x11/meta-monitor-manager-xrandr.c
++++ b/src/backends/x11/meta-monitor-manager-xrandr.c
+@@ -180,8 +180,11 @@ meta_monitor_manager_xrandr_set_power_save_mode (MetaMonitorManager *manager,
+     return;
+   }
+ 
++  meta_clutter_x11_trap_x_errors ();
+   DPMSForceLevel (manager_xrandr->xdisplay, state);
+   DPMSSetTimeouts (manager_xrandr->xdisplay, 0, 0, 0);
++  XSync (manager_xrandr->xdisplay, False);
++  meta_clutter_x11_untrap_x_errors ();
+ }
+ 
+ static xcb_randr_rotation_t
