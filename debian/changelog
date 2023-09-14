@@ -1,3 +1,16 @@
+mutter (45~rc-5) UNRELEASED; urgency=medium
+
+  * Merge packaging from 44.4-3 in unstable
+  * d/p/backends-x11-Trap-errors-from-XIAllowTouchEvents.patch,
+    d/p/monitor-manager-xrandr-Trap-DPMS-changes.patch:
+    Add the 45 branch equivalent of the changes in 44.4-3
+    (Closes: #1050512, LP: #2029413).
+    These changes can be dropped when updating to mutter 45 final release
+    (or rc 2, if there is a rc 2).
+  * Refresh patch series
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 14 Sep 2023 11:52:30 +0100
+
 mutter (45~rc-4) experimental; urgency=medium
 
   * Also skip the new "thread priority" test on i386
