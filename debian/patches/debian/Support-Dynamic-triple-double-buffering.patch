@@ -619,10 +619,10 @@ index 1d5660d..0e7f618 100644
 +
  G_DEFINE_AUTOPTR_CLEANUP_FUNC (ClutterFrame, clutter_frame_unref)
 diff --git a/clutter/clutter/clutter-stage-view.c b/clutter/clutter/clutter-stage-view.c
-index 6fab9b8..5669e92 100644
+index 168746d..f0e3661 100644
 --- a/clutter/clutter/clutter-stage-view.c
 +++ b/clutter/clutter/clutter-stage-view.c
-@@ -1265,14 +1265,21 @@ handle_frame_clock_frame (ClutterFrameClock *frame_clock,
+@@ -1264,14 +1264,21 @@ handle_frame_clock_frame (ClutterFrameClock *frame_clock,
  
        _clutter_stage_window_redraw_view (stage_window, view, frame);
  
@@ -677,10 +677,10 @@ index 73425e4..02c4474 100644
  cogl_onscreen_add_frame_callback (CoglOnscreen *onscreen,
                                    CoglFrameCallback callback,
 diff --git a/src/backends/meta-stage-impl.c b/src/backends/meta-stage-impl.c
-index 26a7531..a052549 100644
+index c35cb36..2130e40 100644
 --- a/src/backends/meta-stage-impl.c
 +++ b/src/backends/meta-stage-impl.c
-@@ -772,6 +772,8 @@ meta_stage_impl_redraw_view (ClutterStageWindow *stage_window,
+@@ -775,6 +775,8 @@ meta_stage_impl_redraw_view (ClutterStageWindow *stage_window,
      {
        g_autoptr (GError) error = NULL;
  
@@ -690,10 +690,10 @@ index 26a7531..a052549 100644
                                          stage_view,
                                          scanout,
 diff --git a/src/backends/native/meta-kms-crtc.c b/src/backends/native/meta-kms-crtc.c
-index ad796e3..c06eb62 100644
+index 707da9d..932e5e6 100644
 --- a/src/backends/native/meta-kms-crtc.c
 +++ b/src/backends/native/meta-kms-crtc.c
-@@ -50,6 +50,8 @@ struct _MetaKmsCrtc
+@@ -48,6 +48,8 @@ struct _MetaKmsCrtc
    MetaKmsCrtcState current_state;
  
    MetaKmsCrtcPropTable prop_table;
@@ -702,7 +702,7 @@ index ad796e3..c06eb62 100644
  };
  
  G_DEFINE_TYPE (MetaKmsCrtc, meta_kms_crtc, G_TYPE_OBJECT)
-@@ -101,6 +103,12 @@ meta_kms_crtc_get_prop_drm_value (MetaKmsCrtc     *crtc,
+@@ -99,6 +101,12 @@ meta_kms_crtc_get_prop_drm_value (MetaKmsCrtc     *crtc,
    return meta_kms_prop_convert_value (prop, value);
  }
  
@@ -715,7 +715,7 @@ index ad796e3..c06eb62 100644
  gboolean
  meta_kms_crtc_is_active (MetaKmsCrtc *crtc)
  {
-@@ -467,12 +475,23 @@ meta_kms_crtc_new (MetaKmsImplDevice  *impl_device,
+@@ -465,12 +473,23 @@ meta_kms_crtc_new (MetaKmsImplDevice  *impl_device,
    return crtc;
  }
  
@@ -739,7 +739,7 @@ index ad796e3..c06eb62 100644
  
    G_OBJECT_CLASS (meta_kms_crtc_parent_class)->finalize (object);
  }
-@@ -482,6 +501,7 @@ meta_kms_crtc_init (MetaKmsCrtc *crtc)
+@@ -480,6 +499,7 @@ meta_kms_crtc_init (MetaKmsCrtc *crtc)
  {
    crtc->current_state.gamma.size = 0;
    crtc->current_state.gamma.value = NULL;
@@ -747,7 +747,7 @@ index ad796e3..c06eb62 100644
  }
  
  static void
-@@ -489,6 +509,7 @@ meta_kms_crtc_class_init (MetaKmsCrtcClass *klass)
+@@ -487,6 +507,7 @@ meta_kms_crtc_class_init (MetaKmsCrtcClass *klass)
  {
    GObjectClass *object_class = G_OBJECT_CLASS (klass);
  
@@ -756,10 +756,10 @@ index ad796e3..c06eb62 100644
  }
  
 diff --git a/src/backends/native/meta-kms-crtc.h b/src/backends/native/meta-kms-crtc.h
-index b7c8dd4..1a0ae08 100644
+index b26b682..a30a6de 100644
 --- a/src/backends/native/meta-kms-crtc.h
 +++ b/src/backends/native/meta-kms-crtc.h
-@@ -24,6 +24,7 @@
+@@ -22,6 +22,7 @@
  #include <xf86drmMode.h>
  
  #include "backends/native/meta-kms-types.h"
@@ -767,17 +767,17 @@ index b7c8dd4..1a0ae08 100644
  #include "backends/meta-backend-types.h"
  #include "core/util-private.h"
  #include "meta/boxes.h"
-@@ -62,3 +63,5 @@ int meta_kms_crtc_get_idx (MetaKmsCrtc *crtc);
+@@ -60,3 +61,5 @@ int meta_kms_crtc_get_idx (MetaKmsCrtc *crtc);
  
  META_EXPORT_TEST
  gboolean meta_kms_crtc_is_active (MetaKmsCrtc *crtc);
 +
 +MetaSwapChain * meta_kms_crtc_get_swap_chain (MetaKmsCrtc *crtc);
 diff --git a/src/backends/native/meta-kms-impl-device-atomic.c b/src/backends/native/meta-kms-impl-device-atomic.c
-index 5e58bb5..939eb7c 100644
+index d3fd772..e749760 100644
 --- a/src/backends/native/meta-kms-impl-device-atomic.c
 +++ b/src/backends/native/meta-kms-impl-device-atomic.c
-@@ -507,6 +507,7 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
+@@ -505,6 +505,7 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
  {
    MetaKmsPlaneAssignment *plane_assignment = update_entry;
    MetaKmsPlane *plane = plane_assignment->plane;
@@ -785,7 +785,7 @@ index 5e58bb5..939eb7c 100644
    MetaDrmBuffer *buffer;
    MetaKmsFbDamage *fb_damage;
    uint32_t prop_id;
-@@ -659,6 +660,12 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
+@@ -657,6 +658,12 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
                                 error))
          return FALSE;
      }
@@ -798,7 +798,7 @@ index 5e58bb5..939eb7c 100644
    return TRUE;
  }
  
-@@ -1003,7 +1010,7 @@ meta_kms_impl_device_atomic_process_update (MetaKmsImplDevice *impl_device,
+@@ -1001,7 +1008,7 @@ meta_kms_impl_device_atomic_process_update (MetaKmsImplDevice *impl_device,
                          req,
                          blob_ids,
                          meta_kms_update_get_plane_assignments (update),
@@ -808,10 +808,10 @@ index 5e58bb5..939eb7c 100644
                          &error))
      goto err;
 diff --git a/src/backends/native/meta-kms-impl-device-simple.c b/src/backends/native/meta-kms-impl-device-simple.c
-index 291e9e7..da35ba4 100644
+index 2d68ba1..f4e23df 100644
 --- a/src/backends/native/meta-kms-impl-device-simple.c
 +++ b/src/backends/native/meta-kms-impl-device-simple.c
-@@ -487,6 +487,8 @@ process_mode_set (MetaKmsImplDevice  *impl_device,
+@@ -485,6 +485,8 @@ process_mode_set (MetaKmsImplDevice  *impl_device,
        return FALSE;
      }
  
@@ -820,7 +820,7 @@ index 291e9e7..da35ba4 100644
    if (drm_mode)
      {
        g_hash_table_replace (impl_device_simple->cached_mode_sets,
-@@ -556,7 +558,7 @@ is_timestamp_earlier_than (uint64_t ts1,
+@@ -554,7 +556,7 @@ is_timestamp_earlier_than (uint64_t ts1,
  typedef struct _RetryPageFlipData
  {
    MetaKmsCrtc *crtc;
@@ -829,7 +829,7 @@ index 291e9e7..da35ba4 100644
    MetaKmsPageFlipData *page_flip_data;
    float refresh_rate;
    uint64_t retry_time_us;
-@@ -569,6 +571,7 @@ retry_page_flip_data_free (RetryPageFlipData *retry_page_flip_data)
+@@ -567,6 +569,7 @@ retry_page_flip_data_free (RetryPageFlipData *retry_page_flip_data)
    g_assert (!retry_page_flip_data->page_flip_data);
    g_clear_pointer (&retry_page_flip_data->custom_page_flip,
                     meta_kms_custom_page_flip_free);
@@ -837,7 +837,7 @@ index 291e9e7..da35ba4 100644
    g_free (retry_page_flip_data);
  }
  
-@@ -636,16 +639,21 @@ retry_page_flips (gpointer user_data)
+@@ -634,16 +637,21 @@ retry_page_flips (gpointer user_data)
          }
        else
          {
@@ -861,7 +861,7 @@ index 291e9e7..da35ba4 100644
                                   DRM_MODE_PAGE_FLIP_EVENT,
                                   retry_page_flip_data->page_flip_data);
          }
-@@ -732,7 +740,7 @@ retry_page_flips (gpointer user_data)
+@@ -730,7 +738,7 @@ retry_page_flips (gpointer user_data)
  static void
  schedule_retry_page_flip (MetaKmsImplDeviceSimple *impl_device_simple,
                            MetaKmsCrtc             *crtc,
@@ -870,7 +870,7 @@ index 291e9e7..da35ba4 100644
                            float                    refresh_rate,
                            MetaKmsPageFlipData     *page_flip_data,
                            MetaKmsCustomPageFlip   *custom_page_flip)
-@@ -747,7 +755,7 @@ schedule_retry_page_flip (MetaKmsImplDeviceSimple *impl_device_simple,
+@@ -745,7 +753,7 @@ schedule_retry_page_flip (MetaKmsImplDeviceSimple *impl_device_simple,
    retry_page_flip_data = g_new0 (RetryPageFlipData, 1);
    *retry_page_flip_data = (RetryPageFlipData) {
      .crtc = crtc,
@@ -879,7 +879,7 @@ index 291e9e7..da35ba4 100644
      .page_flip_data = page_flip_data,
      .refresh_rate = refresh_rate,
      .retry_time_us = retry_time_us,
-@@ -879,6 +887,8 @@ mode_set_fallback (MetaKmsImplDeviceSimple  *impl_device_simple,
+@@ -877,6 +885,8 @@ mode_set_fallback (MetaKmsImplDeviceSimple  *impl_device_simple,
        return FALSE;
      }
  
@@ -888,7 +888,7 @@ index 291e9e7..da35ba4 100644
    if (!impl_device_simple->mode_set_fallback_feedback_source)
      {
        MetaKmsImpl *impl = meta_kms_impl_device_get_impl (impl_device);
-@@ -1005,20 +1015,20 @@ dispatch_page_flip (MetaKmsImplDevice    *impl_device,
+@@ -1003,20 +1013,20 @@ dispatch_page_flip (MetaKmsImplDevice    *impl_device,
        cached_mode_set = get_cached_mode_set (impl_device_simple, crtc);
        if (cached_mode_set)
          {
@@ -913,7 +913,7 @@ index 291e9e7..da35ba4 100644
                                      refresh_rate,
                                      page_flip_data,
                                      g_steal_pointer (&custom_page_flip));
-@@ -1301,7 +1311,7 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
+@@ -1299,7 +1309,7 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
      {
      case META_KMS_PLANE_TYPE_PRIMARY:
        /* Handled as part of the mode-set and page flip. */
@@ -922,7 +922,7 @@ index 291e9e7..da35ba4 100644
      case META_KMS_PLANE_TYPE_CURSOR:
        if (!process_cursor_plane_assignment (impl_device, update,
                                              plane_assignment,
-@@ -1315,7 +1325,7 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
+@@ -1313,7 +1323,7 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
          }
        else
          {
@@ -931,7 +931,7 @@ index 291e9e7..da35ba4 100644
          }
      case META_KMS_PLANE_TYPE_OVERLAY:
        error = g_error_new_literal (G_IO_ERROR, G_IO_ERROR_FAILED,
-@@ -1328,6 +1338,12 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
+@@ -1326,6 +1336,12 @@ process_plane_assignment (MetaKmsImplDevice       *impl_device,
      }
  
    g_assert_not_reached ();
@@ -945,10 +945,10 @@ index 291e9e7..da35ba4 100644
  
  static gboolean
 diff --git a/src/backends/native/meta-kms-impl-device.c b/src/backends/native/meta-kms-impl-device.c
-index d4ed82a..410cf59 100644
+index bd146e2..0042b57 100644
 --- a/src/backends/native/meta-kms-impl-device.c
 +++ b/src/backends/native/meta-kms-impl-device.c
-@@ -1485,10 +1485,11 @@ meta_kms_impl_device_handle_update (MetaKmsImplDevice *impl_device,
+@@ -1483,10 +1483,11 @@ meta_kms_impl_device_handle_update (MetaKmsImplDevice *impl_device,
        meta_kms_update_merge_from (crtc_frame->pending_update, update);
        meta_kms_update_free (update);
        update = g_steal_pointer (&crtc_frame->pending_update);
@@ -961,7 +961,7 @@ index d4ed82a..410cf59 100644
  
    feedback = do_process (impl_device, latch_crtc, update, flags);
    meta_kms_feedback_unref (feedback);
-@@ -1849,6 +1850,16 @@ meta_kms_impl_device_init_mode_setting (MetaKmsImplDevice  *impl_device,
+@@ -1848,6 +1849,16 @@ meta_kms_impl_device_init_mode_setting (MetaKmsImplDevice  *impl_device,
    return TRUE;
  }
  
@@ -978,7 +978,7 @@ index d4ed82a..410cf59 100644
  void
  meta_kms_impl_device_prepare_shutdown (MetaKmsImplDevice *impl_device)
  {
-@@ -1856,6 +1867,8 @@ meta_kms_impl_device_prepare_shutdown (MetaKmsImplDevice *impl_device)
+@@ -1855,6 +1866,8 @@ meta_kms_impl_device_prepare_shutdown (MetaKmsImplDevice *impl_device)
      meta_kms_impl_device_get_instance_private (impl_device);
    MetaKmsImplDeviceClass *klass = META_KMS_IMPL_DEVICE_GET_CLASS (impl_device);
  
@@ -988,10 +988,10 @@ index d4ed82a..410cf59 100644
      klass->prepare_shutdown (impl_device);
  
 diff --git a/src/backends/native/meta-kms-update.c b/src/backends/native/meta-kms-update.c
-index 7658db0..5ca7056 100644
+index 5189c5a..bb7349e 100644
 --- a/src/backends/native/meta-kms-update.c
 +++ b/src/backends/native/meta-kms-update.c
-@@ -192,6 +192,7 @@ static void
+@@ -190,6 +190,7 @@ static void
  meta_kms_plane_assignment_free (MetaKmsPlaneAssignment *plane_assignment)
  {
    g_clear_pointer (&plane_assignment->fb_damage, meta_kms_fb_damage_free);
@@ -999,7 +999,7 @@ index 7658db0..5ca7056 100644
    g_free (plane_assignment);
  }
  
-@@ -301,7 +302,7 @@ meta_kms_update_assign_plane (MetaKmsUpdate          *update,
+@@ -292,7 +293,7 @@ meta_kms_update_assign_plane (MetaKmsUpdate          *update,
      .update = update,
      .crtc = crtc,
      .plane = plane,
@@ -1009,10 +1009,10 @@ index 7658db0..5ca7056 100644
      .dst_rect = dst_rect,
      .flags = flags,
 diff --git a/src/backends/native/meta-kms.c b/src/backends/native/meta-kms.c
-index 31249ad..00d1ed2 100644
+index ec009ec..c670894 100644
 --- a/src/backends/native/meta-kms.c
 +++ b/src/backends/native/meta-kms.c
-@@ -157,6 +157,8 @@ struct _MetaKms
+@@ -155,6 +155,8 @@ struct _MetaKms
    int kernel_thread_inhibit_count;
  
    MetaKmsCursorManager *cursor_manager;
@@ -1021,7 +1021,7 @@ index 31249ad..00d1ed2 100644
  };
  
  G_DEFINE_TYPE (MetaKms, meta_kms, META_TYPE_THREAD)
-@@ -435,6 +437,7 @@ static void
+@@ -433,6 +435,7 @@ static void
  on_prepare_shutdown (MetaBackend *backend,
                       MetaKms     *kms)
  {
@@ -1029,7 +1029,7 @@ index 31249ad..00d1ed2 100644
    meta_kms_run_impl_task_sync (kms, prepare_shutdown_in_impl, NULL, NULL);
    meta_thread_flush_callbacks (META_THREAD (kms));
  
-@@ -489,6 +492,12 @@ meta_kms_new (MetaBackend   *backend,
+@@ -487,6 +490,12 @@ meta_kms_new (MetaBackend   *backend,
    return kms;
  }
  
@@ -1043,10 +1043,10 @@ index 31249ad..00d1ed2 100644
  meta_kms_finalize (GObject *object)
  {
 diff --git a/src/backends/native/meta-kms.h b/src/backends/native/meta-kms.h
-index f40b628..09450a6 100644
+index 7434014..f6b1952 100644
 --- a/src/backends/native/meta-kms.h
 +++ b/src/backends/native/meta-kms.h
-@@ -62,6 +62,8 @@ MetaKmsDevice * meta_kms_create_device (MetaKms            *kms,
+@@ -60,6 +60,8 @@ MetaKmsDevice * meta_kms_create_device (MetaKms            *kms,
                                          MetaKmsDeviceFlag   flags,
                                          GError            **error);
  
@@ -1056,7 +1056,7 @@ index f40b628..09450a6 100644
                          MetaKmsFlags   flags,
                          GError       **error);
 diff --git a/src/backends/native/meta-onscreen-native.c b/src/backends/native/meta-onscreen-native.c
-index a3ba447..b81645a 100644
+index 2388a44..6c854ea 100644
 --- a/src/backends/native/meta-onscreen-native.c
 +++ b/src/backends/native/meta-onscreen-native.c
 @@ -72,7 +72,7 @@ typedef struct _MetaOnscreenNativeSecondaryGpuState
@@ -1606,7 +1606,7 @@ index a3ba447..b81645a 100644
  }
  
  void
-@@ -1549,6 +1668,9 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1555,6 +1674,9 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
    MetaKmsDevice *kms_device = meta_kms_crtc_get_device (kms_crtc);
    MetaFrameNative *frame_native = meta_frame_native_from_frame (frame);
    MetaKmsUpdate *kms_update;
@@ -1616,7 +1616,7 @@ index a3ba447..b81645a 100644
  
    kms_update = meta_frame_native_steal_kms_update (frame_native);
    if (!kms_update)
-@@ -1565,6 +1687,49 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1571,6 +1693,49 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
          }
      }
  
@@ -1666,7 +1666,7 @@ index a3ba447..b81645a 100644
    meta_kms_update_add_result_listener (kms_update,
                                         &finish_frame_result_listener_vtable,
                                         NULL,
-@@ -1588,7 +1753,17 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1594,7 +1759,17 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
    meta_kms_update_set_flushing (kms_update, kms_crtc);
    meta_kms_device_post_update (kms_device, kms_update,
                                 META_KMS_UPDATE_FLAG_NONE);
@@ -1685,7 +1685,7 @@ index a3ba447..b81645a 100644
  }
  
  static gboolean
-@@ -2415,7 +2590,7 @@ meta_onscreen_native_dispose (GObject *object)
+@@ -2421,7 +2596,7 @@ meta_onscreen_native_dispose (GObject *object)
      {
      case META_RENDERER_NATIVE_MODE_GBM:
        g_clear_object (&onscreen_native->gbm.next_fb);
@@ -1694,7 +1694,7 @@ index a3ba447..b81645a 100644
        break;
      case META_RENDERER_NATIVE_MODE_SURFACELESS:
        g_assert_not_reached ();
-@@ -2449,6 +2624,10 @@ meta_onscreen_native_dispose (GObject *object)
+@@ -2455,6 +2630,10 @@ meta_onscreen_native_dispose (GObject *object)
  
    g_clear_object (&onscreen_native->output);
    g_clear_object (&onscreen_native->crtc);
@@ -1706,10 +1706,10 @@ index a3ba447..b81645a 100644
  
  static void
 diff --git a/src/backends/native/meta-onscreen-native.h b/src/backends/native/meta-onscreen-native.h
-index 3be01a3..575da22 100644
+index 91eb7b5..11bb5ba 100644
 --- a/src/backends/native/meta-onscreen-native.h
 +++ b/src/backends/native/meta-onscreen-native.h
-@@ -47,6 +47,8 @@ void meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -45,6 +45,8 @@ void meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
  
  void meta_onscreen_native_dummy_power_save_page_flip (CoglOnscreen *onscreen);
  
@@ -1719,10 +1719,10 @@ index 3be01a3..575da22 100644
                                                              MetaDrmBuffer *fb);
  
 diff --git a/src/backends/native/meta-renderer-native.c b/src/backends/native/meta-renderer-native.c
-index 6826fe9..7c97593 100644
+index 57cb20b..566ac75 100644
 --- a/src/backends/native/meta-renderer-native.c
 +++ b/src/backends/native/meta-renderer-native.c
-@@ -688,12 +688,18 @@ static gboolean
+@@ -683,12 +683,18 @@ static gboolean
  dummy_power_save_page_flip_cb (gpointer user_data)
  {
    MetaRendererNative *renderer_native = user_data;
@@ -1743,7 +1743,7 @@ index 6826fe9..7c97593 100644
    renderer_native->power_save_page_flip_source_id = 0;
  
    return G_SOURCE_REMOVE;
-@@ -705,6 +711,9 @@ meta_renderer_native_queue_power_save_page_flip (MetaRendererNative *renderer_na
+@@ -700,6 +706,9 @@ meta_renderer_native_queue_power_save_page_flip (MetaRendererNative *renderer_na
  {
    const unsigned int timeout_ms = 100;
  
@@ -1753,7 +1753,7 @@ index 6826fe9..7c97593 100644
    if (!renderer_native->power_save_page_flip_source_id)
      {
        renderer_native->power_save_page_flip_source_id =
-@@ -1492,6 +1501,26 @@ detach_onscreens (MetaRenderer *renderer)
+@@ -1493,6 +1502,26 @@ detach_onscreens (MetaRenderer *renderer)
      }
  }
  
@@ -1780,7 +1780,7 @@ index 6826fe9..7c97593 100644
  static void
  meta_renderer_native_rebuild_views (MetaRenderer *renderer)
  {
-@@ -1502,6 +1531,7 @@ meta_renderer_native_rebuild_views (MetaRenderer *renderer)
+@@ -1503,6 +1532,7 @@ meta_renderer_native_rebuild_views (MetaRenderer *renderer)
    MetaRendererClass *parent_renderer_class =
      META_RENDERER_CLASS (meta_renderer_native_parent_class);
  
@@ -1998,10 +1998,10 @@ index 0000000..bad772b
 +
 +#endif /* META_SWAP_CHAIN_H */
 diff --git a/src/meson.build b/src/meson.build
-index f4efdee..5472b51 100644
+index ca2ef16..0038988 100644
 --- a/src/meson.build
 +++ b/src/meson.build
-@@ -846,6 +846,8 @@ if have_native_backend
+@@ -850,6 +850,8 @@ if have_native_backend
      'backends/native/meta-seat-native.h',
      'backends/native/meta-stage-native.c',
      'backends/native/meta-stage-native.h',
@@ -2023,10 +2023,10 @@ index 383ad0b..3b25913 100644
    g_assert_cmpint (n_child_1_leave_events, ==, 0);
    g_assert_cmpint (n_action_sequences_cancelled, ==, 1);
 diff --git a/src/tests/native-kms-render.c b/src/tests/native-kms-render.c
-index 8a6a45c..b67f3f3 100644
+index 31e74a9..259d315 100644
 --- a/src/tests/native-kms-render.c
 +++ b/src/tests/native-kms-render.c
-@@ -41,6 +41,8 @@
+@@ -39,6 +39,8 @@
  #include "tests/meta-wayland-test-driver.h"
  #include "tests/meta-wayland-test-utils.h"
  
@@ -2035,7 +2035,7 @@ index 8a6a45c..b67f3f3 100644
  typedef struct
  {
    int number_of_frames_left;
-@@ -48,12 +50,15 @@ typedef struct
+@@ -46,12 +48,15 @@ typedef struct
  
    struct {
      int n_paints;
@@ -2052,7 +2052,7 @@ index 8a6a45c..b67f3f3 100644
      gboolean scanout_sabotaged;
      gboolean fallback_painted;
      guint repaint_guard_id;
-@@ -103,7 +108,7 @@ meta_test_kms_render_basic (void)
+@@ -101,7 +106,7 @@ meta_test_kms_render_basic (void)
    gulong handler_id;
  
    test = (KmsRenderingTest) {
@@ -2061,7 +2061,7 @@ index 8a6a45c..b67f3f3 100644
      .loop = g_main_loop_new (NULL, FALSE),
    };
    handler_id = g_signal_connect (stage, "after-update",
-@@ -125,7 +130,6 @@ on_scanout_before_update (ClutterStage     *stage,
+@@ -123,7 +128,6 @@ on_scanout_before_update (ClutterStage     *stage,
                            KmsRenderingTest *test)
  {
    test->scanout.n_paints = 0;
@@ -2069,7 +2069,7 @@ index 8a6a45c..b67f3f3 100644
  }
  
  static void
-@@ -136,6 +140,7 @@ on_scanout_before_paint (ClutterStage     *stage,
+@@ -134,6 +138,7 @@ on_scanout_before_paint (ClutterStage     *stage,
  {
    CoglScanout *scanout;
    MetaDrmBuffer *buffer;
@@ -2077,7 +2077,7 @@ index 8a6a45c..b67f3f3 100644
  
    scanout = clutter_stage_view_peek_scanout (stage_view);
    if (!scanout)
-@@ -143,8 +148,14 @@ on_scanout_before_paint (ClutterStage     *stage,
+@@ -141,8 +146,14 @@ on_scanout_before_paint (ClutterStage     *stage,
  
    g_assert_true (META_IS_DRM_BUFFER (scanout));
    buffer = META_DRM_BUFFER (scanout);
@@ -2094,7 +2094,7 @@ index 8a6a45c..b67f3f3 100644
  }
  
  static void
-@@ -173,12 +184,12 @@ on_scanout_presented (ClutterStage     *stage,
+@@ -171,12 +182,12 @@ on_scanout_presented (ClutterStage     *stage,
    MetaDeviceFile *device_file;
    GError *error = NULL;
    drmModeCrtc *drm_crtc;
@@ -2110,7 +2110,7 @@ index 8a6a45c..b67f3f3 100644
  
    device_pool = meta_backend_native_get_device_pool (backend_native);
  
-@@ -197,15 +208,41 @@ on_scanout_presented (ClutterStage     *stage,
+@@ -195,15 +206,41 @@ on_scanout_presented (ClutterStage     *stage,
    drm_crtc = drmModeGetCrtc (meta_device_file_get_fd (device_file),
                               meta_kms_crtc_get_id (kms_crtc));
    g_assert_nonnull (drm_crtc);
@@ -2156,7 +2156,7 @@ index 8a6a45c..b67f3f3 100644
  }
  
  typedef enum
-@@ -244,7 +281,9 @@ meta_test_kms_render_client_scanout (void)
+@@ -242,7 +279,9 @@ meta_test_kms_render_client_scanout (void)
    g_assert_nonnull (wayland_test_client);
  
    test = (KmsRenderingTest) {
@@ -2166,7 +2166,7 @@ index 8a6a45c..b67f3f3 100644
      .wait_for_scanout = TRUE,
    };
  
-@@ -270,7 +309,8 @@ meta_test_kms_render_client_scanout (void)
+@@ -268,7 +307,8 @@ meta_test_kms_render_client_scanout (void)
    clutter_actor_queue_redraw (CLUTTER_ACTOR (stage));
    g_main_loop_run (test.loop);
  
@@ -2176,7 +2176,7 @@ index 8a6a45c..b67f3f3 100644
  
    g_debug ("Unmake fullscreen");
    window = meta_find_window_from_title (test_context, "dma-buf-scanout-test");
-@@ -292,10 +332,15 @@ meta_test_kms_render_client_scanout (void)
+@@ -290,10 +330,15 @@ meta_test_kms_render_client_scanout (void)
    g_assert_cmpint (buffer_rect.y, ==, 10);
  
    test.wait_for_scanout = FALSE;
@@ -2193,7 +2193,7 @@ index 8a6a45c..b67f3f3 100644
  
    g_debug ("Moving back to 0, 0");
    meta_window_move_frame (window, TRUE, 0, 0);
-@@ -307,10 +352,15 @@ meta_test_kms_render_client_scanout (void)
+@@ -305,10 +350,15 @@ meta_test_kms_render_client_scanout (void)
    g_assert_cmpint (buffer_rect.y, ==, 0);
  
    test.wait_for_scanout = TRUE;
@@ -2210,7 +2210,7 @@ index 8a6a45c..b67f3f3 100644
  
    g_signal_handler_disconnect (stage, before_update_handler_id);
    g_signal_handler_disconnect (stage, before_paint_handler_id);
-@@ -364,6 +414,15 @@ on_scanout_fallback_before_paint (ClutterStage     *stage,
+@@ -362,6 +412,15 @@ on_scanout_fallback_before_paint (ClutterStage     *stage,
    if (!scanout)
      return;
  
@@ -2226,7 +2226,7 @@ index 8a6a45c..b67f3f3 100644
    g_assert_false (test->scanout_fallback.scanout_sabotaged);
  
    if (is_atomic_mode_setting (kms_device))
-@@ -401,6 +460,15 @@ on_scanout_fallback_paint_view (ClutterStage     *stage,
+@@ -399,6 +458,15 @@ on_scanout_fallback_paint_view (ClutterStage     *stage,
        g_clear_handle_id (&test->scanout_fallback.repaint_guard_id,
                           g_source_remove);
        test->scanout_fallback.fallback_painted = TRUE;
@@ -2242,7 +2242,7 @@ index 8a6a45c..b67f3f3 100644
      }
  }
  
-@@ -410,11 +478,11 @@ on_scanout_fallback_presented (ClutterStage     *stage,
+@@ -408,11 +476,11 @@ on_scanout_fallback_presented (ClutterStage     *stage,
                                 ClutterFrameInfo *frame_info,
                                 KmsRenderingTest *test)
  {
@@ -2258,7 +2258,7 @@ index 8a6a45c..b67f3f3 100644
  }
  
  static void
-@@ -443,6 +511,7 @@ meta_test_kms_render_client_scanout_fallback (void)
+@@ -441,6 +509,7 @@ meta_test_kms_render_client_scanout_fallback (void)
    g_assert_nonnull (wayland_test_client);
  
    test = (KmsRenderingTest) {
