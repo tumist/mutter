@@ -1,4 +1,6 @@
-mutter (44.4-3) UNRELEASED; urgency=medium
+mutter (44.4-3) unstable; urgency=medium
+
+  * Team upload
 
   [ Simon McVittie ]
   * d/patches: Update to gnome-44 branch commit 44.4-2-g7fc141552a
@@ -12,7 +14,7 @@ mutter (44.4-3) UNRELEASED; urgency=medium
   [ Jeremy Bícha ]
   * Remove sysprof build-dependency on i386
 
- -- Simon McVittie <smcv@debian.org>  Thu, 14 Sep 2023 10:17:16 +0100
+ -- Simon McVittie <smcv@debian.org>  Thu, 14 Sep 2023 10:19:15 +0100
 
 mutter (44.4-2) unstable; urgency=medium
 
