@@ -51,6 +51,24 @@ mutter (45~beta.1-1) experimental; urgency=medium
 
  -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 21 Aug 2023 11:19:08 -0400
 
+mutter (44.4-3) unstable; urgency=medium
+
+  * Team upload
+
+  [ Simon McVittie ]
+  * d/patches: Update to gnome-44 branch commit 44.4-2-g7fc141552a
+    - d/p/monitor-manager-xrandr-Trap-DPMS-changes.patch:
+      Under X11, don't crash if changing display power-saving settings
+      fails (mutter#2857, gnome-shell#6883, Closes: #1050512)
+    - d/p/backends-x11-Trap-errors-from-XIAllowTouchEvents.patch:
+      Under X11, don't crash if some touchscreen operations fail
+      (mutter#2808, LP: #2029413)
+
+  [ Jeremy Bícha ]
+  * Remove sysprof build-dependency on i386
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 14 Sep 2023 10:19:15 +0100
+
 mutter (44.4-2) unstable; urgency=medium
 
   * Don't enable sysprof profiling integration on i386
