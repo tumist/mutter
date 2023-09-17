@@ -1,0 +1,31 @@
+From: =?utf-8?q?Jonas_=C3=85dahl?= <jadahl@gmail.com>
+Date: Wed, 10 May 2023 22:47:19 +0200
+Subject: x11/events: NULL Check input event when getting name
+
+Fixes a SIGSEGV when trying to get the name of an XIEvent for profile
+trace data gathering. We don't use GDK anymore, so we can't rely on any
+GDK semantics.
+
+Origin: upstream, 45.alpha, commit:33a210d768c7e29011e4e97e4eaf9356a7efb303
+Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2998
+---
+ src/x11/events.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/x11/events.c b/src/x11/events.c
+index 00f34e2..d432b27 100644
+--- a/src/x11/events.c
++++ b/src/x11/events.c
+@@ -67,10 +67,9 @@ get_input_event (MetaX11Display *x11_display,
+     {
+       XIEvent *input_event;
+ 
+-      /* NB: GDK event filters already have generic events
+-       * allocated, so no need to do XGetEventData() on our own
+-       */
+       input_event = (XIEvent *) event->xcookie.data;
++      if (!input_event)
++        return NULL;
+ 
+       switch (input_event->evtype)
+         {
