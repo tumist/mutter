@@ -1,3 +1,9 @@
+mutter (44.4-4) UNRELEASED; urgency=medium
+
+  * d/watch: Only watch for v44.x
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 17 Sep 2023 13:54:17 +0100
+
 mutter (44.4-3) unstable; urgency=medium
 
   * Team upload
