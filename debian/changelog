@@ -1,4 +1,4 @@
-mutter (44.5-1) UNRELEASED; urgency=medium
+mutter (44.5-1) unstable; urgency=medium
 
   * New upstream release
     - Fix redraw issue when buffer age is unavailable
@@ -19,8 +19,9 @@ mutter (44.5-1) UNRELEASED; urgency=medium
   * d/p/x11-events-NULL-Check-input-event-when-getting-name.patch:
     Add patch from upstream 45~alpha to avoid a crash when being
     profiled with sysprof 45~rc (mutter#3030)
+  * d/libmutter-12-0.symbols: Update
 
- -- Simon McVittie <smcv@debian.org>  Sun, 17 Sep 2023 14:58:26 +0100
+ -- Simon McVittie <smcv@debian.org>  Sun, 17 Sep 2023 16:54:02 +0100
 
 mutter (44.4-3) unstable; urgency=medium
 
