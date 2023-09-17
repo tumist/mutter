@@ -16,8 +16,11 @@ mutter (44.5-1) UNRELEASED; urgency=medium
     - Other crash fixes were included in 44.4-3 already
   * d/watch: Only watch for v44.x
   * d/patches: Drop patches that were applied upstream
+  * d/p/x11-events-NULL-Check-input-event-when-getting-name.patch:
+    Add patch from upstream 45~alpha to avoid a crash when being
+    profiled with sysprof 45~rc (mutter#3030)
 
- -- Simon McVittie <smcv@debian.org>  Sun, 17 Sep 2023 13:56:39 +0100
+ -- Simon McVittie <smcv@debian.org>  Sun, 17 Sep 2023 14:58:26 +0100
 
 mutter (44.4-3) unstable; urgency=medium
 
