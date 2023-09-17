@@ -1933,6 +1933,7 @@ libmutter-clutter-12.so.0 libmutter-12-0 #MINVER#
  clutter_stage_paint_to_framebuffer@Base 43.0
  clutter_stage_paint_view@Base 43.0
  clutter_stage_peek_stage_views@Base 43.0
+ clutter_stage_pointing_input_foreach@Base 44.5
  clutter_stage_read_pixels@Base 43.0
  clutter_stage_repick_device@Base 43.0
  clutter_stage_schedule_update@Base 43.0
