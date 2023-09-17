@@ -657,7 +657,7 @@ index 842ecec..1e2b11d 100644
  cogl_onscreen_add_frame_callback (CoglOnscreen *onscreen,
                                    CoglFrameCallback callback,
 diff --git a/src/backends/meta-stage-impl.c b/src/backends/meta-stage-impl.c
-index daa5c90..2d44442 100644
+index b0103de..dd38ac7 100644
 --- a/src/backends/meta-stage-impl.c
 +++ b/src/backends/meta-stage-impl.c
 @@ -772,6 +772,8 @@ meta_stage_impl_redraw_view (ClutterStageWindow *stage_window,
@@ -1286,7 +1286,7 @@ index fe4fef1..88421ed 100644
                          MetaKmsFlags   flags,
                          GError       **error);
 diff --git a/src/backends/native/meta-onscreen-native.c b/src/backends/native/meta-onscreen-native.c
-index bcb791b..94fa98b 100644
+index 09c07db..e4128f3 100644
 --- a/src/backends/native/meta-onscreen-native.c
 +++ b/src/backends/native/meta-onscreen-native.c
 @@ -72,7 +72,7 @@ typedef struct _MetaOnscreenNativeSecondaryGpuState
@@ -1801,7 +1801,7 @@ index bcb791b..94fa98b 100644
    meta_kms_update_add_result_listener (kms_update,
                                         on_scanout_update_result,
                                         onscreen_native);
-@@ -1531,7 +1646,20 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1537,7 +1652,20 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
    MetaKmsDevice *kms_device = meta_kms_crtc_get_device (kms_crtc);
    MetaFrameNative *frame_native = meta_frame_native_from_frame (frame);
    MetaKmsUpdate *kms_update;
@@ -1823,7 +1823,7 @@ index bcb791b..94fa98b 100644
  
    kms_update = meta_frame_native_steal_kms_update (frame_native);
    if (!kms_update)
-@@ -1540,6 +1668,42 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1546,6 +1674,42 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
        return;
      }
  
@@ -1866,7 +1866,7 @@ index bcb791b..94fa98b 100644
    meta_kms_update_add_result_listener (kms_update,
                                         on_finish_frame_update_result,
                                         onscreen_native);
-@@ -1560,7 +1724,17 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
+@@ -1566,7 +1730,17 @@ meta_onscreen_native_finish_frame (CoglOnscreen *onscreen,
    kms_feedback =
      meta_kms_device_process_update_sync (kms_device, kms_update,
                                           META_KMS_UPDATE_FLAG_NONE);
@@ -1885,7 +1885,7 @@ index bcb791b..94fa98b 100644
  }
  
  static gboolean
-@@ -2387,7 +2561,7 @@ meta_onscreen_native_dispose (GObject *object)
+@@ -2393,7 +2567,7 @@ meta_onscreen_native_dispose (GObject *object)
      {
      case META_RENDERER_NATIVE_MODE_GBM:
        g_clear_object (&onscreen_native->gbm.next_fb);
@@ -1894,7 +1894,7 @@ index bcb791b..94fa98b 100644
        break;
      case META_RENDERER_NATIVE_MODE_SURFACELESS:
        g_assert_not_reached ();
-@@ -2421,6 +2595,10 @@ meta_onscreen_native_dispose (GObject *object)
+@@ -2427,6 +2601,10 @@ meta_onscreen_native_dispose (GObject *object)
  
    g_clear_object (&onscreen_native->output);
    g_clear_object (&onscreen_native->crtc);
@@ -1905,7 +1905,7 @@ index bcb791b..94fa98b 100644
  }
  
  static void
-@@ -2456,4 +2634,5 @@ void
+@@ -2462,4 +2640,5 @@ void
  meta_onscreen_native_detach (MetaOnscreenNative *onscreen_native)
  {
    clear_invalidation_handlers (onscreen_native);
@@ -1925,10 +1925,10 @@ index 05a9ecd..a33ee38 100644
                                                              MetaDrmBuffer *fb);
  
 diff --git a/src/backends/native/meta-renderer-native.c b/src/backends/native/meta-renderer-native.c
-index 4da361e..e5d9953 100644
+index 7b7b426..5e6974d 100644
 --- a/src/backends/native/meta-renderer-native.c
 +++ b/src/backends/native/meta-renderer-native.c
-@@ -708,12 +708,18 @@ static gboolean
+@@ -710,12 +710,18 @@ static gboolean
  dummy_power_save_page_flip_cb (gpointer user_data)
  {
    MetaRendererNative *renderer_native = user_data;
@@ -1949,7 +1949,7 @@ index 4da361e..e5d9953 100644
    renderer_native->power_save_page_flip_source_id = 0;
  
    return G_SOURCE_REMOVE;
-@@ -725,6 +731,9 @@ meta_renderer_native_queue_power_save_page_flip (MetaRendererNative *renderer_na
+@@ -727,6 +733,9 @@ meta_renderer_native_queue_power_save_page_flip (MetaRendererNative *renderer_na
  {
    const unsigned int timeout_ms = 100;
  
@@ -1959,7 +1959,7 @@ index 4da361e..e5d9953 100644
    if (!renderer_native->power_save_page_flip_source_id)
      {
        renderer_native->power_save_page_flip_source_id =
-@@ -1473,6 +1482,26 @@ detach_onscreens (MetaRenderer *renderer)
+@@ -1475,6 +1484,26 @@ detach_onscreens (MetaRenderer *renderer)
      }
  }
  
@@ -1986,7 +1986,7 @@ index 4da361e..e5d9953 100644
  static void
  meta_renderer_native_rebuild_views (MetaRenderer *renderer)
  {
-@@ -1483,6 +1512,7 @@ meta_renderer_native_rebuild_views (MetaRenderer *renderer)
+@@ -1485,6 +1514,7 @@ meta_renderer_native_rebuild_views (MetaRenderer *renderer)
    MetaRendererClass *parent_renderer_class =
      META_RENDERER_CLASS (meta_renderer_native_parent_class);
  
