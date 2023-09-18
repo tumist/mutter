@@ -1,14 +1,13 @@
-mutter (45.0-1) UNRELEASED; urgency=medium
+mutter (45.0-1) experimental; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release
+    - Fix focus-follows-mouse regression (Closes: #1051780)
+  * debian/libmutter-13-0.symbols: Add new symbol
+  * Refresh patches
 
   [ Simon McVittie ]
   * Merge packaging from 44.4-3 in unstable
-  * d/p/backends-x11-Trap-errors-from-XIAllowTouchEvents.patch,
-    d/p/monitor-manager-xrandr-Trap-DPMS-changes.patch:
-    Add the 45 branch equivalent of the changes in 44.4-3
-    (Closes: #1050512, LP: #2029413).
-    These changes can be dropped when updating to mutter 45 final release
-    (or rc 2, if there is a rc 2).
-  * Refresh patch series
 
   [ Daniel van Vugt ]
   * Update Support-Dynamic-triple-double-buffering.patch to match upstream.
@@ -18,10 +17,7 @@ mutter (45.0-1) UNRELEASED; urgency=medium
     current upstream merge proposals but I doubt that has any behavioural
     impact.
 
-  [ Jeremy Bícha ]
-  * New upstream release
-
- -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 18 Sep 2023 10:13:12 -0400
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 18 Sep 2023 10:21:08 -0400
 
 mutter (45~rc-4) experimental; urgency=medium
 
