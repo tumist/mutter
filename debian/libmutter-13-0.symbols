@@ -145,6 +145,7 @@ libmutter-13.so.0 libmutter-13-0 #MINVER#
  meta_crtc_set_config@Base 43.0
  meta_crtc_unassign_output@Base 43.0
  meta_crtc_unset_config@Base 43.0
+ meta_crtc_virtual_get_type@Base 45.0
  meta_cursor_get_type@Base 43.0
  meta_cursor_renderer_get_cursor@Base 44.1
  meta_cursor_sprite_wayland_get_type@Base 44.1
