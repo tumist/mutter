@@ -145,6 +145,7 @@ libmutter-13.so.0 libmutter-13-0 #MINVER#
  meta_crtc_set_config@Base 43.0
  meta_crtc_unassign_output@Base 43.0
  meta_crtc_unset_config@Base 43.0
+ meta_crtc_virtual_get_type@Base 45.0
  meta_cursor_get_type@Base 43.0
  meta_cursor_renderer_get_cursor@Base 44.1
  meta_cursor_sprite_wayland_get_type@Base 44.1
@@ -2767,11 +2768,11 @@ libmutter-cogl-13.so.0 libmutter-13-0 #MINVER#
  cogl_texture_set_premultiplied@Base 43.0
  cogl_texture_set_region@Base 43.0
  cogl_texture_set_region_from_bitmap@Base 43.0
- (arch=linux-any)cogl_trace_context@Base 43.0
- cogl_trace_describe@Base 43.0
- (arch=linux-any)cogl_trace_end@Base 43.0
- (arch=linux-any)cogl_trace_mutex@Base 43.0
- (arch=linux-any)cogl_trace_thread_data@Base 43.0
+ (arch=!hurd-i386 !i386)cogl_trace_context@Base 43.0
+ (arch=!hurd-i386 !i386)cogl_trace_describe@Base 43.0
+ (arch=!hurd-i386 !i386)cogl_trace_end@Base 43.0
+ (arch=!hurd-i386 !i386)cogl_trace_mutex@Base 43.0
+ (arch=!hurd-i386 !i386)cogl_trace_thread_data@Base 43.0
  cogl_x11_onscreen_get_type@Base 43.0
  cogl_x11_onscreen_get_x11_window@Base 43.0
  cogl_xlib_renderer_add_filter@Base 43.0

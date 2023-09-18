@@ -1,3 +1,58 @@
+mutter (45.0-1) experimental; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release
+    - Fix focus-follows-mouse regression (Closes: #1051780)
+  * debian/libmutter-13-0.symbols: Add new symbol
+  * Refresh patches
+
+  [ Simon McVittie ]
+  * Merge packaging from 44.4-3 in unstable
+
+  [ Daniel van Vugt ]
+  * Update Support-Dynamic-triple-double-buffering.patch to match upstream.
+    This fixes a leak when a monitor is unplugged, which may have been
+    preventing discrete GPUs from entering a lower power state.
+    It also moves the freeze fix by a couple of lines so as to match the
+    current upstream merge proposals but I doubt that has any behavioural
+    impact.
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 18 Sep 2023 10:21:08 -0400
+
+mutter (45~rc-4) experimental; urgency=medium
+
+  * Also skip the new "thread priority" test on i386
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 11 Sep 2023 10:31:41 -0400
+
+mutter (45~rc-3) experimental; urgency=medium
+
+  * Fix sysprof Build-Depends for i386 again
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Sun, 10 Sep 2023 23:02:07 -0400
+
+mutter (45~rc-2) experimental; urgency=medium
+
+  * Merge changes from 44.4-2
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Sun, 10 Sep 2023 22:16:34 -0400
+
+mutter (45~rc-1) experimental; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release
+  * debian/control.in: Bump minimum libei to 1.0.901
+  * debian/control.in: Bump minimum compatible GNOME Shell to 45~rc
+  * debian/libmutter-13-0.symbols: Update
+  * Add new Mtk sublibrary files to gir & dev install lists
+  * Drop "45" and sysprof patches: applied in new release
+
+  [ Daniel van Vugt ]
+  * Add cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
+    to work around https://launchpad.net/bugs/2034672
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Sun, 10 Sep 2023 21:04:02 -0400
+
 mutter (45~rc-0ubuntu2) mantic; urgency=medium
 
   * Add cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
@@ -77,6 +132,53 @@ mutter (45~beta.1-0ubuntu1) mantic; urgency=medium
   * Update triple buffering patch
 
  -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 17 Aug 2023 13:25:40 -0400
+
+mutter (44.4-3) unstable; urgency=medium
+
+  * Team upload
+
+  [ Simon McVittie ]
+  * d/patches: Update to gnome-44 branch commit 44.4-2-g7fc141552a
+    - d/p/monitor-manager-xrandr-Trap-DPMS-changes.patch:
+      Under X11, don't crash if changing display power-saving settings
+      fails (mutter#2857, gnome-shell#6883, Closes: #1050512)
+    - d/p/backends-x11-Trap-errors-from-XIAllowTouchEvents.patch:
+      Under X11, don't crash if some touchscreen operations fail
+      (mutter#2808, LP: #2029413)
+
+  [ Jeremy Bícha ]
+  * Remove sysprof build-dependency on i386
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 14 Sep 2023 10:19:15 +0100
+
+mutter (44.4-2) unstable; urgency=medium
+
+  * Don't enable sysprof profiling integration on i386
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Fri, 01 Sep 2023 14:27:36 -0400
+
+mutter (44.4-1) unstable; urgency=medium
+
+  * New upstream release
+  * Drop '44' patches applied in new release
+  * Cherry-pick proposed patch to build with sysprof 45
+  * debian/control.in: Build-Depend on libsysprof-6-dev
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Fri, 01 Sep 2023 09:49:10 -0400
+
+mutter (44.3-7) unstable; urgency=medium
+
+  * Team upload
+  * d/tests/installed-tests: Run installed-tests via a wrapper script.
+    This collects logs as test artifacts, and lets us fail the test if a
+    packaging bug results in no matching tests being present.
+  * d/tests/installed-tests: Ignore test failures on some architectures.
+    These are the same architectures where we don't run build-time tests.
+    On s390x the tests are timing out at the default 5 minute cutoff, and
+    it's not clear whether they would finish successfully if allowed to
+    run for longer.
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 21 Aug 2023 20:57:49 +0100
 
 mutter (44.3-6) unstable; urgency=medium
 

@@ -325,12 +325,13 @@ static void
 set_output_details_from_edid (MetaOutputInfo *output_info,
                               MetaEdidInfo   *edid_info)
 {
-  output_info->vendor = g_strndup (edid_info->manufacturer_code, 4);
+  output_info->vendor = g_strdup (edid_info->manufacturer_code);
   if (!g_utf8_validate (output_info->vendor, -1, NULL))
     g_clear_pointer (&output_info->vendor, g_free);
 
-  output_info->product = g_strndup (edid_info->dsc_product_name, 14);
-  if (!g_utf8_validate (output_info->product, -1, NULL) ||
+  output_info->product = g_strdup (edid_info->dsc_product_name);
+  if (!output_info->product ||
+      !g_utf8_validate (output_info->product, -1, NULL) ||
       output_info->product[0] == '\0')
     {
       g_clear_pointer (&output_info->product, g_free);
@@ -338,8 +339,9 @@ set_output_details_from_edid (MetaOutputInfo *output_info,
         g_strdup_printf ("0x%04x", (unsigned) edid_info->product_code);
     }
 
-  output_info->serial = g_strndup (edid_info->dsc_serial_number, 14);
-  if (!g_utf8_validate (output_info->serial, -1, NULL) ||
+  output_info->serial = g_strdup (edid_info->dsc_serial_number);
+  if (!output_info->serial ||
+      !g_utf8_validate (output_info->serial, -1, NULL) ||
       output_info->serial[0] == '\0')
     {
       g_clear_pointer (&output_info->serial, g_free);
@@ -561,6 +563,21 @@ meta_output_peek_color_space (MetaOutput *output)
   MetaOutputPrivate *priv = meta_output_get_instance_private (output);
 
   return priv->color_space;
+}
+
+const char *
+meta_output_colorspace_get_name (MetaOutputColorspace color_space)
+{
+  switch (color_space)
+    {
+    case META_OUTPUT_COLORSPACE_UNKNOWN:
+      return "Unknown";
+    case META_OUTPUT_COLORSPACE_DEFAULT:
+      return "Default";
+    case META_OUTPUT_COLORSPACE_BT2020:
+      return "bt.2020";
+    }
+  g_assert_not_reached ();
 }
 
 gboolean
