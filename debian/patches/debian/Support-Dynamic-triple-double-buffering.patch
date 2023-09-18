@@ -22,7 +22,7 @@ git suggests. Also add Gbp-Pq: Topic debian
 Bug: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/3760
 Forwarded: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/1441
 Applied-upstream: no, see also https://bugs.debian.org/1050020
-Last-Update: 2023-08-16
+Last-Update: 2023-09-18
 ---
  clutter/clutter/clutter-frame-clock.c             | 260 ++++++++++++----
  clutter/clutter/clutter-frame-clock.h             |  11 +-
@@ -54,7 +54,7 @@ Last-Update: 2023-08-16
  create mode 100644 src/backends/native/meta-swap-chain.h
 
 diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
-index 8d57428..0bb368d 100644
+index 30cc6fb..d652a6e 100644
 --- a/clutter/clutter/clutter-frame-clock.c
 +++ b/clutter/clutter/clutter-frame-clock.c
 @@ -35,6 +35,15 @@ enum
@@ -429,9 +429,9 @@ index 8d57428..0bb368d 100644
      frame_clock->last_dispatch_lateness_us = 0;
    else
      frame_clock->last_dispatch_lateness_us = lateness_us;
-@@ -753,10 +874,25 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
-                     jitter_us * 100 / frame_clock->refresh_interval_us);
+@@ -755,10 +876,25 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
      }
+ #endif
  
 +  frame_clock->prev_last_dispatch_time_us = frame_clock->last_dispatch_time_us;
    frame_clock->last_dispatch_time_us = time_us;
@@ -456,7 +456,7 @@ index 8d57428..0bb368d 100644
  
    frame_count = frame_clock->frame_count++;
  
-@@ -785,25 +921,31 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+@@ -787,25 +923,31 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
    result = iface->frame (frame_clock, frame, frame_clock->listener.user_data);
    COGL_TRACE_END (ClutterFrameClockFrame);
  
@@ -500,7 +500,7 @@ index 8d57428..0bb368d 100644
          }
        break;
      }
-@@ -836,10 +978,13 @@ frame_clock_source_dispatch (GSource     *source,
+@@ -838,10 +980,13 @@ frame_clock_source_dispatch (GSource     *source,
  }
  
  void
@@ -516,7 +516,7 @@ index 8d57428..0bb368d 100644
  }
  
  GString *
-@@ -933,8 +1078,6 @@ clutter_frame_clock_dispose (GObject *object)
+@@ -935,8 +1080,6 @@ clutter_frame_clock_dispose (GObject *object)
  {
    ClutterFrameClock *frame_clock = CLUTTER_FRAME_CLOCK (object);
  
@@ -525,7 +525,7 @@ index 8d57428..0bb368d 100644
    if (frame_clock->source)
      {
        g_signal_emit (frame_clock, signals[DESTROY], 0);
-@@ -955,6 +1098,15 @@ static void
+@@ -957,6 +1100,15 @@ static void
  clutter_frame_clock_class_init (ClutterFrameClockClass *klass)
  {
    GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -945,7 +945,7 @@ index 2d68ba1..f4e23df 100644
  
  static gboolean
 diff --git a/src/backends/native/meta-kms-impl-device.c b/src/backends/native/meta-kms-impl-device.c
-index bd146e2..c57e9cc 100644
+index da37238..972873a 100644
 --- a/src/backends/native/meta-kms-impl-device.c
 +++ b/src/backends/native/meta-kms-impl-device.c
 @@ -1483,9 +1483,11 @@ meta_kms_impl_device_handle_update (MetaKmsImplDevice *impl_device,
