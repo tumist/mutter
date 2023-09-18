@@ -803,9 +803,11 @@ meta_seat_impl_notify_button_in_impl (MetaSeatImpl       *seat_impl,
 static MetaSeatImpl *
 seat_impl_from_device (ClutterInputDevice *device)
 {
-  MetaInputDeviceNative *device_native = META_INPUT_DEVICE_NATIVE (device);
+  ClutterSeat *seat;
 
-  return meta_input_device_native_get_seat_impl (device_native);
+  seat = clutter_input_device_get_seat (device);
+
+  return META_SEAT_NATIVE (seat)->impl;
 }
 
 static void
@@ -1071,14 +1073,24 @@ meta_seat_impl_notify_touch_event_in_impl (MetaSeatImpl       *seat_impl,
       evtype == CLUTTER_TOUCH_UPDATE)
     modifiers |= CLUTTER_BUTTON1_MASK;
 
-  event =
-    clutter_event_touch_new (evtype,
-                             CLUTTER_EVENT_NONE,
-                             time_us,
-                             input_device,
-                             sequence,
-                             modifiers,
-                             GRAPHENE_POINT_INIT (x, y));
+  if (evtype == CLUTTER_TOUCH_CANCEL)
+    {
+      event = clutter_event_touch_cancel_new (CLUTTER_EVENT_NONE,
+                                              time_us,
+                                              input_device,
+                                              sequence);
+    }
+  else
+    {
+      event =
+        clutter_event_touch_new (evtype,
+                                 CLUTTER_EVENT_NONE,
+                                 time_us,
+                                 input_device,
+                                 sequence,
+                                 modifiers,
+                                 GRAPHENE_POINT_INIT (x, y));
+    }
 
   queue_event (seat_impl, event);
 }
@@ -2952,8 +2964,8 @@ meta_seat_impl_constructed (GObject *object)
   ClutterInputDevice *device;
 
   device = meta_input_device_native_new_virtual (
-      seat_impl, CLUTTER_POINTER_DEVICE,
-      CLUTTER_INPUT_MODE_LOGICAL);
+    CLUTTER_SEAT (seat_impl->seat_native), CLUTTER_POINTER_DEVICE,
+    CLUTTER_INPUT_MODE_LOGICAL);
   seat_impl->pointer_x = INITIAL_POINTER_X;
   seat_impl->pointer_y = INITIAL_POINTER_Y;
   meta_input_device_native_set_coords_in_impl (META_INPUT_DEVICE_NATIVE (device),
@@ -2962,8 +2974,8 @@ meta_seat_impl_constructed (GObject *object)
   seat_impl->core_pointer = device;
 
   device = meta_input_device_native_new_virtual (
-      seat_impl, CLUTTER_KEYBOARD_DEVICE,
-      CLUTTER_INPUT_MODE_LOGICAL);
+    CLUTTER_SEAT (seat_impl->seat_native), CLUTTER_KEYBOARD_DEVICE,
+    CLUTTER_INPUT_MODE_LOGICAL);
   seat_impl->core_keyboard = device;
 
   if (G_OBJECT_CLASS (meta_seat_impl_parent_class)->constructed)

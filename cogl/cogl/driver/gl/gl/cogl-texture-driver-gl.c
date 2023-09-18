@@ -452,12 +452,15 @@ _cogl_texture_driver_upload_supported (CoglContext *ctx,
         return TRUE;
       else
         return FALSE;
+    case COGL_PIXEL_FORMAT_G_16:
+    case COGL_PIXEL_FORMAT_RG_1616:
     case COGL_PIXEL_FORMAT_DEPTH_16:
     case COGL_PIXEL_FORMAT_DEPTH_32:
     case COGL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
     case COGL_PIXEL_FORMAT_ANY:
     case COGL_PIXEL_FORMAT_YUV:
-      return TRUE;
+      g_assert_not_reached ();
+      return FALSE;
     }
 
   g_assert_not_reached ();
