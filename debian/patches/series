@@ -7,3 +7,4 @@ debian/Support-Dynamic-triple-double-buffering.patch
 workarounds/tests-Disable-restore-size-test.patch
 workarounds/tests-Skip-thread-priority-test.patch
 workarounds/cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
+events-Don-t-un-bypass-Clutter-event-handling-in-presence.patch
