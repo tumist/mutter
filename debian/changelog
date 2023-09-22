@@ -1,3 +1,14 @@
+mutter (45.0-2) experimental; urgency=medium
+
+  [ Daniel van Vugt ]
+  * Update triple buffering patch to fix freezing
+    seen when running apps full screen (LP: #2035016)
+
+  [ Jeremy Bícha ]
+  * Cherry-pick patch to fix changing input language in modal popups
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Fri, 22 Sep 2023 10:50:00 -0400
+
 mutter (45.0-1) experimental; urgency=medium
 
   [ Jeremy Bícha ]
