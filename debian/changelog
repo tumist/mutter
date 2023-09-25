@@ -1,3 +1,10 @@
+mutter (45.0-3) UNRELEASED; urgency=medium
+
+  * Merge packaging from 44.5-1 in testing/unstable.
+    All changes were already included in 45.0-1 or earlier.
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 25 Sep 2023 10:21:54 +0100
+
 mutter (45.0-2) experimental; urgency=medium
 
   [ Daniel van Vugt ]
