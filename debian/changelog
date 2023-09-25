@@ -1,3 +1,19 @@
+mutter (44.5-2) UNRELEASED; urgency=medium
+
+  * d/patches: Update to gnome-44 branch commit 44.5-6-g0173cfffcd
+    - Backport a change from 45~alpha to fix an intermittent crash in the
+      closeWithActiveWindows test (mutter#6808)
+    - Backport a change from 45~beta to fix clicks not always taking effect
+      (mutter#2918)
+    - Backport a change from 45~rc to fix an uninitialized memory read
+      (mutter#2964)
+    - Backport a change from 45~rc to fix a crash (mutter#2978)
+    - These changes also fix a crash while restarting gnome-shell in X11
+      mode with Alt+F2, "r" (mutter#2977, another possible cause
+      for the symptoms seen in #1050502)
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 25 Sep 2023 10:03:25 +0100
+
 mutter (44.5-1) unstable; urgency=medium
 
   * New upstream release
