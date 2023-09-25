@@ -80,7 +80,7 @@ Build-Depends: debhelper-compat (= 13),
                xcvt [linux-any],
                xkb-data,
                xvfb,
-               xwayland [linux-any],
+               xwayland (>= 2:23.1.0) [linux-any],
                zenity
 Rules-Requires-Root: no
 Standards-Version: 4.6.2
@@ -125,7 +125,7 @@ Depends: at-spi2-core,
          python3-dbusmock,
          xauth,
          xvfb,
-         xwayland [linux-any],
+         xwayland (>= 2:23.1.0) [linux-any],
          ${misc:Depends},
          ${shlibs:Depends}
 Description: Tests for GNOME's window manager library
@@ -178,7 +178,8 @@ Breaks: apparmor (<< 2.13.3-5~),
         gnome-settings-daemon (<< 3.31.101),
         gnome-shell (<< 44~rc),
         libgtk-3-0 (<< 3.24.33-2~),
-        libgtk-4-1 (<< 4.6.3+ds1-2~)
+        libgtk-4-1 (<< 4.6.3+ds1-2~),
+        xwayland (<< 2:23.1.0),
 Description: window manager library from the Mutter window manager
  Mutter is a Wayland display server and X11 window manager and
  compositor library. It contains functionality related to, among other
