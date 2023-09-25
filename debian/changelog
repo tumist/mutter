@@ -1,7 +1,10 @@
 mutter (45.0-3) UNRELEASED; urgency=medium
 
-  * Merge packaging from 44.5-1 in testing/unstable.
-    All changes were already included in 45.0-1 or earlier.
+  * Merge packaging from 44.5-2 in unstable.
+    - Add versioned Build-Depends/Breaks to ensure Xwayland supports
+      the -byteswappedclients option (Closes: #1050642)
+    - All changes to the upstream code were already included in 45.0-1
+      or earlier
 
  -- Simon McVittie <smcv@debian.org>  Mon, 25 Sep 2023 10:21:54 +0100
 
@@ -89,6 +92,25 @@ mutter (45~beta.1-1) experimental; urgency=medium
   * Update triple buffering patch
 
  -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 21 Aug 2023 11:19:08 -0400
+
+mutter (44.5-2) unstable; urgency=medium
+
+  * Team upload
+  * d/patches: Update to gnome-44 branch commit 44.5-6-g0173cfffcd
+    - Backport a change from 45~alpha to fix an intermittent crash in the
+      closeWithActiveWindows test (mutter#6808)
+    - Backport a change from 45~beta to fix clicks not always taking effect
+      (mutter#2918)
+    - Backport a change from 45~rc to fix an uninitialized memory read
+      (mutter#2964)
+    - Backport a change from 45~rc to fix a crash (mutter#2978)
+    - These changes also fix a crash while restarting gnome-shell in X11
+      mode with Alt+F2, "r" (mutter#2977, another possible cause
+      for the symptoms seen in #1050502)
+  * Add versioned Build-Depends/Breaks to ensure Xwayland supports
+    the -byteswappedclients option (Closes: #1050642)
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 25 Sep 2023 10:14:07 +0100
 
 mutter (44.5-1) unstable; urgency=medium
 
