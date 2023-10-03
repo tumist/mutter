@@ -9,3 +9,5 @@ workarounds/tests-Skip-thread-priority-test.patch
 workarounds/cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
 events-Don-t-un-bypass-Clutter-event-handling-in-presence.patch
 kms-crtc-Increase-default-deadline-evasion-to-800-microse.patch
+core-Do-not-repick-pointer-while-syncing-wayland-foci.patch
+screen-cast-stream-Pass-redraw-clip-to-stage-watches-inst.patch
