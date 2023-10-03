@@ -1,5 +1,5 @@
-From: =?utf-8?q?Jeremy_B=C3=ADcha?= <jeremy.bicha@canonical.com>
-Date: Fri, 22 Sep 2023 10:41:14 -0400
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Wed, 10 Nov 2021 18:55:53 +0800
 Subject: Support Dynamic triple/double buffering
 
 Use triple buffering if and when the previous frame is running late.

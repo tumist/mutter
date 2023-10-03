@@ -1,3 +1,23 @@
+mutter (45.0-3) experimental; urgency=medium
+
+  [ Simon McVittie ]
+  * Merge packaging from 44.5-2 in unstable.
+    - Add versioned Build-Depends/Breaks to ensure Xwayland supports
+      the -byteswappedclients option (Closes: #1050642)
+    - All changes to the upstream code were already included in 45.0-1
+      or earlier
+
+  [ Daniel van Vugt ]
+  * Add kms-crtc-Increase-default-deadline-evasion-to-800-microse.patch
+    to fix cursor stuttering on low/normal frequency mice and touchpads
+    (LP: #2033719). The same patch is already merged into 45.1 upstream.
+
+  [ Jeremy Bícha ]
+  * Add autopkgtest to ensure mutter is still buildable (LP: #1993226)
+  * Cherry-pick 2 more future 45.1 commits to fix crashes
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Tue, 03 Oct 2023 18:38:45 -0400
+
 mutter (45.0-2ubuntu1) mantic; urgency=medium
 
   * Merge with Debian. Remaining changes:
@@ -163,6 +183,50 @@ mutter (45~beta.1-0ubuntu1) mantic; urgency=medium
   * Update triple buffering patch
 
  -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 17 Aug 2023 13:25:40 -0400
+
+mutter (44.5-2) unstable; urgency=medium
+
+  * Team upload
+  * d/patches: Update to gnome-44 branch commit 44.5-6-g0173cfffcd
+    - Backport a change from 45~alpha to fix an intermittent crash in the
+      closeWithActiveWindows test (mutter#6808)
+    - Backport a change from 45~beta to fix clicks not always taking effect
+      (mutter#2918)
+    - Backport a change from 45~rc to fix an uninitialized memory read
+      (mutter#2964)
+    - Backport a change from 45~rc to fix a crash (mutter#2978)
+    - These changes also fix a crash while restarting gnome-shell in X11
+      mode with Alt+F2, "r" (mutter#2977, another possible cause
+      for the symptoms seen in #1050502)
+  * Add versioned Build-Depends/Breaks to ensure Xwayland supports
+    the -byteswappedclients option (Closes: #1050642)
+
+ -- Simon McVittie <smcv@debian.org>  Mon, 25 Sep 2023 10:14:07 +0100
+
+mutter (44.5-1) unstable; urgency=medium
+
+  * New upstream release
+    - Fix redraw issue when buffer age is unavailable
+      (regression in 44.1, mutter#2771)
+    - Fix crash during GNOME Shell restart in Xorg mode
+      (mutter#2852, mutter!3247; Closes: #1050502)
+    - Fix unresponsive touchscreen after titlebar drag when using a
+      touchscreen (mutter#2836)
+    - Fix some XWayland windows not getting mapped
+      (regression in 44.1, mutter#2965, mutter#2820, mutter#2867)
+    - Avoid a possible crash while changing monitor layout
+      (regression in 44.1, mutter!3229)
+    - Correct a check for monitor portrait orientation when choosing
+      whether to allow tiling (mutter!3199, mutter!3248)
+    - Other crash fixes were included in 44.4-3 already
+  * d/watch: Only watch for v44.x
+  * d/patches: Drop patches that were applied upstream
+  * d/p/x11-events-NULL-Check-input-event-when-getting-name.patch:
+    Add patch from upstream 45~alpha to avoid a crash when being
+    profiled with sysprof 45~rc (mutter#3030)
+  * d/libmutter-12-0.symbols: Update
+
+ -- Simon McVittie <smcv@debian.org>  Sun, 17 Sep 2023 16:54:02 +0100
 
 mutter (44.4-3) unstable; urgency=medium
 

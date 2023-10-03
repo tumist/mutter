@@ -10,3 +10,6 @@ ubuntu/x11-Add-support-for-fractional-scaling-using-Randr.patch
 ubuntu/window-Add-ability-to-override-the-edge-constraints.patch
 workarounds/cogl-onscreen-glx-Forcefully-disable-cogl_onscreen_glx_ge.patch
 events-Don-t-un-bypass-Clutter-event-handling-in-presence.patch
+kms-crtc-Increase-default-deadline-evasion-to-800-microse.patch
+core-Do-not-repick-pointer-while-syncing-wayland-foci.patch
+screen-cast-stream-Pass-redraw-clip-to-stage-watches-inst.patch
