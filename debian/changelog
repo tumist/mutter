@@ -1,12 +1,22 @@
-mutter (45.0-3) UNRELEASED; urgency=medium
+mutter (45.0-3) experimental; urgency=medium
 
+  [ Simon McVittie ]
   * Merge packaging from 44.5-2 in unstable.
     - Add versioned Build-Depends/Breaks to ensure Xwayland supports
       the -byteswappedclients option (Closes: #1050642)
     - All changes to the upstream code were already included in 45.0-1
       or earlier
 
- -- Simon McVittie <smcv@debian.org>  Mon, 25 Sep 2023 10:21:54 +0100
+  [ Daniel van Vugt ]
+  * Add kms-crtc-Increase-default-deadline-evasion-to-800-microse.patch
+    to fix cursor stuttering on low/normal frequency mice and touchpads
+    (LP: #2033719). The same patch is already merged into 45.1 upstream.
+
+  [ Jeremy Bícha ]
+  * Add autopkgtest to ensure mutter is still buildable (LP: #1993226)
+  * Cherry-pick 2 more future 45.1 commits to fix crashes
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Tue, 03 Oct 2023 18:38:45 -0400
 
 mutter (45.0-2) experimental; urgency=medium
 
