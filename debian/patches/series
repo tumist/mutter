@@ -15,3 +15,4 @@ core-Do-not-repick-pointer-while-syncing-wayland-foci.patch
 screen-cast-stream-Pass-redraw-clip-to-stage-watches-inst.patch
 clutter-actor-Cache-stage-relative-instead-of-absolute-mo.patch
 clutter-paint-volume-Avoid-amplifying-small-floating-poin.patch
+kms-impl-device-Inhibit-deadline-timer-on-amdgpu.patch
