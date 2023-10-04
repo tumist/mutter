@@ -1,3 +1,14 @@
+mutter (45.0-3ubuntu2) mantic; urgency=medium
+
+  [ Jeremy Bícha ]
+  * Cherry-pick 2 commits to fix vsync (LP: #2037235)
+
+  [ Daniel van Vugt ]
+  * Add patch to fix GNOME Shell getting SIGKILL'd under heavy load
+    or screen locked under Wayland with AMD GPUs (LP: #2034619)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 04 Oct 2023 11:00:14 -0400
+
 mutter (45.0-3ubuntu1) mantic; urgency=medium
 
   * Merge with Debian. Remaining changes:
