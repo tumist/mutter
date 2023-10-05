@@ -1,0 +1,4 @@
+#!/usr/bin/make -f
+
+debian/rules override_dh_auto_configure
+debian/rules override_dh_auto_build
