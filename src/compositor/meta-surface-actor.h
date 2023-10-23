@@ -43,7 +43,7 @@ gboolean meta_surface_actor_is_obscured_on_stage_view (MetaSurfaceActor *self,
                                                        float            *unobscurred_fraction);
 
 gboolean meta_surface_actor_contains_rect (MetaSurfaceActor *surface_actor,
-                                           MetaRectangle    *rect);
+                                           MtkRectangle     *rect);
 
 void meta_surface_actor_set_input_region (MetaSurfaceActor *self,
                                           cairo_region_t   *region);

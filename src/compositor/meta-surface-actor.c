@@ -553,7 +553,7 @@ meta_surface_actor_is_obscured_on_stage_view (MetaSurfaceActor *self,
 
 gboolean
 meta_surface_actor_contains_rect (MetaSurfaceActor *surface_actor,
-                                  MetaRectangle    *rect)
+                                  MtkRectangle     *rect)
 {
   ClutterActor *actor = CLUTTER_ACTOR (surface_actor);
   graphene_rect_t bounding_rect;
@@ -561,7 +561,7 @@ meta_surface_actor_contains_rect (MetaSurfaceActor *surface_actor,
 
   clutter_actor_get_transformed_extents (actor, &bounding_rect);
 
-  _clutter_util_rect_from_rectangle (rect, &bound_rect);
+  bound_rect = mtk_rectangle_to_graphene_rect (rect);
 
   return graphene_rect_contains_rect (&bounding_rect,
                                       &bound_rect);

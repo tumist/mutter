@@ -362,7 +362,7 @@ find_frame_sync_candidate (MetaCompositorView *compositor_view,
   MetaWindowActor *window_actor;
   MetaWindow *window;
   ClutterStageView *stage_view;
-  MetaRectangle view_layout;
+  MtkRectangle view_layout;
   MetaSurfaceActor *surface_actor;
 
   if (meta_compositor_is_unredirect_inhibited (compositor))

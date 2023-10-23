@@ -4315,10 +4315,10 @@ meta_window_get_session_geometry (MetaWindow  *window,
 
 gboolean
 meta_window_frame_contains_rect (MetaWindow    *window,
-                                 MetaRectangle *rect)
+                                 MtkRectangle  *rect)
 {
-  return meta_rectangle_contains_rect (&window->rect,
-                                       rect);
+  return mtk_rectangle_contains_rect (&window->rect,
+                                      rect);
 }
 
 /**
