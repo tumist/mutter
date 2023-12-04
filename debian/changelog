@@ -1,13 +1,17 @@
-mutter (45.2-0ubuntu1) UNRELEASED; urgency=medium
+mutter (45.2-0ubuntu1) mantic; urgency=medium
 
   [ Jeremy Bícha ]
   * New upstream release (LP: #2043000)
-    - Fix capital accent letters (LP: #2035076)
-    - Fix crash when screen locked or heavy load with some Ryzen systems
-      (LP: #2034619)
+    - Fix entering capital accent letters with Caps Lock (LP: #2035076)
     - Fix Wacom on X11 issues (LP: #2043027)
+  * debian/libmutter-13-0.symbols: Add new symbols
+  * Drop patches applied in new release
+  * Rebase X11 fractional scaling patch
 
- -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 05 Oct 2023 14:29:32 -0400
+  [ Daniel van Vugt ]
+  * Rebase triple buffering patch
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 04 Dec 2023 13:45:25 -0500
 
 mutter (45.0-3ubuntu3.1) mantic; urgency=medium
 
