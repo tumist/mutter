@@ -1,3 +1,14 @@
+mutter (45.2-0ubuntu1) UNRELEASED; urgency=medium
+
+  [ Jeremy Bícha ]
+  * New upstream release (LP: #2043000)
+    - Fix capital accent letters (LP: #2035076)
+    - Fix crash when screen locked or heavy load with some Ryzen systems
+      (LP: #2034619)
+    - Fix Wacom on X11 issues (LP: #2043027)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 05 Oct 2023 14:29:32 -0400
+
 mutter (45.0-3ubuntu3.1) mantic; urgency=medium
 
   * Cherry pick 4 commits to fix SIGKILL on lockscreen. (LP: #2034619)
