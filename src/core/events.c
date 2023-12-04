@@ -340,6 +340,8 @@ meta_display_handle_event (MetaDisplay        *display,
   if (event_type != CLUTTER_DEVICE_ADDED &&
       event_type != CLUTTER_DEVICE_REMOVED)
     handle_idletime_for_event (display, event);
+  else
+    meta_pad_action_mapper_handle_event (display->pad_action_mapper, event);
 
   if (event_type == CLUTTER_MOTION)
     {
@@ -530,7 +532,7 @@ meta_display_handle_event (MetaDisplay        *display,
 #ifdef HAVE_WAYLAND
   /* If a Wayland client has a grab, don't pass that through to Clutter */
   if (wayland_compositor && meta_wayland_compositor_is_grabbed (wayland_compositor))
-    bypass_clutter = !bypass_wayland;
+    bypass_clutter = bypass_clutter || !bypass_wayland;
 
   if (wayland_compositor && !bypass_wayland)
     {
